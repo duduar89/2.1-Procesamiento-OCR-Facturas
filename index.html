@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🤖 Procesador OCR v2.1</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📄 Procesador Inteligente de Facturas</h1>
+            <div class="status" id="status">Listo para procesar</div>
+        </header>
+
+        <main>
+            <!-- Zona de subida -->
+            <section class="upload-section" id="uploadSection">
+                <div class="upload-zone" id="uploadZone">
+                    <div class="upload-icon">📤</div>
+                    <h3>Arrastra tu factura PDF aquí</h3>
+                    <p>O haz clic para seleccionar archivo</p>
+                    <small>Máximo 10MB • Solo PDF</small>
+                    <input type="file" id="fileInput" accept=".pdf" hidden>
+                </div>
+
+                <!-- Queue de documentos -->
+                <div class="queue-section" id="queueSection" style="display: none;">
+                    <h3>📋 Documentos en Cola</h3>
+                    <div class="queue-list" id="queueList">
+                        <!-- Los documentos aparecerán aquí -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- Área de procesamiento -->
+            <section class="processing-section" id="processingSection" style="display: none;">
+                <div class="document-viewer">
+                    <h3>📋 Documento</h3>
+                    <div class="pdf-container" id="pdfContainer">
+                        <div class="pdf-placeholder">
+                            <p>Cargando documento...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="extracted-data">
+                    <h3>🧠 Datos Extraídos</h3>
+                    <div class="progress-bar" id="progressBar">
+                        <div class="progress-fill"></div>
+                    </div>
+                    
+                    <div class="fields-container" id="fieldsContainer">
+                        <!-- Los campos se generan aquí -->
+                    </div>
+
+                    <div class="confidence-indicator" id="confidenceIndicator">
+                        <span class="confidence-label">Confianza Global:</span>
+                        <span class="confidence-value" id="confidenceValue">0%</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Botones de acción -->
+            <section class="actions-section" id="actionsSection" style="display: none;">
+                <button class="btn primary" id="downloadBtn">📥 Descargar JSON</button>
+                <button class="btn secondary" id="newDocBtn">🔄 Procesar Otro</button>
+                <button class="btn tertiary" id="copyBtn">📋 Copiar Datos</button>
+            </section>
+        </main>
+
+        <!-- Loading overlay -->
+        <div class="loading-overlay" id="loadingOverlay" style="display: none;">
+            <div class="loading-spinner"></div>
+            <div class="loading-text" id="loadingText">Procesando documento...</div>
+            <div class="loading-steps" id="loadingSteps">
+                <div class="step">✅ Archivo subido</div>
+                <div class="step">🔄 Extrayendo texto...</div>
+                <div class="step">🤖 Analizando contenido...</div>
+                <div class="step">📊 Calculando confianza...</div>
+            </div>
+        </div>
+
+        <!-- Notificaciones -->
+        <div class="notifications" id="notifications"></div>
+    </div>
+
+    <script src="config.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

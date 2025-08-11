@@ -1,0 +1,1197 @@
+-- ===== FACTURA PRO - ESQUEMA MULTI-TENANT COMPLETO =====
+-- Sistema que soporta múltiples restaurantes con separación total de datos
+-- Ejecutar en Supabase SQL Editor
+
+-- 🏢 TABLA PRINCIPAL DE RESTAURANTES
+CREATE TABLE IF NOT EXISTS restaurantes (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    
+    -- INFORMACIÓN BÁSICA
+    nombre VARCHAR(255) NOT NULL,
+    nombre_comercial VARCHAR(255),
+    cif VARCHAR(12) UNIQUE NOT NULL,
+    
+    -- CONTACTO Y UBICACIÓN
+    direccion TEXT,
+    codigo_postal VARCHAR(10),
+    ciudad VARCHAR(100),
+    provincia VARCHAR(100),
+    pais VARCHAR(50) DEFAULT 'España',
+    telefono VARCHAR(20),
+    email VARCHAR(100),
+    web VARCHAR(255),
+    
+    -- CONFIGURACIÓN DEL RESTAURANTE
+    configuracion JSONB DEFAULT '{
+        "alertas_email": [],
+        "umbral_confianza": 0.7,
+        "proveedores_confiables": [],
+        "categorias_personalizadas": ["Carnes", "Pescados", "Verduras", "Lácteos", "Bebidas", "Otros"],
+        "moneda": "EUR",
+        "idioma": "es",
+        "zona_horaria": "Europe/Madrid"
+    }',
+    
+    -- LÍMITES Y CUOTAS
+    limite_documentos_mes INTEGER DEFAULT 1000,
+    documentos_procesados_mes INTEGER DEFAULT 0,
+    limite_storage_gb INTEGER DEFAULT 5,
+    storage_utilizado_gb DECIMAL(8,3) DEFAULT 0,
+    
+    -- ESTADO Y FECHAS
+    activo BOOLEAN DEFAULT TRUE,
+    fecha_creacion TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    fecha_ultima_actividad TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    
+    -- FACTURACIÓN (para futuro SaaS)
+    plan VARCHAR(20) DEFAULT 'basico' CHECK (plan IN ('basico', 'profesional', 'enterprise')),
+    fecha_vencimiento_plan TIMESTAMP WITH TIME ZONE,
+    
+    CONSTRAINT restaurantes_cif_valido CHECK (LENGTH(cif) >= 9),
+    CONSTRAINT restaurantes_email_valido CHECK (email ~* '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$')
+);
+
+-- 👥 TABLA DE USUARIOS DEL SISTEMA
+CREATE TABLE IF NOT EXISTS usuarios (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    
+    -- IDENTIFICACIÓN
+    email VARCHAR(255) UNIQUE NOT NULL,
+    nombre VARCHAR(100),
+    apellidos VARCHAR(100),
+    telefono VARCHAR(20),
+    
+    -- RELACIÓN CON RESTAURANTE
+    restaurante_id UUID NOT NULL REFERENCES restaurantes(id) ON DELETE CASCADE,
+    
+    -- ROL Y PERMISOS
+    rol VARCHAR(20) NOT NULL DEFAULT 'usuario' CHECK (rol IN ('admin_global', 'admin_restaurante', 'usuario', 'solo_lectura')),
+    permisos JSONB DEFAULT '{
+        "ver_documentos": true,
+        "subir_documentos": true,
+        "corregir_datos": true,
+        "ver_reportes": true,
+        "configurar_alertas": false,
+        "administrar_usuarios": false
+    }',
+    
+    -- ESTADO Y ACTIVIDAD
+    activo BOOLEAN DEFAULT TRUE,
+    ultimo_acceso TIMESTAMP WITH TIME ZONE,
+    fecha_creacion TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    creado_por UUID REFERENCES usuarios(id),
+    
+    -- CONFIGURACIÓN PERSONAL
+    configuracion_ui JSONB DEFAULT '{
+        "tema": "claro",
+        "idioma": "es",
+        "notificaciones_email": true,
+        "notificaciones_push": true
+    }',
+    
+    CONSTRAINT usuarios_email_valido CHECK (email ~* '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$')
+);
+
+-- 🗂️ TABLA PRINCIPAL DE DOCUMENTOS (CON RESTAURANTE_ID)
+CREATE TABLE IF NOT EXISTS documentos (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    restaurante_id UUID NOT NULL REFERENCES restaurantes(id) ON DELETE CASCADE,
+    
+    -- INFORMACIÓN DEL ARCHIVO
+    nombre_archivo VARCHAR(255) NOT NULL,
+    tipo_documento VARCHAR(20) NOT NULL CHECK (tipo_documento IN ('factura', 'albaran', 'ticket', 'extracto')),
+    url_storage TEXT NOT NULL,
+    url_thumbnail TEXT, -- Preview del documento
+    tamaño_bytes BIGINT NOT NULL,
+    numero_paginas INTEGER DEFAULT 1,
+    
+    -- PROCESAMIENTO Y ESTADO
+    estado VARCHAR(20) NOT NULL DEFAULT 'uploaded' CHECK (estado IN ('uploaded', 'processing', 'processed', 'validated', 'error', 'archived')),
+    confianza_clasificacion DECIMAL(3,2) DEFAULT 0.5,
+    calidad_estimada VARCHAR(10) DEFAULT 'media' CHECK (calidad_estimada IN ('alta', 'media', 'baja')),
+    
+    -- METADATOS DE PROCESAMIENTO
+    modelo_ia_version VARCHAR(50) DEFAULT 'v1.0',
+    tiempo_procesamiento_ms INTEGER,
+    tokens_consumidos INTEGER,
+    costo_procesamiento_usd DECIMAL(8,4) DEFAULT 0,
+    
+    -- FECHAS Y AUDITORÍA
+    fecha_subida TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    fecha_procesamiento TIMESTAMP WITH TIME ZONE,
+    usuario_subida UUID REFERENCES usuarios(id),
+    usuario_validacion UUID REFERENCES usuarios(id),
+    
+    -- SEGURIDAD Y DUPLICADOS
+    checksum_archivo VARCHAR(64), -- Para detectar duplicados
+    ip_subida INET, -- IP desde donde se subió
+    
+    -- TAGS Y CATEGORIZACIÓN
+    tags TEXT[] DEFAULT '{}',
+    categoria_personalizada VARCHAR(100),
+    notas TEXT,
+    
+    CONSTRAINT documentos_tamaño_positivo CHECK (tamaño_bytes > 0),
+    CONSTRAINT documentos_confianza_valida CHECK (confianza_clasificacion >= 0 AND confianza_clasificacion <= 1),
+    CONSTRAINT documentos_paginas_positivas CHECK (numero_paginas > 0)
+);
+
+-- 📄 DATOS EXTRAÍDOS DE FACTURAS (CON RESTAURANTE_ID)
+CREATE TABLE IF NOT EXISTS datos_extraidos_facturas (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    documento_id UUID NOT NULL REFERENCES documentos(id) ON DELETE CASCADE,
+    restaurante_id UUID NOT NULL REFERENCES restaurantes(id) ON DELETE CASCADE,
+    
+    -- DATOS DEL PROVEEDOR
+    proveedor_nombre VARCHAR(255),
+    proveedor_cif VARCHAR(12),
+    proveedor_direccion TEXT,
+    proveedor_codigo_postal VARCHAR(10),
+    proveedor_ciudad VARCHAR(100),
+    proveedor_telefono VARCHAR(20),
+    proveedor_email VARCHAR(100),
+    proveedor_web VARCHAR(255),
+    confianza_proveedor DECIMAL(3,2) DEFAULT 0,
+    
+    -- DATOS FISCALES DE LA FACTURA
+    numero_factura VARCHAR(100) NOT NULL,
+    fecha_factura DATE,
+    fecha_vencimiento DATE,
+    fecha_operacion DATE, -- Fecha real de la operación
+    periodo_facturacion VARCHAR(50),
+    numero_pedido VARCHAR(50),
+    numero_albaran_relacionado VARCHAR(50),
+    confianza_datos_fiscales DECIMAL(3,2) DEFAULT 0,
+    
+    -- IMPORTES PRINCIPALES
+    base_imponible DECIMAL(12,2),
+    total_factura DECIMAL(12,2) NOT NULL,
+    confianza_importes DECIMAL(3,2) DEFAULT 0,
+    
+    -- DESGLOSE DE IVA (pueden ser múltiples tipos)
+    iva_tipos JSONB DEFAULT '[]', -- [{"tipo": 21, "base": 100.00, "cuota": 21.00}, ...]
+    total_iva DECIMAL(12,2) DEFAULT 0,
+    
+    -- RETENCIONES Y OTROS IMPUESTOS
+    retencion_irpf DECIMAL(12,2) DEFAULT 0,
+    porcentaje_retencion DECIMAL(5,2) DEFAULT 0,
+    recargo_equivalencia DECIMAL(12,2) DEFAULT 0,
+    
+    -- DESCUENTOS Y RAPPELS
+    descuentos JSONB DEFAULT '[]', -- [{"concepto": "Descuento comercial", "importe": 50.00}, ...]
+    total_descuentos DECIMAL(12,2) DEFAULT 0,
+    
+    -- DATOS DE ENTREGA/SERVICIO
+    direccion_entrega TEXT,
+    fecha_entrega DATE,
+    transportista VARCHAR(255),
+    condiciones_pago TEXT,
+    metodo_pago_preferido VARCHAR(50),
+    
+    -- OBSERVACIONES Y NOTAS
+    observaciones TEXT,
+    referencias_externas JSONB DEFAULT '{}', -- Otras referencias del documento
+    
+    -- CALIDAD Y VALIDACIÓN
+    confianza_global DECIMAL(3,2) DEFAULT 0,
+    requiere_revision BOOLEAN DEFAULT FALSE,
+    campos_con_baja_confianza TEXT[], -- Array de nombres de campos problemáticos
+    validaciones_matematicas JSONB DEFAULT '{}', -- Resultados de validaciones
+    errores_detectados TEXT[],
+    
+    -- COORDENADAS PARA OVERLAYS
+    coordenadas_campos JSONB DEFAULT '{}', -- Posiciones de cada campo en el PDF
+    
+    -- AUDITORÍA Y HISTORIAL
+    fecha_extraccion TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    fecha_ultima_modificacion TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    usuario_extraccion UUID REFERENCES usuarios(id),
+    usuario_modificacion UUID REFERENCES usuarios(id),
+    historial_cambios JSONB DEFAULT '[]', -- Log de cambios realizados
+    
+    CONSTRAINT facturas_confianzas_validas CHECK (
+        confianza_proveedor >= 0 AND confianza_proveedor <= 1 AND
+        confianza_datos_fiscales >= 0 AND confianza_datos_fiscales <= 1 AND
+        confianza_importes >= 0 AND confianza_importes <= 1 AND
+        confianza_global >= 0 AND confianza_global <= 1
+    ),
+    CONSTRAINT facturas_importes_logicos CHECK (
+        (base_imponible IS NULL OR base_imponible >= 0) AND
+        (total_factura IS NULL OR total_factura >= 0) AND
+        (total_iva IS NULL OR total_iva >= 0)
+    ),
+    CONSTRAINT facturas_fechas_logicas CHECK (
+        fecha_vencimiento IS NULL OR fecha_factura IS NULL OR fecha_vencimiento >= fecha_factura
+    )
+);
+
+-- 🛒 PRODUCTOS EXTRAÍDOS - DETALLE DE LÍNEAS (CON RESTAURANTE_ID)
+CREATE TABLE IF NOT EXISTS productos_extraidos (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    documento_id UUID NOT NULL REFERENCES documentos(id) ON DELETE CASCADE,
+    factura_id UUID REFERENCES datos_extraidos_facturas(id) ON DELETE CASCADE,
+    restaurante_id UUID NOT NULL REFERENCES restaurantes(id) ON DELETE CASCADE,
+    
+    -- POSICIÓN EN EL DOCUMENTO
+    linea_numero INTEGER NOT NULL,
+    pagina_numero INTEGER DEFAULT 1,
+    
+    -- IDENTIFICACIÓN DEL PRODUCTO
+    descripcion_original TEXT NOT NULL,
+    descripcion_normalizada VARCHAR(255), -- Versión limpia y estandarizada
+    codigo_producto VARCHAR(100), -- SKU del proveedor
+    codigo_barras VARCHAR(20), -- EAN/UPC si aparece
+    codigo_interno_restaurante VARCHAR(50), -- Código propio del restaurante
+    marca VARCHAR(100),
+    fabricante VARCHAR(100),
+    
+    -- CLASIFICACIÓN Y CATEGORIZACIÓN
+    categoria_principal VARCHAR(50), -- "Verduras", "Carnes", "Lácteos"
+    subcategoria VARCHAR(50), -- "Tomates", "Ternera", "Quesos" 
+    tipo_producto VARCHAR(50), -- "Fresco", "Congelado", "Conserva", "Seco"
+    origen VARCHAR(100), -- "España", "Francia", etc.
+    certificaciones TEXT[], -- ["ecológico", "denominación_origen", "halal"]
+    
+    -- ESPECIFICACIONES FÍSICAS
+    unidad_medida VARCHAR(20) NOT NULL, -- "kg", "litro", "unidad", "caja", "bandeja"
+    formato_comercial VARCHAR(100), -- "Bandeja 500gr", "Botella 1L", "Caja 12 unidades"
+    peso_neto DECIMAL(10,3), -- En kg
+    peso_bruto DECIMAL(10,3), -- En kg
+    volumen DECIMAL(10,3), -- En litros
+    dimensiones VARCHAR(100), -- "30x20x10 cm"
+    
+    -- CANTIDADES Y UNIDADES
+    cantidad DECIMAL(10,3) NOT NULL,
+    unidades_por_caja DECIMAL(8,2), -- Para conversiones
+    factor_conversion DECIMAL(10,4) DEFAULT 1, -- Para convertir a unidad base
+    
+    -- PRECIOS DETALLADOS
+    precio_unitario_sin_iva DECIMAL(10,4),
+    precio_unitario_con_iva DECIMAL(10,4), 
+    precio_total_linea_sin_iva DECIMAL(12,2),
+    precio_total_linea_con_iva DECIMAL(12,2),
+    
+    -- PRECIOS NORMALIZADOS (para comparación)
+    precio_por_kg DECIMAL(10,4), -- €/kg si aplica
+    precio_por_litro DECIMAL(10,4), -- €/litro si aplica
+    precio_por_unidad_base DECIMAL(10,4), -- €/unidad base
+    
+    -- IVA Y DESCUENTOS POR LÍNEA
+    tipo_iva DECIMAL(5,2), -- 4.00, 10.00, 21.00
+    cuota_iva_linea DECIMAL(12,2),
+    descuento_porcentaje DECIMAL(5,2) DEFAULT 0,
+    descuento_importe DECIMAL(10,2) DEFAULT 0,
+    motivo_descuento VARCHAR(100), -- "Rappel", "Descuento comercial"
+    
+    -- INFORMACIÓN ADICIONAL
+    lote VARCHAR(50),
+    fecha_caducidad DATE,
+    fecha_consumo_preferente DATE,
+    temperatura_conservacion VARCHAR(50), -- "Refrigerado 0-4°C", "Congelado -18°C"
+    instrucciones_conservacion TEXT,
+    
+    -- COORDENADAS PARA OVERLAYS
+    coordenadas_linea JSONB, -- Posición de esta línea en el PDF
+    
+    -- CALIDAD DE EXTRACCIÓN
+    confianza_linea DECIMAL(3,2) DEFAULT 0,
+    campos_inciertos TEXT[], -- Campos con baja confianza en esta línea
+    requiere_revision_linea BOOLEAN DEFAULT FALSE,
+    
+    -- MATCHING Y NORMALIZACIÓN
+    embedding_descripcion VECTOR(1536), -- Para matching inteligente
+    productos_similares_ids UUID[], -- IDs de productos similares ya procesados
+    confianza_normalizacion DECIMAL(3,2), -- Qué tan seguros estamos de la normalización
+    
+    -- AUDITORÍA
+    fecha_extraccion TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    fecha_normalizacion TIMESTAMP WITH TIME ZONE,
+    usuario_normalizacion UUID REFERENCES usuarios(id),
+    
+    CONSTRAINT productos_cantidad_positiva CHECK (cantidad > 0),
+    CONSTRAINT productos_precios_coherentes CHECK (
+        (precio_unitario_sin_iva IS NULL OR precio_unitario_sin_iva >= 0) AND
+        (precio_total_linea_sin_iva IS NULL OR precio_total_linea_sin_iva >= 0)
+    ),
+    CONSTRAINT productos_confianza_valida CHECK (confianza_linea >= 0 AND confianza_linea <= 1),
+    CONSTRAINT productos_iva_valido CHECK (tipo_iva IS NULL OR tipo_iva IN (0, 4, 10, 21))
+);
+
+-- 📋 DATOS EXTRAÍDOS DE ALBARANES (CON RESTAURANTE_ID)
+CREATE TABLE IF NOT EXISTS datos_extraidos_albaranes (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    documento_id UUID NOT NULL REFERENCES documentos(id) ON DELETE CASCADE,
+    restaurante_id UUID NOT NULL REFERENCES restaurantes(id) ON DELETE CASCADE,
+    
+    -- DATOS DEL PROVEEDOR
+    proveedor_nombre VARCHAR(255),
+    proveedor_cif VARCHAR(12),
+    confianza_proveedor DECIMAL(3,2) DEFAULT 0,
+    
+    -- DATOS DEL ALBARÁN
+    numero_albaran VARCHAR(100) NOT NULL,
+    fecha_albaran DATE,
+    hora_entrega TIME,
+    numero_pedido_relacionado VARCHAR(50),
+    numero_factura_relacionada VARCHAR(50),
+    confianza_datos_albaran DECIMAL(3,2) DEFAULT 0,
+    
+    -- DATOS DE ENTREGA
+    direccion_entrega TEXT,
+    fecha_entrega DATE,
+    hora_entrega_real TIME,
+    transportista VARCHAR(255),
+    matricula_vehiculo VARCHAR(15),
+    nombre_conductor VARCHAR(100),
+    telefono_conductor VARCHAR(20),
+    
+    -- ESTADO DE LA ENTREGA
+    estado_entrega VARCHAR(20) DEFAULT 'entregado' CHECK (estado_entrega IN ('entregado', 'pendiente', 'parcial', 'rechazado')),
+    observaciones_entrega TEXT,
+    incidencias TEXT,
+    
+    -- RECEPCIÓN
+    recibido_por VARCHAR(100),
+    firma_digital TEXT, -- Base64 de la firma si existe
+    fecha_recepcion TIMESTAMP WITH TIME ZONE,
+    conformidad BOOLEAN DEFAULT TRUE,
+    observaciones_recepcion TEXT,
+    
+    -- TOTALES (si el albarán incluye precios)
+    incluye_precios BOOLEAN DEFAULT FALSE,
+    total_albaran DECIMAL(12,2),
+    
+    -- CALIDAD Y VALIDACIÓN
+    confianza_global DECIMAL(3,2) DEFAULT 0,
+    requiere_revision BOOLEAN DEFAULT FALSE,
+    
+    -- AUDITORÍA
+    fecha_extraccion TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    fecha_ultima_modificacion TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    usuario_extraccion UUID REFERENCES usuarios(id)
+);
+
+-- 🗂️ COLA DE PROCESAMIENTO (CON RESTAURANTE_ID)
+CREATE TABLE IF NOT EXISTS cola_procesamiento (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    documento_id UUID NOT NULL REFERENCES documentos(id) ON DELETE CASCADE,
+    restaurante_id UUID NOT NULL REFERENCES restaurantes(id) ON DELETE CASCADE,
+    
+    -- CONFIGURACIÓN DE COLA
+    prioridad INTEGER NOT NULL DEFAULT 3, -- 1=facturas, 2=albaranes, 3=tickets, 4=extractos, 5=otros
+    estado VARCHAR(20) NOT NULL DEFAULT 'pendiente' CHECK (estado IN ('pendiente', 'procesando', 'completado', 'error', 'cancelado', 'pausado')),
+    
+    -- GESTIÓN DE REINTENTOS
+    intentos INTEGER DEFAULT 0,
+    max_intentos INTEGER DEFAULT 3,
+    ultimo_error TEXT,
+    codigo_error VARCHAR(50),
+    
+    -- TIMING Y PERFORMANCE
+    fecha_programada TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    fecha_inicio_procesamiento TIMESTAMP WITH TIME ZONE,
+    fecha_finalizacion TIMESTAMP WITH TIME ZONE,
+    tiempo_estimado_ms INTEGER,
+    tiempo_real_ms INTEGER,
+    
+    -- METADATOS DE PROCESAMIENTO
+    tipo_documento VARCHAR(20),
+    tamaño_archivo BIGINT,
+    numero_paginas INTEGER DEFAULT 1,
+    servidor_procesamiento VARCHAR(100), -- Para balanceamiento de carga
+    
+    -- RECURSOS CONSUMIDOS
+    tokens_ocr_utilizados INTEGER DEFAULT 0,
+    tokens_ner_utilizados INTEGER DEFAULT 0,
+    costo_procesamiento_usd DECIMAL(8,4) DEFAULT 0,
+    
+    -- CONFIGURACIÓN ESPECÍFICA
+    configuracion_procesamiento JSONB DEFAULT '{}', -- Parámetros específicos por restaurante
+    
+    CONSTRAINT cola_prioridad_valida CHECK (prioridad >= 1 AND prioridad <= 5),
+    CONSTRAINT cola_intentos_validos CHECK (intentos >= 0 AND intentos <= max_intentos)
+);
+
+-- 🧠 EMBEDDINGS PARA ML (CON RESTAURANTE_ID)
+-- Requiere extensión pgvector: CREATE EXTENSION IF NOT EXISTS vector;
+CREATE TABLE IF NOT EXISTS embeddings_documentos (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    documento_id UUID NOT NULL REFERENCES documentos(id) ON DELETE CASCADE,
+    restaurante_id UUID NOT NULL REFERENCES restaurantes(id) ON DELETE CASCADE,
+    
+    -- EMBEDDINGS VECTORIALES (1536 dimensiones para OpenAI)
+    embedding_proveedor VECTOR(1536),
+    embedding_productos VECTOR(1536), 
+    embedding_contenido_general VECTOR(1536),
+    
+    -- EMBEDDINGS ESPECÍFICOS POR TIPO
+    embedding_descripcion_factura VECTOR(1536), -- Para matching facturas similares
+    embedding_productos_categoria VECTOR(1536), -- Para clasificación de productos
+    
+    -- METADATOS DE EMBEDDING
+    modelo_embedding VARCHAR(50) NOT NULL DEFAULT 'text-embedding-3-small',
+    version_modelo VARCHAR(20) DEFAULT '1.0',
+    fecha_creacion TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    fecha_actualizacion TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    
+    -- COSTOS Y TOKENS
+    tokens_utilizados INTEGER,
+    costo_generacion_usd DECIMAL(8,4),
+    
+    -- ÍNDICES DE SIMILITUD PRE-CALCULADOS (para optimización)
+    similitudes_proveedores JSONB DEFAULT '{}', -- Top 10 proveedores similares dentro del restaurante
+    similitudes_documentos JSONB DEFAULT '{}', -- Top 10 documentos similares dentro del restaurante
+    similitudes_globales JSONB DEFAULT '{}', -- Similitudes cross-restaurante (solo para admin)
+    
+    -- MÉTRICAS DE CALIDAD
+    calidad_embedding DECIMAL(3,2), -- Qué tan representativo es el embedding
+    ultimo_uso TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 🔔 ALERTAS GENERADAS (CON RESTAURANTE_ID)
+CREATE TABLE IF NOT EXISTS alertas (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    documento_id UUID REFERENCES documentos(id) ON DELETE CASCADE,
+    restaurante_id UUID NOT NULL REFERENCES restaurantes(id) ON DELETE CASCADE,
+    
+    -- CLASIFICACIÓN DE LA ALERTA
+    tipo_alerta VARCHAR(50) NOT NULL, -- 'duplicate_detected', 'price_anomaly', 'math_error', 'low_confidence'
+    categoria VARCHAR(20) DEFAULT 'operacional' CHECK (categoria IN ('operacional', 'financiera', 'calidad', 'seguridad')),
+    prioridad VARCHAR(10) NOT NULL DEFAULT 'media' CHECK (prioridad IN ('baja', 'media', 'alta', 'critica')),
+    
+    -- CONTENIDO DE LA ALERTA
+    titulo VARCHAR(255) NOT NULL,
+    mensaje TEXT NOT NULL,
+    descripcion_detallada TEXT,
+    contexto JSONB DEFAULT '{}', -- Datos específicos del tipo de alerta
+    
+    -- IMPACTO Y CONSECUENCIAS
+    impacto_estimado VARCHAR(20) DEFAULT 'bajo' CHECK (impacto_estimado IN ('bajo', 'medio', 'alto')),
+    importe_afectado DECIMAL(12,2), -- Si la alerta afecta a un importe específico
+    proveedores_afectados TEXT[],
+    productos_afectados TEXT[],
+    
+    -- ACCIONES Y RESOLUCIÓN
+    acciones_sugeridas TEXT[],
+    accion_automatica VARCHAR(100), -- Acción que tomó el sistema automáticamente
+    requiere_accion_humana BOOLEAN DEFAULT TRUE,
+    
+    -- ESTADO Y SEGUIMIENTO
+    estado VARCHAR(20) DEFAULT 'activa' CHECK (estado IN ('activa', 'en_revision', 'resuelta', 'descartada', 'escalada')),
+    asignada_a UUID REFERENCES usuarios(id),
+    fecha_creacion TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    fecha_asignacion TIMESTAMP WITH TIME ZONE,
+    fecha_resolucion TIMESTAMP WITH TIME ZONE,
+    tiempo_resolucion_minutos INTEGER,
+    
+    -- RESOLUCIÓN Y FEEDBACK
+    resolucion TEXT,
+    usuario_resolucion UUID REFERENCES usuarios(id),
+    valoracion_resolucion INTEGER CHECK (valoracion_resolucion >= 1 AND valoracion_resolucion <= 5),
+    
+    -- ESCALADO Y NOTIFICACIONES
+    nivel_escalado INTEGER DEFAULT 0, -- Cuántas veces se ha escalado
+    canales_enviados TEXT[] DEFAULT '{}', -- ['email', 'sms', 'dashboard', 'slack']
+    fecha_ultimo_envio TIMESTAMP WITH TIME ZONE,
+    usuarios_notificados UUID[],
+    
+    -- MÉTRICAS Y APRENDIZAJE
+    precision_alerta DECIMAL(3,2), -- ¿Era realmente importante esta alerta?
+    feedback_usuario JSONB DEFAULT '{}', -- Feedback para mejorar futuras alertas
+    alerta_recurrente BOOLEAN DEFAULT FALSE,
+    alertas_relacionadas UUID[],
+    
+    CONSTRAINT alertas_fechas_logicas CHECK (
+        fecha_resolucion IS NULL OR fecha_resolucion >= fecha_creacion
+    ),
+    CONSTRAINT alertas_escalado_valido CHECK (nivel_escalado >= 0)
+);
+
+-- 📈 HISTORIAL DE CORRECCIONES PARA ML (CON RESTAURANTE_ID)
+CREATE TABLE IF NOT EXISTS historial_correcciones (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    documento_id UUID NOT NULL REFERENCES documentos(id) ON DELETE CASCADE,
+    restaurante_id UUID NOT NULL REFERENCES restaurantes(id) ON DELETE CASCADE,
+    
+    -- IDENTIFICACIÓN DEL CAMPO CORREGIDO
+    campo_corregido VARCHAR(100) NOT NULL,
+    tabla_origen VARCHAR(50) NOT NULL, -- 'datos_extraidos_facturas', 'productos_extraidos', etc.
+    registro_id UUID, -- ID específico del registro corregido
+    
+    -- VALORES ANTES Y DESPUÉS
+    valor_ia_original TEXT,
+    valor_corregido TEXT NOT NULL,
+    confianza_ia_original DECIMAL(3,2),
+    
+    -- ANÁLISIS DEL ERROR
+    tipo_error VARCHAR(50) NOT NULL, -- 'error_ocr', 'error_formato', 'error_clasificacion', 'campo_no_detectado'
+    subtipo_error VARCHAR(50), -- Más específico: 'numero_mal_leido', 'fecha_formato_incorrecto'
+    gravedad_error VARCHAR(10) NOT NULL CHECK (gravedad_error IN ('baja', 'media', 'alta')),
+    afecta_calculos BOOLEAN DEFAULT FALSE, -- ¿Este error afectaba cálculos matemáticos?
+    
+    -- CONTEXTO DE LA CORRECCIÓN
+    tiempo_correccion_ms INTEGER,
+    metodo_correccion VARCHAR(30), -- 'typing', 'selection', 'autocomplete', 'voice', 'suggestion'
+    coordenadas_campo JSONB, -- Posición exacta en el documento
+    texto_contexto TEXT, -- Texto alrededor del campo para entender el contexto
+    
+    -- USUARIO Y SESIÓN
+    usuario_correccion UUID NOT NULL REFERENCES usuarios(id),
+    sesion_id VARCHAR(100), -- Para agrupar correcciones de la misma sesión
+    dispositivo VARCHAR(50), -- 'desktop', 'tablet', 'mobile'
+    navegador VARCHAR(50),
+    
+    -- TIMING Y ACTIVIDAD
+    fecha_correccion TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    momento_en_sesion INTEGER, -- ¿Fue la primera, segunda, tercera corrección?
+    tiempo_desde_carga_ms INTEGER, -- Tiempo desde que se cargó el documento
+    
+    -- VALIDACIÓN Y FEEDBACK
+    confirmacion_usuario BOOLEAN DEFAULT TRUE, -- ¿El usuario confirmó que la corrección es correcta?
+    motivo_correccion TEXT, -- Explicación opcional del usuario
+    dificultad_percibida INTEGER CHECK (dificultad_percibida >= 1 AND dificultad_percibida <= 5),
+    
+    -- APRENDIZAJE AUTOMÁTICO
+    utilizada_para_entrenamiento BOOLEAN DEFAULT FALSE,
+    peso_para_ml DECIMAL(3,2) DEFAULT 1.0, -- Qué tan importante es esta corrección
+    modelo_version_cuando_error VARCHAR(50), -- Versión del modelo que cometió el error
+    
+    -- MÉTRICAS DE MEJORA
+    error_repetido BOOLEAN DEFAULT FALSE, -- ¿Se había cometido este error antes?
+    mejora_confianza_posterior DECIMAL(3,2), -- Mejora en confianza tras aplicar aprendizaje
+    
+    CONSTRAINT correcciones_confianza_valida CHECK (
+        confianza_ia_original IS NULL OR (confianza_ia_original >= 0 AND confianza_ia_original <= 1)
+    )
+);
+
+-- 📊 MÉTRICAS DE PERFORMANCE POR RESTAURANTE
+CREATE TABLE IF NOT EXISTS metricas_procesamiento (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    restaurante_id UUID NOT NULL REFERENCES restaurantes(id) ON DELETE CASCADE,
+    fecha DATE NOT NULL DEFAULT CURRENT_DATE,
+    
+    -- VOLÚMENES DE PROCESAMIENTO
+    documentos_procesados INTEGER DEFAULT 0,
+    documentos_facturas INTEGER DEFAULT 0,
+    documentos_albaranes INTEGER DEFAULT 0,
+    documentos_tickets INTEGER DEFAULT 0,
+    documentos_con_error INTEGER DEFAULT 0,
+    
+    -- CALIDAD DE EXTRACCIÓN
+    precision_global DECIMAL(5,4), -- Más precisión para tracking
+    precision_proveedores DECIMAL(5,4),
+    precision_importes DECIMAL(5,4),
+    precision_productos DECIMAL(5,4),
+    precision_fechas DECIMAL(5,4),
+    
+    -- PERFORMANCE TEMPORAL
+    tiempo_promedio_procesamiento_ms INTEGER,
+    tiempo_promedio_ocr_ms INTEGER,
+    tiempo_promedio_ner_ms INTEGER,
+    tiempo_promedio_validacion_ms INTEGER,
+    
+    -- COSTOS POR RESTAURANTE
+    tokens_openai_consumidos INTEGER DEFAULT 0,
+    costo_openai_usd DECIMAL(10,6) DEFAULT 0,
+    tokens_google_consumidos INTEGER DEFAULT 0,
+    costo_google_usd DECIMAL(10,6) DEFAULT 0,
+    costo_total_usd DECIMAL(10,6) DEFAULT 0,
+    
+    -- ERRORES Y MEJORAS
+    reintentos_totales INTEGER DEFAULT 0,
+    tipos_error_frecuentes JSONB DEFAULT '{}',
+    mejoras_precision_ml DECIMAL(5,4) DEFAULT 0, -- Mejora respecto al mes anterior
+    
+    -- ACTIVIDAD DE USUARIOS
+    usuarios_activos INTEGER DEFAULT 0,
+    correcciones_manuales INTEGER DEFAULT 0,
+    tiempo_promedio_correccion_ms INTEGER,
+    
+    -- ALERTAS Y NOTIFICACIONES
+    alertas_generadas INTEGER DEFAULT 0,
+    alertas_criticas INTEGER DEFAULT 0,
+    alertas_resueltas INTEGER DEFAULT 0,
+    tiempo_promedio_resolucion_alertas_horas DECIMAL(8,2),
+    
+    -- STORAGE Y RECURSOS
+    storage_utilizado_gb DECIMAL(8,3) DEFAULT 0,
+    documentos_archivados INTEGER DEFAULT 0,
+    
+    CONSTRAINT metricas_fecha_restaurante_unica UNIQUE (restaurante_id, fecha),
+    CONSTRAINT metricas_valores_positivos CHECK (
+        documentos_procesados >= 0 AND
+        costo_total_usd >= 0 AND
+        storage_utilizado_gb >= 0
+    )
+);
+
+-- 🔗 RELACIONES ENTRE DOCUMENTOS (COTEJACIÓN)
+CREATE TABLE IF NOT EXISTS relaciones_documentos (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    restaurante_id UUID NOT NULL REFERENCES restaurantes(id) ON DELETE CASCADE,
+    
+    -- DOCUMENTOS RELACIONADOS
+    documento_origen_id UUID NOT NULL REFERENCES documentos(id) ON DELETE CASCADE,
+    documento_destino_id UUID NOT NULL REFERENCES documentos(id) ON DELETE CASCADE,
+    
+    -- TIPO DE RELACIÓN
+    tipo_relacion VARCHAR(30) NOT NULL CHECK (tipo_relacion IN (
+        'factura_albaran', 'albaran_factura', 'factura_rectificativa', 
+        'duplicado_exacto', 'duplicado_probable', 'documento_corregido',
+        'pago_factura', 'nota_credito', 'nota_debito'
+    )),
+    
+    -- CALIDAD DE LA RELACIÓN
+    confianza_relacion DECIMAL(3,2) NOT NULL,
+    metodo_matching VARCHAR(50) NOT NULL, -- 'numero_referencia', 'embedding_similarity', 'manual'
+    
+    -- ANÁLISIS DE DISCREPANCIAS
+    discrepancias_detectadas JSONB DEFAULT '[]',
+    diferencias_importantes BOOLEAN DEFAULT FALSE,
+    requiere_revision_manual BOOLEAN DEFAULT FALSE,
+    
+    -- ESTADO Y VALIDACIÓN
+    estado VARCHAR(20) DEFAULT 'detectada' CHECK (estado IN ('detectada', 'validada', 'rechazada', 'pendiente_revision')),
+    validada_por UUID REFERENCES usuarios(id),
+    fecha_validacion TIMESTAMP WITH TIME ZONE,
+    
+    -- AUDITORÍA
+    fecha_deteccion TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    usuario_deteccion UUID REFERENCES usuarios(id), -- NULL si fue automático
+    algoritmo_version VARCHAR(20),
+    
+    -- OBSERVACIONES
+    notas TEXT,
+    motivo_rechazo TEXT,
+    
+    CONSTRAINT relaciones_documentos_diferentes CHECK (documento_origen_id != documento_destino_id),
+    CONSTRAINT relaciones_confianza_valida CHECK (confianza_relacion >= 0 AND confianza_relacion <= 1)
+);
+
+-- 💰 CONCILIACIÓN BANCARIA (CON RESTAURANTE_ID)
+CREATE TABLE IF NOT EXISTS movimientos_bancarios (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    restaurante_id UUID NOT NULL REFERENCES restaurantes(id) ON DELETE CASCADE,
+    
+    -- IDENTIFICACIÓN DEL MOVIMIENTO
+    numero_cuenta VARCHAR(34), -- IBAN
+    entidad_bancaria VARCHAR(100),
+    numero_operacion VARCHAR(50),
+    referencia_bancaria VARCHAR(100),
+    
+    -- DATOS DEL MOVIMIENTO
+    fecha_operacion DATE NOT NULL,
+    fecha_valor DATE,
+    importe DECIMAL(12,2) NOT NULL,
+    tipo_movimiento VARCHAR(20) CHECK (tipo_movimiento IN ('ingreso', 'gasto', 'transferencia')),
+    
+    -- DESCRIPCIÓN Y CONCEPTO
+    concepto TEXT NOT NULL,
+    concepto_normalizado VARCHAR(255), -- Versión limpia
+    codigo_transaccion VARCHAR(10), -- Código bancario del tipo de operación
+    
+    -- CONCILIACIÓN CON FACTURAS
+    factura_relacionada_id UUID REFERENCES datos_extraidos_facturas(id),
+    confianza_conciliacion DECIMAL(3,2),
+    metodo_conciliacion VARCHAR(50), -- 'importe_exacto', 'referencia_factura', 'embedding_similarity'
+    
+    -- CLASIFICACIÓN
+    categoria VARCHAR(50), -- 'pago_proveedor', 'ingreso_cliente', 'gasto_operativo'
+    subcategoria VARCHAR(50),
+    proveedor_detectado VARCHAR(255),
+    
+    -- ESTADO DE CONCILIACIÓN
+    estado_conciliacion VARCHAR(20) DEFAULT 'pendiente' CHECK (estado_conciliacion IN (
+        'pendiente', 'conciliado_automatico', 'conciliado_manual', 'no_conciliable', 'revision'
+    )),
+    
+    -- AUDITORÍA
+    fecha_importacion TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    usuario_importacion UUID REFERENCES usuarios(id),
+    fecha_conciliacion TIMESTAMP WITH TIME ZONE,
+    usuario_conciliacion UUID REFERENCES usuarios(id),
+    
+    -- OBSERVACIONES
+    observaciones TEXT,
+    tags TEXT[] DEFAULT '{}'
+);
+
+-- 🗄️ CONFIGURACIÓN AVANZADA POR RESTAURANTE
+CREATE TABLE IF NOT EXISTS configuracion_restaurantes (
+    restaurante_id UUID PRIMARY KEY REFERENCES restaurantes(id) ON DELETE CASCADE,
+    
+    -- CONFIGURACIÓN DE PROCESAMIENTO
+    modelo_ocr_preferido VARCHAR(50) DEFAULT 'google_document_ai',
+    modelo_ner_preferido VARCHAR(50) DEFAULT 'spacy_es_core_news_lg',
+    umbral_confianza_general DECIMAL(3,2) DEFAULT 0.7,
+    umbrales_por_campo JSONB DEFAULT '{
+        "proveedor": 0.8,
+        "cif": 0.9,
+        "fecha": 0.85,
+        "importe": 0.95,
+        "productos": 0.75
+    }',
+    
+    -- CONFIGURACIÓN DE ALERTAS
+    alertas_activadas BOOLEAN DEFAULT TRUE,
+    canales_alertas TEXT[] DEFAULT '{"email", "dashboard"}',
+    emails_alertas TEXT[] DEFAULT '{}',
+    telefono_alertas VARCHAR(20),
+    horario_alertas_inicio TIME DEFAULT '08:00',
+    horario_alertas_fin TIME DEFAULT '20:00',
+    
+    -- CONFIGURACIÓN DE PROVEEDORES
+    proveedores_confiables JSONB DEFAULT '[]', -- Lista de CIFs de proveedores de confianza
+    proveedores_bloqueados JSONB DEFAULT '[]', -- Lista de CIFs bloqueados
+    umbrales_precio_por_categoria JSONB DEFAULT '{}', -- Umbrales de alerta por categoría de producto
+    
+    -- CONFIGURACIÓN DE PRODUCTOS
+    categorias_personalizadas JSONB DEFAULT '["Carnes", "Pescados", "Verduras", "Lácteos", "Bebidas", "Otros"]',
+    productos_favoritos JSONB DEFAULT '[]', -- Productos que compra frecuentemente
+    alertas_precio_productos BOOLEAN DEFAULT TRUE,
+    porcentaje_alerta_precio DECIMAL(5,2) DEFAULT 20.00, -- Alertar si precio sube >20%
+    
+    -- CONFIGURACIÓN FISCAL
+    regimen_fiscal VARCHAR(30) DEFAULT 'general' CHECK (regimen_fiscal IN ('general', 'simplificado', 'recargo_equivalencia')),
+    tipos_iva_habituales DECIMAL(5,2)[] DEFAULT '{21.00, 10.00, 4.00}',
+    retencion_irpf_habitual DECIMAL(5,2) DEFAULT 0,
+    
+    -- CONFIGURACIÓN DE BACKUP Y ARCHIVADO
+    auto_archivar_documentos BOOLEAN DEFAULT FALSE,
+    dias_antes_archivar INTEGER DEFAULT 365,
+    backup_automatico BOOLEAN DEFAULT TRUE,
+    frecuencia_backup VARCHAR(20) DEFAULT 'diario',
+    
+    -- CONFIGURACIÓN DE INTEGRACIONES
+    integracion_contabilidad JSONB DEFAULT '{}', -- Configuración para software contable
+    webhook_url VARCHAR(500), -- URL para notificaciones webhooks
+    api_keys_externas JSONB DEFAULT '{}', -- Claves para APIs externas (cifradas)
+    
+    -- FECHAS DE CONFIGURACIÓN
+    fecha_creacion TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    fecha_ultima_modificacion TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    usuario_ultima_modificacion UUID REFERENCES usuarios(id)
+);
+
+-- 🔍 ÍNDICES OPTIMIZADOS PARA MULTI-TENANT
+
+-- Índices principales para documentos
+CREATE INDEX IF NOT EXISTS idx_documentos_restaurante_estado ON documentos(restaurante_id, estado);
+CREATE INDEX IF NOT EXISTS idx_documentos_restaurante_tipo ON documentos(restaurante_id, tipo_documento);
+CREATE INDEX IF NOT EXISTS idx_documentos_restaurante_fecha ON documentos(restaurante_id, fecha_subida);
+CREATE INDEX IF NOT EXISTS idx_documentos_checksum ON documentos(checksum_archivo); -- Para duplicados
+
+-- Índices para facturas
+CREATE INDEX IF NOT EXISTS idx_facturas_restaurante ON datos_extraidos_facturas(restaurante_id);
+CREATE INDEX IF NOT EXISTS idx_facturas_restaurante_proveedor ON datos_extraidos_facturas(restaurante_id, proveedor_nombre);
+CREATE INDEX IF NOT EXISTS idx_facturas_restaurante_fecha ON datos_extraidos_facturas(restaurante_id, fecha_factura);
+CREATE INDEX IF NOT EXISTS idx_facturas_restaurante_total ON datos_extraidos_facturas(restaurante_id, total_factura);
+CREATE INDEX IF NOT EXISTS idx_facturas_numero ON datos_extraidos_facturas(numero_factura);
+CREATE INDEX IF NOT EXISTS idx_facturas_cif ON datos_extraidos_facturas(proveedor_cif);
+
+-- Índices para productos
+CREATE INDEX IF NOT EXISTS idx_productos_restaurante ON productos_extraidos(restaurante_id);
+CREATE INDEX IF NOT EXISTS idx_productos_restaurante_categoria ON productos_extraidos(restaurante_id, categoria_principal);
+CREATE INDEX IF NOT EXISTS idx_productos_descripcion ON productos_extraidos(descripcion_normalizada);
+CREATE INDEX IF NOT EXISTS idx_productos_codigo ON productos_extraidos(codigo_producto);
+CREATE INDEX IF NOT EXISTS idx_productos_precio_kg ON productos_extraidos(precio_por_kg) WHERE precio_por_kg IS NOT NULL;
+
+-- Índices para albaranes
+CREATE INDEX IF NOT EXISTS idx_albaranes_restaurante ON datos_extraidos_albaranes(restaurante_id);
+CREATE INDEX IF NOT EXISTS idx_albaranes_numero ON datos_extraidos_albaranes(numero_albaran);
+CREATE INDEX IF NOT EXISTS idx_albaranes_fecha ON datos_extraidos_albaranes(fecha_albaran);
+
+-- Índices para cola de procesamiento
+CREATE INDEX IF NOT EXISTS idx_cola_restaurante_estado ON cola_procesamiento(restaurante_id, estado, prioridad);
+CREATE INDEX IF NOT EXISTS idx_cola_fecha_programada ON cola_procesamiento(fecha_programada) WHERE estado = 'pendiente';
+
+-- Índices para alertas
+CREATE INDEX IF NOT EXISTS idx_alertas_restaurante_estado ON alertas(restaurante_id, estado, prioridad);
+CREATE INDEX IF NOT EXISTS idx_alertas_tipo_fecha ON alertas(tipo_alerta, fecha_creacion);
+CREATE INDEX IF NOT EXISTS idx_alertas_asignada ON alertas(asignada_a) WHERE asignada_a IS NOT NULL;
+
+-- Índices para embeddings (requiere pgvector instalado)
+CREATE INDEX IF NOT EXISTS idx_embeddings_restaurante ON embeddings_documentos(restaurante_id);
+-- CREATE INDEX IF NOT EXISTS idx_embeddings_proveedor ON embeddings_documentos USING ivfflat (embedding_proveedor vector_cosine_ops);
+-- CREATE INDEX IF NOT EXISTS idx_embeddings_productos ON embeddings_documentos USING ivfflat (embedding_productos vector_cosine_ops);
+
+-- Índices para métricas
+CREATE INDEX IF NOT EXISTS idx_metricas_restaurante_fecha ON metricas_procesamiento(restaurante_id, fecha);
+
+-- Índices para relaciones
+CREATE INDEX IF NOT EXISTS idx_relaciones_restaurante ON relaciones_documentos(restaurante_id);
+CREATE INDEX IF NOT EXISTS idx_relaciones_origen ON relaciones_documentos(documento_origen_id);
+CREATE INDEX IF NOT EXISTS idx_relaciones_destino ON relaciones_documentos(documento_destino_id);
+
+-- Índices para movimientos bancarios
+CREATE INDEX IF NOT EXISTS idx_movimientos_restaurante ON movimientos_bancarios(restaurante_id);
+CREATE INDEX IF NOT EXISTS idx_movimientos_fecha ON movimientos_bancarios(fecha_operacion);
+CREATE INDEX IF NOT EXISTS idx_movimientos_conciliacion ON movimientos_bancarios(estado_conciliacion);
+
+-- 🔐 ROW LEVEL SECURITY (RLS) MULTI-TENANT
+
+-- Habilitar RLS en todas las tablas principales
+ALTER TABLE restaurantes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE usuarios ENABLE ROW LEVEL SECURITY;
+ALTER TABLE documentos ENABLE ROW LEVEL SECURITY;
+ALTER TABLE datos_extraidos_facturas ENABLE ROW LEVEL SECURITY;
+ALTER TABLE productos_extraidos ENABLE ROW LEVEL SECURITY;
+ALTER TABLE datos_extraidos_albaranes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE cola_procesamiento ENABLE ROW LEVEL SECURITY;
+ALTER TABLE embeddings_documentos ENABLE ROW LEVEL SECURITY;
+ALTER TABLE alertas ENABLE ROW LEVEL SECURITY;
+ALTER TABLE historial_correcciones ENABLE ROW LEVEL SECURITY;
+ALTER TABLE metricas_procesamiento ENABLE ROW LEVEL SECURITY;
+ALTER TABLE relaciones_documentos ENABLE ROW LEVEL SECURITY;
+ALTER TABLE movimientos_bancarios ENABLE ROW LEVEL SECURITY;
+ALTER TABLE configuracion_restaurantes ENABLE ROW LEVEL SECURITY;
+
+-- 🔑 FUNCIONES AUXILIARES PARA RLS
+
+-- Función para obtener el restaurante_id del usuario actual
+CREATE OR REPLACE FUNCTION obtener_restaurante_usuario_actual()
+RETURNS UUID AS 
+BEGIN
+    -- En producción, esto se obtendría del JWT del usuario autenticado
+    -- Por ahora, devolvemos el restaurante_id desde el JWT custom claims
+    RETURN COALESCE(
+        (auth.jwt() ->> 'restaurante_id')::UUID,
+        (SELECT restaurante_id FROM usuarios WHERE id = auth.uid() LIMIT 1)
+    );
+END;
+$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Función para verificar si el usuario es admin global
+CREATE OR REPLACE FUNCTION es_admin_global()
+RETURNS BOOLEAN AS $
+BEGIN
+    RETURN COALESCE(
+        (auth.jwt() ->> 'rol') = 'admin_global',
+        (SELECT rol FROM usuarios WHERE id = auth.uid() AND rol = 'admin_global' LIMIT 1) IS NOT NULL
+    );
+END;
+$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- 🛡️ POLÍTICAS RLS ESPECÍFICAS
+
+-- Política para restaurantes: cada usuario solo ve su restaurante
+CREATE POLICY "Usuarios ven su restaurante" ON restaurantes
+    FOR ALL USING (
+        es_admin_global() OR 
+        id = obtener_restaurante_usuario_actual()
+    );
+
+-- Política para usuarios: cada restaurante solo ve sus usuarios
+CREATE POLICY "Restaurante ve sus usuarios" ON usuarios
+    FOR ALL USING (
+        es_admin_global() OR 
+        restaurante_id = obtener_restaurante_usuario_actual()
+    );
+
+-- Política para documentos: aislamiento total por restaurante
+CREATE POLICY "Documentos por restaurante" ON documentos
+    FOR ALL USING (
+        es_admin_global() OR 
+        restaurante_id = obtener_restaurante_usuario_actual()
+    );
+
+-- Política para facturas
+CREATE POLICY "Facturas por restaurante" ON datos_extraidos_facturas
+    FOR ALL USING (
+        es_admin_global() OR 
+        restaurante_id = obtener_restaurante_usuario_actual()
+    );
+
+-- Política para productos
+CREATE POLICY "Productos por restaurante" ON productos_extraidos
+    FOR ALL USING (
+        es_admin_global() OR 
+        restaurante_id = obtener_restaurante_usuario_actual()
+    );
+
+-- Política para albaranes
+CREATE POLICY "Albaranes por restaurante" ON datos_extraidos_albaranes
+    FOR ALL USING (
+        es_admin_global() OR 
+        restaurante_id = obtener_restaurante_usuario_actual()
+    );
+
+-- Política para alertas
+CREATE POLICY "Alertas por restaurante" ON alertas
+    FOR ALL USING (
+        es_admin_global() OR 
+        restaurante_id = obtener_restaurante_usuario_actual()
+    );
+
+-- Política para métricas (solo admin del restaurante o admin global)
+CREATE POLICY "Métricas por restaurante" ON metricas_procesamiento
+    FOR ALL USING (
+        es_admin_global() OR 
+        (restaurante_id = obtener_restaurante_usuario_actual() AND 
+         (SELECT rol FROM usuarios WHERE id = auth.uid()) IN ('admin_restaurante', 'admin_global'))
+    );
+
+-- 🔧 TRIGGERS Y FUNCIONES AUTOMATIZADAS
+
+-- Función para actualizar fecha de última modificación
+CREATE OR REPLACE FUNCTION actualizar_fecha_modificacion()
+RETURNS TRIGGER AS $
+BEGIN
+    NEW.fecha_ultima_modificacion := NOW();
+    NEW.usuario_modificacion := auth.uid();
+    RETURN NEW;
+END;
+$ LANGUAGE plpgsql;
+
+-- Función para calcular confianza global automáticamente
+CREATE OR REPLACE FUNCTION calcular_confianza_global_facturas()
+RETURNS TRIGGER AS $
+BEGIN
+    -- Calcular promedio ponderado de confianzas
+    NEW.confianza_global := COALESCE((
+        COALESCE(NEW.confianza_proveedor, 0) * 0.25 +
+        COALESCE(NEW.confianza_datos_fiscales, 0) * 0.35 +
+        COALESCE(NEW.confianza_importes, 0) * 0.40
+    ), 0);
+    
+    -- Marcar para revisión si la confianza es baja
+    NEW.requiere_revision := (NEW.confianza_global < 0.7);
+    
+    -- Actualizar campos de auditoría
+    IF TG_OP = 'INSERT' THEN
+        NEW.usuario_extraccion := auth.uid();
+    ELSE
+        NEW.fecha_ultima_modificacion := NOW();
+        NEW.usuario_modificacion := auth.uid();
+    END IF;
+    
+    RETURN NEW;
+END;
+$ LANGUAGE plpgsql;
+
+-- Función para actualizar métricas de restaurante
+CREATE OR REPLACE FUNCTION actualizar_metricas_restaurante()
+RETURNS TRIGGER AS $
+DECLARE
+    _restaurante_id UUID;
+BEGIN
+    -- Obtener restaurante_id del documento
+    _restaurante_id := COALESCE(NEW.restaurante_id, OLD.restaurante_id);
+    
+    -- Actualizar contador de documentos procesados del mes actual
+    INSERT INTO metricas_procesamiento (restaurante_id, fecha, documentos_procesados)
+    VALUES (_restaurante_id, CURRENT_DATE, 1)
+    ON CONFLICT (restaurante_id, fecha)
+    DO UPDATE SET 
+        documentos_procesados = metricas_procesamiento.documentos_procesados + 1,
+        documentos_facturas = CASE 
+            WHEN NEW.tipo_documento = 'factura' THEN metricas_procesamiento.documentos_facturas + 1
+            ELSE metricas_procesamiento.documentos_facturas
+        END;
+    
+    RETURN COALESCE(NEW, OLD);
+END;
+$ LANGUAGE plpgsql;
+
+-- Función para mantener límites de storage
+CREATE OR REPLACE FUNCTION verificar_limites_storage()
+RETURNS TRIGGER AS $
+DECLARE
+    _storage_actual DECIMAL;
+    _limite_storage DECIMAL;
+BEGIN
+    -- Calcular storage actual del restaurante
+    SELECT 
+        COALESCE(SUM(tamaño_bytes), 0) / (1024.0 * 1024.0 * 1024.0), -- Convertir a GB
+        r.limite_storage_gb
+    INTO _storage_actual, _limite_storage
+    FROM documentos d
+    RIGHT JOIN restaurantes r ON d.restaurante_id = r.id
+    WHERE r.id = NEW.restaurante_id
+    GROUP BY r.limite_storage_gb;
+    
+    -- Verificar si excede el límite
+    IF _storage_actual > _limite_storage THEN
+        RAISE EXCEPTION 'Storage limit exceeded. Current: % GB, Limit: % GB', _storage_actual, _limite_storage;
+    END IF;
+    
+    -- Actualizar storage utilizado en la tabla restaurantes
+    UPDATE restaurantes 
+    SET storage_utilizado_gb = _storage_actual
+    WHERE id = NEW.restaurante_id;
+    
+    RETURN NEW;
+END;
+$ LANGUAGE plpgsql;
+
+-- 🎯 APLICAR TRIGGERS
+
+-- Trigger para auto-calcular confianza en facturas
+CREATE TRIGGER trigger_calcular_confianza_facturas
+    BEFORE INSERT OR UPDATE ON datos_extraidos_facturas
+    FOR EACH ROW
+    EXECUTE FUNCTION calcular_confianza_global_facturas();
+
+-- Trigger para actualizar fecha de modificación en facturas
+CREATE TRIGGER trigger_fecha_modificacion_facturas
+    BEFORE UPDATE ON datos_extraidos_facturas
+    FOR EACH ROW
+    EXECUTE FUNCTION actualizar_fecha_modificacion();
+
+-- Trigger para actualizar métricas cuando se procesa un documento
+CREATE TRIGGER trigger_metricas_documento_procesado
+    AFTER UPDATE OF estado ON documentos
+    FOR EACH ROW
+    WHEN (NEW.estado = 'processed' AND OLD.estado != 'processed')
+    EXECUTE FUNCTION actualizar_metricas_restaurante();
+
+-- Trigger para verificar límites de storage
+CREATE TRIGGER trigger_verificar_storage
+    BEFORE INSERT ON documentos
+    FOR EACH ROW
+    EXECUTE FUNCTION verificar_limites_storage();
+
+-- 📊 VISTAS ÚTILES MULTI-TENANT
+
+-- Vista completa de facturas por restaurante
+CREATE OR REPLACE VIEW vista_facturas_completas AS
+SELECT 
+    d.restaurante_id,
+    r.nombre as restaurante_nombre,
+    d.id as documento_id,
+    d.nombre_archivo,
+    d.fecha_subida,
+    d.estado as estado_documento,
+    f.proveedor_nombre,
+    f.proveedor_cif,
+    f.numero_factura,
+    f.fecha_factura,
+    f.fecha_vencimiento,
+    f.total_factura,
+    f.confianza_global,
+    f.requiere_revision,
+    (SELECT COUNT(*) FROM productos_extraidos p WHERE p.documento_id = d.id) as num_productos,
+    (SELECT COUNT(*) FROM alertas a WHERE a.documento_id = d.id AND a.estado = 'activa') as alertas_activas,
+    (SELECT COUNT(*) FROM relaciones_documentos rel WHERE rel.documento_origen_id = d.id) as documentos_relacionados
+FROM documentos d
+JOIN restaurantes r ON d.restaurante_id = r.id
+LEFT JOIN datos_extraidos_facturas f ON d.id = f.documento_id
+WHERE d.tipo_documento = 'factura';
+
+-- Vista de dashboard por restaurante
+CREATE OR REPLACE VIEW vista_dashboard_restaurante AS
+SELECT 
+    r.id as restaurante_id,
+    r.nombre as restaurante_nombre,
+    r.activo,
+    
+    -- Documentos del mes actual
+    COUNT(d.id) FILTER (WHERE d.fecha_subida >= DATE_TRUNC('month', CURRENT_DATE)) as documentos_mes_actual,
+    COUNT(d.id) FILTER (WHERE d.fecha_subida >= DATE_TRUNC('month', CURRENT_DATE) AND d.tipo_documento = 'factura') as facturas_mes_actual,
+    
+    -- Métricas de procesamiento
+    AVG(f.confianza_global) as confianza_promedio,
+    COUNT(d.id) FILTER (WHERE d.estado = 'error') as documentos_con_error,
+    
+    -- Alertas activas
+    COUNT(a.id) FILTER (WHERE a.estado = 'activa') as alertas_activas,
+    COUNT(a.id) FILTER (WHERE a.estado = 'activa' AND a.prioridad = 'critica') as alertas_criticas,
+    
+    -- Storage
+    r.storage_utilizado_gb,
+    r.limite_storage_gb,
+    (r.storage_utilizado_gb / r.limite_storage_gb * 100) as porcentaje_storage,
+    
+    -- Actividad reciente
+    r.fecha_ultima_actividad,
+    MAX(d.fecha_subida) as ultimo_documento_subido
+
+FROM restaurantes r
+LEFT JOIN documentos d ON r.id = d.restaurante_id
+LEFT JOIN datos_extraidos_facturas f ON d.id = f.documento_id
+LEFT JOIN alertas a ON r.id = a.restaurante_id
+GROUP BY r.id, r.nombre, r.activo, r.storage_utilizado_gb, r.limite_storage_gb, r.fecha_ultima_actividad;
+
+-- Vista de cola de procesamiento por restaurante
+CREATE OR REPLACE VIEW vista_cola_por_restaurante AS
+SELECT 
+    c.restaurante_id,
+    r.nombre as restaurante_nombre,
+    c.id as cola_id,
+    c.documento_id,
+    d.nombre_archivo,
+    d.tipo_documento,
+    c.prioridad,
+    c.estado,
+    c.intentos,
+    c.fecha_programada,
+    EXTRACT(EPOCH FROM (NOW() - c.fecha_programada))/60 as minutos_en_cola,
+    c.ultimo_error
+FROM cola_procesamiento c
+JOIN restaurantes r ON c.restaurante_id = r.id
+JOIN documentos d ON c.documento_id = d.id
+WHERE c.estado IN ('pendiente', 'procesando')
+ORDER BY c.restaurante_id, c.prioridad ASC, c.fecha_programada ASC;
+
+-- 🎯 DATOS DE EJEMPLO (OPCIONAL - solo para testing)
+-- Descomenta si quieres datos de prueba
+
+/*
+-- Insertar restaurante de ejemplo
+INSERT INTO restaurantes (nombre, cif, email, configuracion) VALUES 
+('Restaurante Demo', 'B12345678', 'demo@restaurante.com', '{
+    "alertas_email": ["admin@restaurante.com"],
+    "umbral_confianza": 0.8,
+    "proveedores_confiables": ["A28004743"],
+    "categorias_personalizadas": ["Carnes", "Pescados", "Verduras", "Lácteos", "Bebidas"]
+}');
+
+-- Insertar usuario administrador de ejemplo
+INSERT INTO usuarios (email, nombre, apellidos, restaurante_id, rol) VALUES 
+('admin@restaurante.com', 'Admin', 'Demo', 
+ (SELECT id FROM restaurantes WHERE cif = 'B12345678'), 'admin_restaurante');
+*/
+
+-- ✅ VERIFICACIÓN DEL ESQUEMA
+DO $
+DECLARE
+    table_count INTEGER;
+    index_count INTEGER;
+    policy_count INTEGER;
+BEGIN
+    -- Contar tablas creadas
+    SELECT COUNT(*) INTO table_count
+    FROM information_schema.tables 
+    WHERE table_schema = 'public' 
+    AND table_name IN (
+        'restaurantes', 'usuarios', 'documentos', 'datos_extraidos_facturas', 
+        'productos_extraidos', 'datos_extraidos_albaranes', 'cola_procesamiento',
+        'embeddings_documentos', 'alertas', 'historial_correcciones', 
+        'metricas_procesamiento', 'relaciones_documentos', 'movimientos_bancarios',
+        'configuracion_restaurantes'
+    );
+    
+    -- Contar índices creados
+    SELECT COUNT(*) INTO index_count
+    FROM pg_indexes 
+    WHERE schemaname = 'public' 
+    AND indexname LIKE 'idx_%';
+    
+    -- Contar políticas RLS
+    SELECT COUNT(*) INTO policy_count
+    FROM pg_policies 
+    WHERE schemaname = 'public';
+    
+    RAISE NOTICE '✅ ESQUEMA MULTI-TENANT CREADO EXITOSAMENTE';
+    RAISE NOTICE '📊 Tablas creadas: %', table_count;
+    RAISE NOTICE '🔍 Índices creados: %', index_count;
+    RAISE NOTICE '🔐 Políticas RLS creadas: %', policy_count;
+    RAISE NOTICE '';
+    RAISE NOTICE '🏢 Sistema listo para múltiples restaurantes';
+    RAISE NOTICE '🔒 Row Level Security habilitado';
+    RAISE NOTICE '⚡ Índices optimizados para performance';
+    RAISE NOTICE '🤖 Triggers automáticos configurados';
+    RAISE NOTICE '';
+    RAISE NOTICE '📝 Próximo paso: Configurar autenticación y crear tu primer restaurante';
+END $;

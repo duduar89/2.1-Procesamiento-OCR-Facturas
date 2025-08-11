@@ -1,0 +1,6 @@
+-- Ejecutar en SQL Editor
+INSERT INTO restaurantes (nombre, cif, email, direccion, telefono) VALUES 
+('Mi Restaurante Demo', 'B12345678', 'admin@mirestaurante.com', 'Calle Mayor 123, 28001 Madrid', '911234567');
+
+-- Verificar que se creó
+SELECT id, nombre, cif FROM restaurantes;
