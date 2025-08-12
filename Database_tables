@@ -851,7 +851,7 @@ ALTER TABLE configuracion_restaurantes ENABLE ROW LEVEL SECURITY;
 
 -- Función para obtener el restaurante_id del usuario actual
 CREATE OR REPLACE FUNCTION obtener_restaurante_usuario_actual()
-RETURNS UUID AS 
+RETURNS UUID AS $$
 BEGIN
     -- En producción, esto se obtendría del JWT del usuario autenticado
     -- Por ahora, devolvemos el restaurante_id desde el JWT custom claims
@@ -860,18 +860,18 @@ BEGIN
         (SELECT restaurante_id FROM usuarios WHERE id = auth.uid() LIMIT 1)
     );
 END;
-$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Función para verificar si el usuario es admin global
 CREATE OR REPLACE FUNCTION es_admin_global()
-RETURNS BOOLEAN AS $
+RETURNS BOOLEAN AS $$
 BEGIN
     RETURN COALESCE(
         (auth.jwt() ->> 'rol') = 'admin_global',
         (SELECT rol FROM usuarios WHERE id = auth.uid() AND rol = 'admin_global' LIMIT 1) IS NOT NULL
     );
 END;
-$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- 🛡️ POLÍTICAS RLS ESPECÍFICAS
 
@@ -936,17 +936,17 @@ CREATE POLICY "Métricas por restaurante" ON metricas_procesamiento
 
 -- Función para actualizar fecha de última modificación
 CREATE OR REPLACE FUNCTION actualizar_fecha_modificacion()
-RETURNS TRIGGER AS $
+RETURNS TRIGGER AS $$
 BEGIN
     NEW.fecha_ultima_modificacion := NOW();
     NEW.usuario_modificacion := auth.uid();
     RETURN NEW;
 END;
-$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql;
 
 -- Función para calcular confianza global automáticamente
 CREATE OR REPLACE FUNCTION calcular_confianza_global_facturas()
-RETURNS TRIGGER AS $
+RETURNS TRIGGER AS $$
 BEGIN
     -- Calcular promedio ponderado de confianzas
     NEW.confianza_global := COALESCE((
@@ -968,11 +968,11 @@ BEGIN
     
     RETURN NEW;
 END;
-$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql;
 
 -- Función para actualizar métricas de restaurante
 CREATE OR REPLACE FUNCTION actualizar_metricas_restaurante()
-RETURNS TRIGGER AS $
+RETURNS TRIGGER AS $$
 DECLARE
     _restaurante_id UUID;
 BEGIN
@@ -992,11 +992,11 @@ BEGIN
     
     RETURN COALESCE(NEW, OLD);
 END;
-$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql;
 
 -- Función para mantener límites de storage
 CREATE OR REPLACE FUNCTION verificar_limites_storage()
-RETURNS TRIGGER AS $
+RETURNS TRIGGER AS $$
 DECLARE
     _storage_actual DECIMAL;
     _limite_storage DECIMAL;
@@ -1023,7 +1023,7 @@ BEGIN
     
     RETURN NEW;
 END;
-$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql;
 
 -- 🎯 APLICAR TRIGGERS
 
@@ -1154,7 +1154,7 @@ INSERT INTO usuarios (email, nombre, apellidos, restaurante_id, rol) VALUES
 */
 
 -- ✅ VERIFICACIÓN DEL ESQUEMA
-DO $
+DO $$
 DECLARE
     table_count INTEGER;
     index_count INTEGER;
@@ -1194,4 +1194,4 @@ BEGIN
     RAISE NOTICE '🤖 Triggers automáticos configurados';
     RAISE NOTICE '';
     RAISE NOTICE '📝 Próximo paso: Configurar autenticación y crear tu primer restaurante';
-END $;
+END $$;

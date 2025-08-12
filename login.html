@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔐 Login - Factura Pro</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .login-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+            padding: 40px;
+            width: 100%;
+            max-width: 450px;
+            text-align: center;
+        }
+
+        .logo {
+            font-size: 4rem;
+            margin-bottom: 10px;
+        }
+
+        .login-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+
+        .login-subtitle {
+            color: #7f8c8d;
+            font-size: 1rem;
+            margin-bottom: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+        .form-label {
+            display: block;
+            font-weight: 600;
+            color: #34495e;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e1e8ed;
+            border-radius: 10px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            background: #f8f9fa;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #667eea;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .form-input::placeholder {
+            color: #95a5a6;
+        }
+
+        .login-button {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 10px;
+        }
+
+        .login-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .login-button:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .error-message {
+            background: #e74c3c;
+            color: white;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 0.9rem;
+            display: none;
+        }
+
+        .success-message {
+            background: #27ae60;
+            color: white;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 0.9rem;
+            display: none;
+        }
+
+        .loading-spinner {
+            display: none;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #ffffff;
+            border-top: 2px solid transparent;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .demo-section {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #ecf0f1;
+        }
+
+        .demo-title {
+            font-size: 0.9rem;
+            color: #7f8c8d;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .demo-buttons {
+            display: flex;
+            gap: 10px;
+            flex-direction: column;
+        }
+
+        .demo-button {
+            padding: 10px;
+            border: 2px solid #3498db;
+            background: white;
+            color: #3498db;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.3s ease;
+        }
+
+        .demo-button:hover {
+            background: #3498db;
+            color: white;
+        }
+
+        .footer-info {
+            margin-top: 30px;
+            font-size: 0.8rem;
+            color: #95a5a6;
+            line-height: 1.5;
+        }
+
+        /* Responsive */
+        @media (max-width: 480px) {
+            .login-container {
+                padding: 30px 20px;
+                margin: 10px;
+            }
+            
+            .login-title {
+                font-size: 1.5rem;
+            }
+            
+            .demo-buttons {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <!-- Logo y título -->
+        <div class="logo">🧾</div>
+        <h1 class="login-title">Factura Pro</h1>
+        <p class="login-subtitle">Sistema Inteligente de Gestión Documental</p>
+
+        <!-- Mensajes de error/éxito -->
+        <div id="errorMessage" class="error-message"></div>
+        <div id="successMessage" class="success-message"></div>
+
+        <!-- Formulario de login -->
+        <form id="loginForm">
+            <div class="form-group">
+                <label class="form-label" for="email">Email</label>
+                <input 
+                    type="email" 
+                    id="email" 
+                    class="form-input" 
+                    placeholder="tu@restaurante.com"
+                    required
+                >
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="password">Contraseña</label>
+                <input 
+                    type="password" 
+                    id="password" 
+                    class="form-input" 
+                    placeholder="••••••••"
+                    required
+                >
+            </div>
+
+            <button type="submit" class="login-button" id="loginButton">
+                <span class="loading-spinner" id="loadingSpinner"></span>
+                <span id="buttonText">Iniciar Sesión</span>
+            </button>
+        </form>
+
+        <!-- Sección demo -->
+        <div class="demo-section">
+            <div class="demo-title">🧪 Usuarios de Prueba</div>
+            <div class="demo-buttons">
+                <button class="demo-button" onclick="fillDemo('manolo')">
+                    🍺 Bar Manolo (admin@barmanolo.com)
+                </button>
+                <button class="demo-button" onclick="fillDemo('paco')">
+                    🥘 Restaurante Paco (admin@respaco.com)
+                </button>
+            </div>
+        </div>
+
+        <!-- Info del pie -->
+        <div class="footer-info">
+            <strong>🏢 Sistema Multi-Tenant</strong><br>
+            Cada restaurante ve solo sus datos<br>
+            Tecnología: Supabase + Row Level Security
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="config.js"></script>
+    <script>
+        // ===== VARIABLES GLOBALES =====
+        let supabaseClient = null;
+
+        // ===== INICIALIZACIÓN =====
+        document.addEventListener('DOMContentLoaded', async function() {
+            await initializeAuth();
+            checkIfAlreadyLoggedIn();
+        });
+
+        // ===== INICIALIZAR SUPABASE =====
+        async function initializeAuth() {
+            try {
+                // Verificar configuración
+                if (!CONFIG.SUPABASE.URL || !CONFIG.SUPABASE.ANON_KEY) {
+                    throw new Error('Configuración de Supabase incompleta');
+                }
+
+                // Inicializar cliente Supabase
+                supabaseClient = supabase.createClient(
+                    CONFIG.SUPABASE.URL,
+                    CONFIG.SUPABASE.ANON_KEY
+                );
+
+                console.log('✅ Supabase inicializado correctamente');
+
+            } catch (error) {
+                console.error('❌ Error inicializando Supabase:', error);
+                showError('Error de configuración: ' + error.message);
+            }
+        }
+
+        // ===== VERIFICAR SI YA ESTÁ LOGUEADO =====
+        async function checkIfAlreadyLoggedIn() {
+            try {
+                const { data: { session } } = await supabaseClient.auth.getSession();
+                
+                if (session) {
+                    showSuccess('Ya tienes sesión activa, redirigiendo...');
+                    setTimeout(() => {
+                        window.location.href = 'index.html';
+                    }, 1500);
+                }
+            } catch (error) {
+                console.log('No hay sesión activa');
+            }
+        }
+
+        // ===== MANEJO DEL FORMULARIO =====
+        document.getElementById('loginForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            await handleLogin();
+        });
+
+        // ===== FUNCIÓN PRINCIPAL DE LOGIN =====
+        async function handleLogin() {
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+
+            // Validaciones básicas
+            if (!email || !password) {
+                showError('Por favor, completa todos los campos');
+                return;
+            }
+
+            if (!isValidEmail(email)) {
+                showError('Por favor, introduce un email válido');
+                return;
+            }
+
+            // Mostrar estado de carga
+            setLoadingState(true);
+            hideMessages();
+
+            try {
+                // 1. Intentar login con Supabase
+                const { data: authData, error: authError } = await supabaseClient.auth.signInWithPassword({
+                    email: email,
+                    password: password
+                });
+
+                if (authError) {
+                    throw new Error(getErrorMessage(authError));
+                }
+
+                if (!authData.user) {
+                    throw new Error('No se pudo autenticar el usuario');
+                }
+
+                // 2. Obtener datos del usuario y restaurante
+                const { data: userData, error: userError } = await supabaseClient
+                    .from('usuarios')
+                    .select(`
+                        id,
+                        email,
+                        nombre,
+                        apellidos,
+                        rol,
+                        restaurante_id,
+                        restaurantes (
+                            id,
+                            nombre,
+                            cif,
+                            activo
+                        )
+                    `)
+                    .eq('id', authData.user.id)
+                    .single();
+
+                if (userError || !userData) {
+                    throw new Error('Usuario no encontrado en el sistema');
+                }
+
+                if (!userData.restaurantes || !userData.restaurantes.activo) {
+                    throw new Error('Restaurante no activo o no encontrado');
+                }
+
+                // 3. Guardar información en localStorage para uso posterior
+                const userInfo = {
+                    id: userData.id,
+                    email: userData.email,
+                    nombre: userData.nombre,
+                    apellidos: userData.apellidos,
+                    rol: userData.rol,
+                    restaurante: userData.restaurantes
+                };
+
+                localStorage.setItem('user_info', JSON.stringify(userInfo));
+                localStorage.setItem('restaurante_actual', JSON.stringify(userData.restaurantes));
+
+                // 4. Mostrar éxito y redirigir
+                showSuccess(`¡Bienvenido ${userData.nombre}! Redirigiendo...`);
+                
+                setTimeout(() => {
+                    window.location.href = 'index.html';
+                }, 1500);
+
+            } catch (error) {
+                console.error('Error en login:', error);
+                showError(error.message);
+            } finally {
+                setLoadingState(false);
+            }
+        }
+
+        // ===== RELLENAR FORMULARIO CON DATOS DEMO =====
+        function fillDemo(restaurant) {
+            const demoAccounts = {
+                'manolo': {
+                    email: 'admin@barmanolo.com',
+                    password: 'barmanolo123'
+                },
+                'paco': {
+                    email: 'admin@respaco.com', 
+                    password: 'respaco123'
+                }
+            };
+
+            const account = demoAccounts[restaurant];
+            if (account) {
+                document.getElementById('email').value = account.email;
+                document.getElementById('password').value = account.password;
+                
+                showSuccess(`Datos demo cargados para ${restaurant}. ¡Haz clic en "Iniciar Sesión"!`);
+            }
+        }
+
+        // ===== UTILIDADES =====
+        function isValidEmail(email) {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            return emailRegex.test(email);
+        }
+
+        function getErrorMessage(error) {
+            const errorMessages = {
+                'Invalid login credentials': 'Email o contraseña incorrectos',
+                'Email not confirmed': 'Email no confirmado',
+                'Too many requests': 'Demasiados intentos. Espera unos minutos',
+                'Invalid email': 'Email no válido',
+                'signup_disabled': 'Registro deshabilitado'
+            };
+
+            return errorMessages[error.message] || error.message || 'Error desconocido';
+        }
+
+        function setLoadingState(loading) {
+            const button = document.getElementById('loginButton');
+            const spinner = document.getElementById('loadingSpinner');
+            const buttonText = document.getElementById('buttonText');
+
+            if (loading) {
+                button.disabled = true;
+                spinner.style.display = 'inline-block';
+                buttonText.textContent = 'Iniciando sesión...';
+            } else {
+                button.disabled = false;
+                spinner.style.display = 'none';
+                buttonText.textContent = 'Iniciar Sesión';
+            }
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('errorMessage');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+            
+            // Auto-ocultar después de 5 segundos
+            setTimeout(() => {
+                errorDiv.style.display = 'none';
+            }, 5000);
+        }
+
+        function showSuccess(message) {
+            const successDiv = document.getElementById('successMessage');
+            successDiv.textContent = message;
+            successDiv.style.display = 'block';
+        }
+
+        function hideMessages() {
+            document.getElementById('errorMessage').style.display = 'none';
+            document.getElementById('successMessage').style.display = 'none';
+        }
+
+        // ===== MANEJO DE TECLAS =====
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && e.target.tagName !== 'BUTTON') {
+                e.preventDefault();
+                handleLogin();
+            }
+        });
+    </script>
+</body>
+</html>

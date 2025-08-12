@@ -4,7 +4,7 @@
 const CONFIG = {
     SUPABASE: {
         URL: 'https://yurqgcpgwsgdnxnpyxes.supabase.co',    // ✅ TU URL
-        ANON_KEY: 'tu-anon-key-aqui',                         // ⚠️ CAMBIAR POR TU KEY
+        ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl1cnFnY3Bnd3NnZG54bnB5eGVzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5MjgzODIsImV4cCI6MjA3MDUwNDM4Mn0.iOPGaCYvtE9EQgkl7ytKAymvKKQzsfwlPUyM5ChDiRg', // ⚠️ REEMPLAZA CON TU ANON KEY REAL
         STORAGE_BUCKET: 'documentos'
     },
     
@@ -18,18 +18,6 @@ const CONFIG = {
         // Modo de operación
         MODO: 'desarrollo', // 'desarrollo' | 'produccion'
         AUTO_SELECT_RESTAURANTE: true, // Si hay solo uno, seleccionarlo automáticamente
-    },
-    
-    // 🤖 APIs DE IA (para futuro uso)
-    GOOGLE_CLOUD: {
-        API_KEY: 'tu-google-cloud-api-key',
-        PROJECT_ID: 'tu-proyecto-gcp',
-        LOCATION: 'us',
-        PROCESSOR_ID: 'tu-processor-id'
-    },
-    
-    OPENAI: {
-        API_KEY: 'tu-openai-api-key'
     },
     
     // ⚙️ CONFIGURACIÓN DE LA APLICACIÓN
@@ -87,217 +75,116 @@ const CONFIG = {
             ALERTAS: 'alertas',
             METRICAS: 'metricas_procesamiento',
             RELACIONES: 'relaciones_documentos',
-            MOVIMIENTOS_BANCARIOS: 'movimientos_bancarios',
+            MOVIMIENTOS: 'movimientos_bancarios',
             CONFIGURACION: 'configuracion_restaurantes'
+        },
+        
+        // Campos principales por tabla
+        FIELDS: {
+            DOCUMENTOS: ['id', 'restaurante_id', 'nombre_archivo', 'tipo_documento', 'estado', 'fecha_subida'],
+            FACTURAS: ['documento_id', 'restaurante_id', 'proveedor_nombre', 'numero_factura', 'total_factura'],
+            PRODUCTOS: ['documento_id', 'restaurante_id', 'descripcion_original', 'cantidad', 'precio_unitario_sin_iva']
         }
     },
     
-    // 👥 ROLES Y PERMISOS
-    ROLES: {
-        ADMIN_GLOBAL: 'admin_global',        // Ve todos los restaurantes
-        ADMIN_RESTAURANTE: 'admin_restaurante', // Solo su restaurante
-        USUARIO: 'usuario',                  // Usuario normal
-        SOLO_LECTURA: 'solo_lectura'        // Solo puede ver
-    },
-    
-    PERMISOS: {
-        VER_DOCUMENTOS: 'ver_documentos',
-        SUBIR_DOCUMENTOS: 'subir_documentos',
-        CORREGIR_DATOS: 'corregir_datos',
-        VER_REPORTES: 'ver_reportes',
-        CONFIGURAR_ALERTAS: 'configurar_alertas',
-        ADMINISTRAR_USUARIOS: 'administrar_usuarios',
-        VER_METRICAS: 'ver_metricas',
-        CONFIGURAR_SISTEMA: 'configurar_sistema'
-    },
-    
-    // 🎨 CONFIGURACIÓN DE UI
+    // 🎨 CONFIGURACIÓN DE INTERFAZ
     UI: {
         COLORS: {
             PRIMARY: '#2563eb',
-            SUCCESS: '#10b981', 
-            WARNING: '#f59e0b',
-            ERROR: '#ef4444',
-            SECONDARY: '#64748b'
+            SUCCESS: '#16a34a', 
+            WARNING: '#d97706',
+            ERROR: '#dc2626',
+            INFO: '#0891b2'
         },
         
         MESSAGES: {
-            // Mensajes básicos
-            UPLOAD_SUCCESS: '✅ Archivo subido correctamente',
-            UPLOAD_ERROR: '❌ Error al subir archivo',
-            PROCESSING_START: '🔄 Iniciando procesamiento...',
-            PROCESSING_COMPLETE: '✅ Procesamiento completado',
-            INVALID_FILE: '⚠️ Archivo no válido',
-            FILE_TOO_LARGE: '⚠️ Archivo demasiado grande (máx. 10MB)',
-            NETWORK_ERROR: '🌐 Error de conexión',
-            
-            // Mensajes multi-tenant
-            RESTAURANTE_NO_SELECCIONADO: '🏢 Selecciona un restaurante para continuar',
-            RESTAURANTE_CAMBIADO: '🔄 Restaurante cambiado correctamente',
-            SIN_PERMISOS: '🚫 No tienes permisos para esta acción',
-            LIMITE_STORAGE_EXCEDIDO: '💾 Límite de almacenamiento excedido',
-            LIMITE_DOCUMENTOS_EXCEDIDO: '📄 Límite de documentos mensuales excedido'
+            UPLOADING: 'Subiendo archivo...',
+            PROCESSING: 'Procesando con IA...',
+            VALIDATING: 'Validando resultados...',
+            COMPLETED: 'Procesamiento completado',
+            ERROR_UPLOAD: 'Error subiendo archivo',
+            ERROR_PROCESSING: 'Error en procesamiento',
+            NO_RESTAURANT: 'No hay restaurante seleccionado',
+            RESTAURANTE_NO_SELECCIONADO: 'Debes seleccionar un restaurante primero'
+        },
+        
+        ANIMATIONS: {
+            FADE_DURATION: 300,
+            SLIDE_DURATION: 400,
+            BOUNCE_DURATION: 600
         }
     },
     
-    // 🔍 CONFIGURACIÓN DE EXTRACCIÓN
-    EXTRACTION: {
-        // Patrones regex para campos españoles
-        PATTERNS: {
-            CIF: /^[A-Z]\d{8}[A-Z0-9]$/,
-            NIF: /^\d{8}[A-Z]$/,
-            FECHA_ES: /\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4}/,
-            IMPORTE_ES: /\d{1,3}(?:\.\d{3})*,\d{2}\s*€?/,
-            TELEFONO_ES: /^[679]\d{8}$/
-        },
-        
-        // Campos a extraer por tipo de documento
-        CAMPOS_FACTURA: [
-            'proveedor_nombre',
-            'proveedor_cif', 
-            'numero_factura',
-            'fecha_factura',
-            'fecha_vencimiento',
-            'base_imponible',
-            'total_factura',
-            'productos'
-        ],
-        
-        CAMPOS_ALBARAN: [
-            'proveedor_nombre',
-            'numero_albaran',
-            'fecha_entrega',
-            'direccion_entrega',
-            'productos',
-            'observaciones'
-        ]
-    },
-    
-    // 🚨 CONFIGURACIÓN DE ALERTAS
-    ALERTS: {
-        TYPES: {
-            DUPLICATE: 'duplicate_detected',
-            PRICE_ANOMALY: 'price_anomaly',
-            MATH_ERROR: 'math_error',
-            LOW_CONFIDENCE: 'low_confidence',
-            STORAGE_LIMIT: 'storage_limit_warning',
-            DOCUMENT_LIMIT: 'document_limit_warning'
-        },
-        
-        THRESHOLDS: {
-            DUPLICATE_SIMILARITY: 0.95,      // 95% similitud = duplicado
-            PRICE_VARIANCE: 0.30,            // 30% variación = anomalía
-            MIN_CONFIDENCE: 0.70,            // <70% = requiere revisión
-            STORAGE_WARNING: 0.80,           // Alertar al 80% del límite
-            DOCUMENT_WARNING: 0.90           // Alertar al 90% del límite mensual
-        }
+    // 🔧 CONFIGURACIÓN DE DESARROLLO
+    DEBUG: {
+        ENABLED: true,
+        LOG_LEVEL: 'info', // 'debug', 'info', 'warn', 'error'
+        SHOW_CONFIDENCE: true,
+        MOCK_PROCESSING: false
     }
 };
 
-// 🏢 GESTIÓN DE RESTAURANTE ACTUAL
+// 🏢 GESTOR MULTI-TENANT
 class TenantManager {
     constructor() {
         this.restauranteActual = null;
-        this.usuarioActual = null;
-        this.permisos = new Set();
-    }
-    
-    // Obtener lista de restaurantes disponibles para el usuario
-    async obtenerRestaurantesDisponibles() {
-        try {
-            const { data: restaurantes, error } = await window.supabase
-                .from(CONFIG.DATABASE.TABLES.RESTAURANTES)
-                .select('id, nombre, cif, activo')
-                .eq('activo', true)
-                .order('nombre');
-            
-            if (error) throw error;
-            return restaurantes || [];
-        } catch (error) {
-            console.error('Error obteniendo restaurantes:', error);
-            return [];
-        }
-    }
-    
-    // Establecer restaurante actual
-    async establecerRestaurante(restauranteId) {
-        try {
-            const { data: restaurante, error } = await window.supabase
-                .from(CONFIG.DATABASE.TABLES.RESTAURANTES)
-                .select('*')
-                .eq('id', restauranteId)
-                .single();
-            
-            if (error) throw error;
-            
-            this.restauranteActual = restaurante;
-            CONFIG.TENANT.RESTAURANTE_ID = restauranteId;
-            CONFIG.TENANT.RESTAURANTE_ACTUAL = restaurante;
-            
-            // Guardar en localStorage para persistencia
-            localStorage.setItem('restaurante_actual', JSON.stringify(restaurante));
-            
-            // Actualizar UI
-            this.actualizarUIRestaurante();
-            
-            return restaurante;
-        } catch (error) {
-            console.error('Error estableciendo restaurante:', error);
-            throw error;
-        }
+        this.configuracionActual = null;
     }
     
     // Cargar restaurante desde localStorage
     cargarRestauranteGuardado() {
         try {
-            const restauranteGuardado = localStorage.getItem('restaurante_actual');
-            if (restauranteGuardado) {
-                const restaurante = JSON.parse(restauranteGuardado);
-                this.restauranteActual = restaurante;
-                CONFIG.TENANT.RESTAURANTE_ID = restaurante.id;
-                CONFIG.TENANT.RESTAURANTE_ACTUAL = restaurante;
-                this.actualizarUIRestaurante();
-                return restaurante;
+            const saved = localStorage.getItem('restaurante_actual');
+            if (saved) {
+                this.restauranteActual = JSON.parse(saved);
+                CONFIG.TENANT.RESTAURANTE_ID = this.restauranteActual.id;
+                CONFIG.TENANT.RESTAURANTE_ACTUAL = this.restauranteActual;
+                return this.restauranteActual;
             }
         } catch (error) {
             console.error('Error cargando restaurante guardado:', error);
-            localStorage.removeItem('restaurante_actual');
         }
         return null;
     }
     
-    // Actualizar UI con información del restaurante
-    actualizarUIRestaurante() {
-        if (this.restauranteActual) {
-            // Actualizar título si existe el elemento
-            const tituloElement = document.querySelector('h1');
-            if (tituloElement) {
-                tituloElement.textContent = `📄 ${this.restauranteActual.nombre} - Procesador de Facturas`;
+    // Seleccionar restaurante activo
+    async seleccionarRestaurante(restauranteId) {
+        try {
+            if (!window.supabase) {
+                throw new Error('Supabase no inicializado');
             }
             
-            // Actualizar selector de restaurante si existe
-            const selectorElement = document.getElementById('restauranteSelector');
-            if (selectorElement) {
-                selectorElement.value = this.restauranteActual.id;
+            const { data: restaurante, error } = await window.supabase
+                .from(CONFIG.DATABASE.TABLES.RESTAURANTES)
+                .select('*')
+                .eq('id', restauranteId)
+                .eq('activo', true)
+                .single();
+            
+            if (error || !restaurante) {
+                throw new Error('Restaurante no encontrado o inactivo');
             }
             
-            // Mostrar información en la consola para debug
-            if (CONFIG.TENANT.MODO === 'desarrollo') {
-                console.log('🏢 Restaurante actual:', this.restauranteActual.nombre);
-                console.log('🆔 ID:', this.restauranteActual.id);
-            }
+            this.restauranteActual = restaurante;
+            CONFIG.TENANT.RESTAURANTE_ID = restaurante.id;
+            CONFIG.TENANT.RESTAURANTE_ACTUAL = restaurante;
+            
+            // Guardar en localStorage
+            localStorage.setItem('restaurante_actual', JSON.stringify(restaurante));
+            
+            // Cargar configuración del restaurante
+            await this.cargarConfiguracionRestaurante();
+            
+            return restaurante;
+            
+        } catch (error) {
+            console.error('Error seleccionando restaurante:', error);
+            throw error;
         }
     }
     
-    // Verificar si el usuario tiene un permiso específico
-    tienePermiso(permiso) {
-        return this.permisos.has(permiso);
-    }
-    
-    // Obtener configuración del restaurante actual
-    async obtenerConfiguracion() {
-        if (!this.restauranteActual) return null;
-        
+    // Cargar configuración específica del restaurante
+    async cargarConfiguracionRestaurante() {
         try {
             const { data: config, error } = await window.supabase
                 .from(CONFIG.DATABASE.TABLES.CONFIGURACION)
@@ -305,13 +192,16 @@ class TenantManager {
                 .eq('restaurante_id', this.restauranteActual.id)
                 .single();
             
-            if (error && error.code !== 'PGRST116') { // PGRST116 = not found
-                throw error;
+            if (error && error.code !== 'PGRST116') { // PGRST116 = no rows found
+              throw error;
             }
             
-            return config || {};
+            this.configuracionActual = config || {};
+            return this.configuracionActual;
+            
         } catch (error) {
             console.error('Error obteniendo configuración:', error);
+            this.configuracionActual = {};
             return {};
         }
     }
@@ -395,6 +285,20 @@ const TenantUtils = {
             throw new Error(CONFIG.UI.MESSAGES.RESTAURANTE_NO_SELECCIONADO);
         }
         return true;
+    },
+    
+    // Generar ID único para documentos
+    generarDocumentoId() {
+        const timestamp = Date.now();
+        const random = Math.random().toString(36).substring(2, 8);
+        return `${CONFIG.TENANT.RESTAURANTE_ID}_${timestamp}_${random}`;
+    },
+    
+    // Formatear nombre de archivo para storage
+    formatearNombreArchivo(originalName, documentId) {
+        const extension = originalName.split('.').pop();
+        const cleanName = originalName.replace(/[^a-zA-Z0-9.-]/g, '_');
+        return `${documentId}_${cleanName}`;
     }
 };
 
@@ -405,11 +309,19 @@ window.TenantUtils = TenantUtils;
 window.validateConfig = validateConfig;
 
 // 📝 LOGS DE DEBUG
-if (window.location.hostname === 'localhost' || CONFIG.TENANT.MODO === 'desarrollo') {
+if (window.location.hostname === 'localhost' || CONFIG.DEBUG.ENABLED) {
     console.log('🔧 Configuración Multi-Tenant cargada:', CONFIG);
     const configErrors = validateConfig();
     if (configErrors.length > 0) {
         console.warn('⚠️ Errores de configuración:', configErrors);
+        // Mostrar errores en la interfaz también
+        setTimeout(() => {
+            if (window.showNotification) {
+                configErrors.forEach(error => {
+                    window.showNotification(error, 'error');
+                });
+            }
+        }, 1000);
     } else {
         console.log('✅ Configuración válida');
     }

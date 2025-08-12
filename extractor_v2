@@ -1,0 +1,58 @@
+Funcionalidades Completas Implementadas:
+✅ 1. Autenticación JWT con Google Cloud
+
+Service Account con credenciales desde variables de entorno
+Generación automática de tokens de acceso
+Manejo completo de errores de autenticación
+
+✅ 2. Clasificación Automática de Documentos
+
+Detecta automáticamente: Facturas, Albaranes, Tickets
+Sistema de scoring por patrones
+Confianza por tipo de documento
+
+✅ 3. Extracción NER Avanzada
+
+Patrones específicos para datos españoles (CIF, fechas DD/MM/YYYY, importes con comas)
+Extracción de proveedor inteligente
+Detección de números de factura, fechas, importes, emails, teléfonos
+
+✅ 4. Procesamiento de Productos
+
+Extracción de tablas de productos
+Cantidad, descripción, precios unitarios y totales
+Guardado en tabla productos_extraidos
+
+✅ 5. Validación Matemática Automática
+
+Verifica que Base + IVA = Total
+Valida porcentajes de IVA
+Detecta errores de cálculo con tolerancia
+
+✅ 6. Sistema de Confianza por Campo
+
+Confianza específica para cada campo extraído
+Identificación de campos con baja confianza
+Cálculo de confianza global
+
+✅ 7. Detección de Duplicados
+
+Búsqueda por CIF + número de factura
+Detección de facturas similares por importe
+Marcado automático para revisión
+
+✅ 8. Preparación para Embeddings
+
+Estructura lista para embeddings vectoriales
+Base para matching futuro entre documentos
+
+✅ 9. Manejo Multi-Tenant
+
+Filtrado por restaurante_id
+Datos aislados por establecimiento
+
+✅ 10. Logging y Debugging Completo
+
+Logs detallados en cada paso
+Información de estadísticas de procesamiento
+Sugerencias de resolución de errores
