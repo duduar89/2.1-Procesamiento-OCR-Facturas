@@ -3,7 +3,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 // Configuración de la API de Google Document AI
 const GOOGLE_PROJECT_ID = 'gen-lang-client-0960907787'
 const GOOGLE_LOCATION = 'eu'
-const GOOGLE_PROCESSOR_ID = 'd8f21f63e573ae81'
+const GOOGLE_PROCESSOR_ID = '49b7920fa26bebc' // ✅ Procesador de OCR puro (solo extrae texto)
 const GOOGLE_API_ENDPOINT = `https://eu-documentai.googleapis.com/v1/projects/${GOOGLE_PROJECT_ID}/locations/${GOOGLE_LOCATION}/processors/${GOOGLE_PROCESSOR_ID}:process`
 
 // Headers CORS
@@ -156,19 +156,29 @@ async function getAccessToken() {
 function extractCoordinates(field: any, confidence: number, fieldValue: string) {
   try {
     // Intentar diferentes formatos de coordenadas que puede devolver Google AI
-    let vertices = null;
+    let vertices: any[] | null = null;
     
-    // Formato 1: boundingBox.vertices (coordenadas absolutas)
+    // Formato 1: layout.boundingPoly.normalizedVertices (OCR)
+    if (field.layout && field.layout.boundingPoly && field.layout.boundingPoly.normalizedVertices) {
+      vertices = field.layout.boundingPoly.normalizedVertices
+      console.log('📍 Usando layout.boundingPoly.normalizedVertices (coordenadas normalizadas)')
+    }
+    // Formato 2: layout.boundingPoly.vertices (coordenadas absolutas)
+    else if (field.layout && field.layout.boundingPoly && field.layout.boundingPoly.vertices) {
+      vertices = field.layout.boundingPoly.vertices
+      console.log('📍 Usando layout.boundingPoly.vertices (coordenadas absolutas)')
+    }
+    // Formato 3: boundingBox.vertices (algunos tipos)
     if (field.boundingBox && field.boundingBox.vertices) {
       vertices = field.boundingBox.vertices;
       console.log('📍 Usando boundingBox.vertices (coordenadas absolutas)');
     }
-    // Formato 2: boundingPoly.normalizedVertices (coordenadas normalizadas 0-1)
+    // Formato 4: boundingPoly.normalizedVertices (coordenadas normalizadas 0-1)
     else if (field.boundingPoly && field.boundingPoly.normalizedVertices) {
       vertices = field.boundingPoly.normalizedVertices;
       console.log('📍 Usando boundingPoly.normalizedVertices (coordenadas normalizadas)');
     }
-    // Formato 3: boundingPoly.vertices (coordenadas absolutas)
+    // Formato 5: boundingPoly.vertices (coordenadas absolutas)
     else if (field.boundingPoly && field.boundingPoly.vertices) {
       vertices = field.boundingPoly.vertices;
       console.log('📍 Usando boundingPoly.vertices (coordenadas absolutas)');
@@ -230,320 +240,125 @@ function extractCoordinates(field: any, confidence: number, fieldValue: string) 
 
 // 🌍 FUNCIÓN UNIVERSAL PARA CUALQUIER TIPO DE FACTURA - CON COORDENADAS Y CONFIANZA
 function extractDataFromGoogleAI(googleAIResponse: any) {
-  console.log('🌍 Iniciando extracción desde Google AI con coordenadas...')
+  console.log('🌍 Iniciando extracción desde Google AI OCR...')
   
   try {
     const document = googleAIResponse.document
-    if (!document) {
-      throw new Error('Respuesta de Google AI no contiene documento válido')
+    if (!document || !document.text) {
+      throw new Error('No se encontró texto en la respuesta de Google AI')
     }
 
     console.log('📄 Documento encontrado en respuesta')
     console.log('📝 Texto presente:', !!document.text)
     console.log('📝 Longitud texto:', document.text?.length || 0)
     
-    // ✅ CORRECCIÓN: Invoice Parser usa document.entities, NO page.entities
-    const entities = document.entities || []
-    const formFields = [] // Invoice Parser no usa formFields
+    // ✅ NUEVO: Extraer coordenadas del OCR puro para visualización avanzada
+    // Estas coordenadas se usarán en el botón "AVANZADO" para mostrar overlays en el PDF
+    let coordenadasCampos = {}
     
-    console.log('🔍 Entities encontrados a nivel documento:', entities.length)
-    
-    // LOGGING DETALLADO PARA DEBUG
-    if (entities.length > 0) {
-      console.log('📋 PRIMERA ENTITY (ejemplo):', JSON.stringify(entities[0], null, 2))
-      console.log('🔍 ESTRUCTURA DE LA ENTITY:')
-      console.log('  - type:', entities[0].type)
-      console.log('  - mentionText:', entities[0].mentionText)
-      console.log('  - confidence:', entities[0].confidence)
-      console.log('  - pageAnchor:', entities[0].pageAnchor)
-      if (entities[0].pageAnchor?.pageRefs?.[0]?.boundingPoly) {
-        console.log('  - boundingPoly:', entities[0].pageAnchor.pageRefs[0].boundingPoly)
-      }
-    }
-
-    // INICIALIZAR RESULTADO CON VALORES POR DEFECTO
-    const resultado = {
-      proveedor_nombre: 'Proveedor no identificado',
-      proveedor_cif: null,
-      numero_factura: 'SIN_NUMERO',
-      fecha_factura: new Date().toISOString(),
-      total_factura: 0,
-      base_imponible: 0,
-      cuota_iva: 0,
-      tipo_iva: 21,
-      confianza_global: 0.3,
-      confianza_proveedor: 0,
-      confianza_datos_fiscales: 0,
-      confianza_importes: 0,
-      coordenadas_campos: {},
-      campos_con_baja_confianza: []
-    }
-
-    // MAPEO DE CAMPOS DE GOOGLE AI INVOICE PARSER A NUESTROS CAMPOS
-    const fieldMappings = {
-      // Proveedor
-      'proveedor_nombre': ['supplier_name', 'company_name', 'business_name', 'vendor_name'],
-      'proveedor_cif': ['supplier_tax_id', 'tax_id', 'vat_number', 'business_id', 'company_id'],
-      'numero_factura': ['invoice_id', 'invoice_number', 'document_number', 'bill_number'],
-      'fecha_factura': ['invoice_date', 'document_date', 'bill_date'],
-      'total_factura': ['total_amount', 'grand_total', 'total_invoice', 'amount_due'],
-      'base_imponible': ['subtotal', 'base_amount', 'taxable_amount', 'net_amount'],
-      'cuota_iva': ['tax_amount', 'vat_amount', 'tax_total'],
-      'tipo_iva': ['tax_rate', 'vat_rate', 'tax_percentage']
-    }
-
-    // ✅ CORRECCIÓN: EXTRAER DATOS DE ENTITIES DEL INVOICE PARSER
-    if (entities.length > 0) {
-      console.log('📋 Procesando Entities del Invoice Parser...')
+    if (document.pages && document.pages.length > 0) {
+      console.log('🔍 Buscando coordenadas en páginas del OCR para visualización...')
       
-      for (const entity of entities) {
-        const entityType = entity.type?.toLowerCase() || ''
-        const entityText = entity.mentionText || ''
-        const confidence = entity.confidence || 0
-        
-        console.log(`🔍 Entity: ${entityType}, Texto: ${entityText}, Confianza: ${confidence}`)
-        
-        // Buscar mapeo para este campo
-        for (const [ourField, googleFields] of Object.entries(fieldMappings)) {
-          if (googleFields.some(gf => entityType.includes(gf))) {
-            console.log(`✅ Mapeando ${entityType} a ${ourField}`)
-            
-            // Mapear valor según el tipo de campo
-            switch (ourField) {
-              case 'proveedor_nombre':
-                if (entityText && entityText.length > 3) {
-                  resultado.proveedor_nombre = entityText
-                  resultado.confianza_proveedor = confidence
-                  
-                  // ✅ CORRECCIÓN: Extraer coordenadas del pageAnchor
-                  const coordenadas = extractCoordinatesFromPageAnchor(entity, confidence, entityText)
-                  if (coordenadas) {
-                    resultado.coordenadas_campos[ourField] = coordenadas
-                  }
-                }
-                break
-                
-              case 'proveedor_cif':
-                if (entityText && /[A-Z0-9]/.test(entityText)) {
-                  resultado.proveedor_cif = entityText
-                  const coordenadas = extractCoordinatesFromPageAnchor(entity, confidence, entityText)
-                  if (coordenadas) {
-                    resultado.coordenadas_campos[ourField] = coordenadas
-                  }
-                }
-                break
-                
-              case 'numero_factura':
-                if (entityText && entityText.length > 0) {
-                  resultado.numero_factura = entityText
-                  const coordenadas = extractCoordinatesFromPageAnchor(entity, confidence, entityText)
-                  if (coordenadas) {
-                    resultado.coordenadas_campos[ourField] = coordenadas
-                  }
-                }
-                break
-                
-              case 'fecha_factura':
-                if (entityText && entityText.length > 0) {
-                  try {
-                    const fecha = new Date(entityText)
-                    if (!isNaN(fecha.getTime())) {
-                      resultado.fecha_factura = fecha.toISOString()
-                      const coordenadas = extractCoordinatesFromPageAnchor(entity, confidence, entityText)
-                      if (coordenadas) {
-                        resultado.coordenadas_campos[ourField] = coordenadas
-                      }
-                    }
-                  } catch (error) {
-                    console.log('⚠️ Error parseando fecha:', entityText)
-                  }
-                }
-                break
-                
-              case 'total_factura':
-                if (entityText) {
-                  const importe = parseFloat(entityText.replace(/[€$£¥\s,]/g, '').replace(',', '.'))
-                  if (!isNaN(importe) && importe > 0) {
-                    resultado.total_factura = importe
-                    resultado.confianza_importes = Math.max(resultado.confianza_importes, confidence)
-                    const coordenadas = extractCoordinatesFromPageAnchor(entity, confidence, entityText)
-                    if (coordenadas) {
-                      resultado.coordenadas_campos[ourField] = coordenadas
-                    }
-                  }
-                }
-                break
-                
-              case 'base_imponible':
-                if (entityText) {
-                  const importe = parseFloat(entityText.replace(/[€$£¥\s,]/g, '').replace(',', '.'))
-                  if (!isNaN(importe) && importe > 0) {
-                    resultado.base_imponible = importe
-                    resultado.confianza_importes = Math.max(resultado.confianza_importes, confidence)
-                    const coordenadas = extractCoordinatesFromPageAnchor(entity, confidence, entityText)
-                    if (coordenadas) {
-                      resultado.coordenadas_campos[ourField] = coordenadas
-                    }
-                  }
-                }
-                break
-                
-              case 'cuota_iva':
-                if (entityText) {
-                  const importe = parseFloat(entityText.replace(/[€$£¥\s,]/g, '').replace(',', '.'))
-                  if (!isNaN(importe) && importe > 0) {
-                    resultado.cuota_iva = importe
-                    resultado.confianza_importes = Math.max(resultado.confianza_importes, confidence)
-                    const coordenadas = extractCoordinatesFromPageAnchor(entity, confidence, entityText)
-                    if (coordenadas) {
-                      resultado.coordenadas_campos[ourField] = coordenadas
-                    }
-                  }
-                }
-                break
-                
-              case 'tipo_iva':
-                if (entityText) {
-                  const porcentaje = parseFloat(entityText.replace(/[€$£¥\s,]/g, ''))
-                  if (!isNaN(porcentaje) && porcentaje > 0 && porcentaje <= 30) {
-                    resultado.tipo_iva = porcentaje
-                    const coordenadas = extractCoordinatesFromPageAnchor(entity, confidence, entityText)
-                    if (coordenadas) {
-                      resultado.coordenadas_campos[ourField] = coordenadas
-                    }
-                  }
-                }
-                break
+      // Utilidad: reconstruir texto desde textAnchor
+      const getTextFromAnchor = (fullText: string, textAnchor: any): string => {
+        try {
+          if (!textAnchor || !textAnchor.textSegments) return ''
+          let combined = ''
+          for (const seg of textAnchor.textSegments) {
+            const start = typeof seg.startIndex !== 'undefined' ? Number(seg.startIndex) : 0
+            const end = typeof seg.endIndex !== 'undefined' ? Number(seg.endIndex) : 0
+            if (Number.isFinite(start) && Number.isFinite(end) && end > start && end <= fullText.length) {
+              combined += fullText.substring(start, end)
             }
-            break // Solo procesar el primer mapeo encontrado
           }
+          return combined.trim()
+        } catch (e) {
+          return ''
         }
       }
-    }
 
-    // ✅ CORRECCIÓN: Si no hay entities, usar el texto como fallback
-    if (entities.length === 0 && document.text) {
-      console.log('⚠️ No se encontraron entities, usando extracción manual del texto...')
-      return extractDataFromTextFallback(document.text)
-    }
+      document.pages.forEach((page: any, pageIndex: number) => {
+        console.log(`📄 Procesando página ${pageIndex + 1} para coordenadas...`)
+        
+        // Preferir layout de elementos estructurados: blocks, paragraphs, lines, tokens
+        const containers = [
+          { key: 'block', items: page.blocks || [], conf: 0.7 },
+          { key: 'paragraph', items: page.paragraphs || [], conf: 0.75 },
+          { key: 'line', items: page.lines || [], conf: 0.85 },
+          { key: 'token', items: page.tokens || [], conf: 0.9 }
+        ]
 
-    // CALCULAR CONFIANZA GLOBAL
-    const confianzas = [
-      resultado.confianza_proveedor,
-      resultado.confianza_datos_fiscales,
-      resultado.confianza_importes
-    ].filter(c => c > 0)
-    
-    if (confianzas.length > 0) {
-      resultado.confianza_global = confianzas.reduce((a, b) => a + b, 0) / confianzas.length
-    }
-
-    // IDENTIFICAR CAMPOS CON BAJA CONFIANZA
-    resultado.campos_con_baja_confianza = Object.entries(resultado.coordenadas_campos)
-      .filter(([_, data]: [string, any]) => data.confidence < 0.7)
-      .map(([field, _]) => field)
-
-    // VALIDACIONES MATEMÁTICAS
-    if (resultado.base_imponible > 0 && resultado.tipo_iva > 0 && resultado.cuota_iva === 0) {
-      resultado.cuota_iva = resultado.base_imponible * (resultado.tipo_iva / 100)
-    }
-    
-    if (resultado.base_imponible > 0 && resultado.cuota_iva > 0 && resultado.total_factura === 0) {
-      resultado.total_factura = resultado.base_imponible + resultado.cuota_iva
-    }
-
-    // Redondear importes
-    resultado.total_factura = Math.round(resultado.total_factura * 100) / 100
-    resultado.base_imponible = Math.round(resultado.base_imponible * 100) / 100
-    resultado.cuota_iva = Math.round(resultado.cuota_iva * 100) / 100
-
-    console.log('✅ EXTRACCIÓN COMPLETADA CON COORDENADAS:', {
-      proveedor: resultado.proveedor_nombre.substring(0, 30) + '...',
-      cif: resultado.proveedor_cif,
-      factura: resultado.numero_factura,
-      total: resultado.total_factura + '€',
-      confianza: Math.round(resultado.confianza_global * 100) + '%',
-      campos_coordenadas: Object.keys(resultado.coordenadas_campos).length
-    })
-    
-    // LOGGING DETALLADO DE COORDENADAS EXTRAÍDAS
-    if (Object.keys(resultado.coordenadas_campos).length > 0) {
-      console.log('📍 COORDENADAS EXTRAÍDAS:')
-      Object.entries(resultado.coordenadas_campos).forEach(([campo, coords]: [string, any]) => {
-        console.log(`  - ${campo}: x=${coords.x}, y=${coords.y}, w=${coords.width}, h=${coords.height}, conf=${coords.confidence}`)
+        containers.forEach(container => {
+          if (container.items && container.items.length > 0) {
+            console.log(`  📍 ${container.items.length} ${container.key}s con layout`)
+            container.items.forEach((item: any, idx: number) => {
+              const itemText = getTextFromAnchor(document.text, item.layout?.textAnchor)
+              const coords = extractCoordinates(item, container.conf, itemText)
+              if (coords) {
+                const key = `pagina_${pageIndex + 1}_${container.key}_${idx + 1}`
+                coordenadasCampos[key] = {
+                  ...coords,
+                  texto: itemText,
+                  pagina: pageIndex + 1,
+                  tipo: container.key
+                }
+              }
+            })
+          }
+        })
+        
+        // Buscar coordenadas en boundingPoly de la página (formato alternativo)
+        if (page.boundingPoly && page.boundingPoly.vertices) {
+          console.log(`  📍 Encontradas coordenadas de página ${pageIndex + 1}`)
+          const pageCoords = extractCoordinates(page, 0.9, `Página ${pageIndex + 1}`)
+          if (pageCoords) {
+            coordenadasCampos[`pagina_${pageIndex + 1}_completa`] = {
+              ...pageCoords,
+              texto: `Página ${pageIndex + 1}`,
+              pagina: pageIndex + 1,
+              tipo: 'pagina_completa'
+            }
+          }
+        }
       })
+      
+      console.log(`🎯 Total de coordenadas extraídas: ${Object.keys(coordenadasCampos).length}`)
     } else {
-      console.log('⚠️ NO SE EXTRAJERON COORDENADAS - Revisar respuesta de Google AI')
+      console.log('⚠️ No se encontraron páginas con coordenadas en la respuesta OCR')
     }
-
-    return resultado
-
+    
+    // ✅ Extraer datos del texto usando fallback manual
+    console.log('🔄 Usando extracción manual del texto OCR...')
+    const datosExtraidos = extractDataFromTextFallback(document.text)
+    
+    // ✅ INTEGRAR COORDENADAS REALES para visualización avanzada
+    // Estas coordenadas se usarán en el botón "AVANZADO" para mostrar overlays en el PDF
+    datosExtraidos.coordenadas_campos = coordenadasCampos
+    
+    // ✅ Marcar campos con baja confianza basado en coordenadas
+    if (Object.keys(coordenadasCampos).length === 0) {
+      datosExtraidos.campos_con_baja_confianza = ['coordenadas_no_disponibles']
+      console.log('⚠️ No se pudieron extraer coordenadas para visualización avanzada')
+    } else {
+      console.log('✅ Coordenadas disponibles para visualización avanzada en botón')
+      console.log('🎯 Las coordenadas se pueden usar para:')
+      console.log('   - Mostrar overlays en el PDF original')
+      console.log('   - Resaltar campos extraídos')
+      console.log('   - Visualización interactiva de datos')
+      console.log('   - Análisis de posicionamiento del texto')
+    }
+    
+    return datosExtraidos
+    
   } catch (error) {
     console.error('❌ Error en extracción desde Google AI:', error)
     
     // FALLBACK: Usar extracción manual si falla Google AI
     console.log('🔄 Usando extracción manual como fallback...')
-    return extractDataFromTextFallback(googleAIResponse.document?.text || '')
-  }
-}
-
-// ✅ NUEVA FUNCIÓN: Extraer coordenadas del pageAnchor del Invoice Parser
-function extractCoordinatesFromPageAnchor(entity: any, confidence: number, fieldValue: string) {
-  try {
-    console.log('📍 Extrayendo coordenadas del pageAnchor...')
-    
-    // Verificar estructura del pageAnchor
-    if (!entity.pageAnchor?.pageRefs?.[0]?.boundingPoly?.normalizedVertices) {
-      console.log('⚠️ No se encontró pageAnchor.boundingPoly.normalizedVertices')
-      return null
-    }
-    
-    const vertices = entity.pageAnchor.pageRefs[0].boundingPoly.normalizedVertices
-    
-    if (!vertices || vertices.length < 4) {
-      console.log('⚠️ No se encontraron coordenadas válidas en pageAnchor')
-      return null
-    }
-    
-    console.log('📍 Vertices encontrados en pageAnchor:', vertices.length)
-    
-    // Calcular coordenadas del rectángulo
-    const x = vertices[0]?.x || 0
-    const y = vertices[0]?.y || 0
-    const width = Math.abs((vertices[1]?.x || 0) - (vertices[0]?.x || 0))
-    const height = Math.abs((vertices[2]?.y || 0) - (vertices[0]?.y || 0))
-    
-    // Las coordenadas del Invoice Parser están normalizadas (0-1), convertirlas a píxeles
-    // Asumimos un PDF estándar de 595x842 puntos (A4)
-    const pdfWidth = 595
-    const pdfHeight = 842
-    
-    const finalX = Math.round(x * pdfWidth)
-    const finalY = Math.round(y * pdfHeight)
-    const finalWidth = Math.round(width * pdfWidth)
-    const finalHeight = Math.round(height * pdfHeight)
-    
-    console.log(`📍 Coordenadas extraídas del pageAnchor: x=${finalX}, y=${finalY}, w=${finalWidth}, h=${finalHeight}`)
-    
-    return {
-      x: finalX,
-      y: finalY,
-      width: finalWidth,
-      height: finalHeight,
-      confidence: confidence,
-      text: fieldValue,
-      original_coordinates: {
-        x: x,
-        y: y,
-        width: width,
-        height: height,
-        normalized: true
-      }
-    }
-    
-  } catch (error) {
-    console.error('❌ Error extrayendo coordenadas del pageAnchor:', error)
-    return null
+    const datosFallback = extractDataFromTextFallback(googleAIResponse.document?.text || '')
+    datosFallback.coordenadas_campos = {}
+    datosFallback.campos_con_baja_confianza.push('error_coordenadas')
+    return datosFallback
   }
 }
 
@@ -558,9 +373,10 @@ function extractDataFromTextFallback(text: string) {
   
   console.log('📋 Líneas procesadas:', lines.length)
   
-  // PATRONES UNIVERSALES - Funcionan con CUALQUIER factura
+  // ✅ PATRONES UNIVERSALES MEJORADOS - Optimizados para facturas españolas
+  // Incluyen formatos específicos como "Nº FACTURA\n905", "FECHA\n29/05/2025", etc.
   const patterns: {
-    cif: RegExp;
+    cif: RegExp[];
     numeroFactura: RegExp[];
     fecha: RegExp[];
     totalBruto: RegExp[];
@@ -568,21 +384,47 @@ function extractDataFromTextFallback(text: string) {
     cuotaIva: RegExp[];
     tipoIva: RegExp[];
   } = {
-    // CIF - Todos los formatos posibles españoles
-    cif: /\b([A-Z]\d{8}[A-Z0-9]?)\b|\b([A-Z][\s\-]?\d{2}[\.\s]?\d{3}[\.\s]?\d{3}[\s\-]?[A-Z0-9])\b|\b(\d{8}[A-Z])\b/gi,
-    
-    // Número de factura - MÁXIMA flexibilidad
-    numeroFactura: [
-      /(?:FACTURA|factura|Factura)\s*[:\s#\-]*([A-Z0-9\-\/\.\s]{1,20})/gi,
-      /(?:invoice|Invoice|INVOICE)\s*[:\s#\-]*([A-Z0-9\-\/\.\s]{1,20})/gi,
-      /(?:n[úu]m(?:ero)?|N[ÚU]M(?:ERO)?|num|NUM)\s*[:\s]*([A-Z0-9\-\/\.\s]{1,20})/gi,
-      /(?:f\.?n\.?|F\.?N\.?)\s*[:\s]*([A-Z0-9\-\/\.\s]{1,20})/gi
+    // ✅ PATRONES MEJORADOS PARA CIF - FORMATO ESPAÑOL
+    cif: [
+      // Formato español: "A-11024361" (con guión)
+      /\b([A-Z]\-\d{8}\d{1,2})\b/gi,
+      // Formato español: "B56390065" (sin guión)
+      /\b([A-Z]\d{8}[A-Z0-9]?)\b/gi,
+      // Formato español: "CIF: B56390065"
+      /(?:CIF|C\.I\.F\.)\s*[:\s]*([A-Z][\-\d]{8,10})/gi,
+      // Formato genérico: cualquier CIF válido
+      /\b([A-Z]\d{8}[A-Z0-9]?)\b|\b([A-Z][\s\-]?\d{2}[\.\s]?\d{3}[\.\s]?\d{3}[\s\-]?[A-Z0-9])\b|\b(\d{8}[A-Z])\b/gi
     ],
     
-    // Fechas - TODOS los formatos posibles
+    // ✅ PATRONES MEJORADOS PARA NÚMERO DE FACTURA - FORMATO ESPAÑOL
+    numeroFactura: [
+      // Formato español: "Nº FACTURA\n905" (con salto de línea)
+      /(?:Nº?\s*FACTURA|N[ÚU]MERO?\s*FACTURA)\s*\n?(\d+)/gi,
+      // Formato español: "FACTURA\n905" (con salto de línea)
+      /(?:FACTURA|factura|Factura)\s*\n?(\d+)/gi,
+      // Formato español: "Nº\n905" (con salto de línea)
+      /(?:Nº|NUMERO?|num|NUM)\s*\n?(\d+)/gi,
+      // Formato español: "F.N: 905"
+      /(?:f\.?n\.?|F\.?N\.?)\s*[:\s]*(\d+)/gi,
+      // Formato genérico: "FACTURA: 905"
+      /(?:FACTURA|factura|Factura)\s*[:\s#\-]*([A-Z0-9\-\/\.\s]{1,20})/gi,
+      // Formato genérico: "invoice: 905"
+      /(?:invoice|Invoice|INVOICE)\s*[:\s#\-]*([A-Z0-9\-\/\.\s]{1,20})/gi
+    ],
+    
+    // ✅ PATRONES MEJORADOS PARA FECHA - FORMATO ESPAÑOL
     fecha: [
+      // Formato español: "FECHA\n29/05/2025" (con salto de línea)
+      /(?:FECHA|fecha|Date|date)\s*\n?(\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4})/gi,
+      // Formato español: "29/05/2025" (sin etiqueta)
       /(\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4})/g,  // DD/MM/YYYY, DD-MM-YYYY, DD.MM.YYYY
+      // Formato español: "29-05-2025"
+      /(\d{1,2}\-\d{1,2}\-\d{4})/g,
+      // Formato español: "29.05.2025"
+      /(\d{1,2}\.\d{1,2}\.\d{4})/g,
+      // Formato YYYY/MM/DD
       /(\d{2,4}[\/\-\.]\d{1,2}[\/\-\.]\d{1,2})/g,  // YYYY/MM/DD, YYYY-MM-DD
+      // Formato texto: "29 de mayo de 2025"
       /(\d{1,2}\s+de\s+\w+\s+de\s+\d{4})/gi        // 12 de enero de 2024
     ],
     
@@ -595,20 +437,32 @@ function extractDataFromTextFallback(text: string) {
       /(?:SUMA\s*TOTAL|suma\s*total)\s*[:\s]*(\d{1,8}[,\.]\d{1,2})\s*€?/gi
     ],
     
-    // BASE IMPONIBLE - Todas las variaciones
+    // ✅ BASE IMPONIBLE - PATRONES MEJORADOS Y MÁS ESPECÍFICOS
     baseImponible: [
       /(?:BASE\s*IMPONIBLE|base\s*imponible)\s*[:\s]*(\d{1,8}[,\.]\d{1,2})\s*€?/gi,
       /(?:SUBTOTAL|subtotal|Subtotal)\s*[:\s]*(\d{1,8}[,\.]\d{1,2})\s*€?/gi,
       /(?:BASE|base|Base)\s*[:\s]*(\d{1,8}[,\.]\d{1,2})\s*€?/gi,
       /(?:IMPORTE\s*NETO|importe\s*neto)\s*[:\s]*(\d{1,8}[,\.]\d{1,2})\s*€?/gi,
-      /(?:NETO|neto|Neto)\s*[:\s]*(\d{1,8}[,\.]\d{1,2})\s*€?/gi
+      /(?:NETO|neto|Neto)\s*[:\s]*(\d{1,8}[,\.]\d{1,2})\s*€?/gi,
+      // ✅ NUEVOS PATRONES MÁS ESPECÍFICOS
+      /(?:BASE\s*IMPONIBLE|base\s*imponible)\s*(\d{1,8}[,\.]\d{1,2})/gi,
+      /(\d{1,8}[,\.]\d{1,2})\s*€?\s*(?:BASE|base|Base)/gi,
+      /(?:SUBTOTAL|subtotal)\s*(\d{1,8}[,\.]\d{1,2})/gi,
+      /(?:BASE\s*IMPONIBLE|base\s*imponible)\s*(\d{1,8})/gi,
+      /(\d{1,8})\s*(?:BASE|base|Base)/gi
     ],
     
-    // IVA - Todos los contextos posibles  
+    // ✅ CUOTA IVA - PATRONES MEJORADOS Y MÁS ESPECÍFICOS
     cuotaIva: [
       /(?:IVA|iva)\s*\d{1,2}%?\s*[:\s]*(\d{1,8}[,\.]\d{1,2})\s*€?/gi,
       /(?:CUOTA\s*IVA|cuota\s*iva)\s*[:\s]*(\d{1,8}[,\.]\d{1,2})\s*€?/gi,
-      /(?:I\.V\.A\.|i\.v\.a\.)\s*[:\s]*(\d{1,8}[,\.]\d{1,2})\s*€?/gi
+      /(?:I\.V\.A\.|i\.v\.a\.)\s*[:\s]*(\d{1,8}[,\.]\d{1,2})\s*€?/gi,
+      // ✅ NUEVOS PATRONES MÁS ESPECÍFICOS
+      /(?:IVA|iva)\s*(\d{1,8}[,\.]\d{1,2})/gi,
+      /(\d{1,8}[,\.]\d{1,2})\s*€?\s*(?:IVA|iva)/gi,
+      /(?:CUOTA\s*IVA|cuota\s*iva)\s*(\d{1,8}[,\.]\d{1,2})/gi,
+      /(?:IVA|iva)\s*(\d{1,8})/gi,
+      /(\d{1,8})\s*(?:IVA|iva)/gi
     ],
     
     // Tipo de IVA - Todos los formatos
@@ -621,7 +475,7 @@ function extractDataFromTextFallback(text: string) {
   
   // FUNCIÓN UNIVERSAL PARA EXTRAER CON MÚLTIPLES PATRONES
   function extractWithPatterns(patterns: RegExp[], text: string): string[] {
-    const results = []
+    const results: string[] = []
     for (const pattern of patterns) {
       const matches = [...text.matchAll(pattern)]
       results.push(...matches.map(m => m[1]?.trim()).filter(Boolean))
@@ -638,7 +492,7 @@ function extractDataFromTextFallback(text: string) {
   console.log('🔍 Aplicando patrones universales...')
   
   const matches = {
-    cifs: extractWithPattern(patterns.cif, text).map(cif => cif.replace(/[\s\-\.]/g, '')),
+    cifs: extractWithPatterns(patterns.cif, text).map(cif => cif.replace(/[\s\-\.]/g, '')),
     numeroFactura: extractWithPatterns(patterns.numeroFactura, text),
     fechas: patterns.fecha.flatMap(pattern => extractWithPattern(pattern, text)),
     totalBruto: extractWithPatterns(patterns.totalBruto, text),
@@ -648,14 +502,39 @@ function extractDataFromTextFallback(text: string) {
       .map(t => parseInt(t)).filter(n => !isNaN(n) && n >= 0 && n <= 30)
   }
   
+  // ✅ LOGGING DETALLADO PARA DEBUG
+  console.log('🔍 === EXTRACCIÓN DE TEXTO OCR ===')
+  console.log('📄 Texto completo (primeros 1000 chars):', text.substring(0, 1000))
   console.log('📊 Matches universales encontrados:', {
     cifs: matches.cifs.length,
     facturas: matches.numeroFactura.length,
     fechas: matches.fechas.length,
     totales: matches.totalBruto.length,
     bases: matches.baseImponible.length,
-    iva: matches.tipoIva.length
+    iva: matches.cuotaIva.length,
+    tipoIva: matches.tipoIva.length
   })
+  
+  // ✅ LOGGING ESPECÍFICO PARA IMPORTES
+  if (matches.baseImponible.length > 0) {
+    console.log('✅ Base imponible encontrada:', matches.baseImponible)
+  } else {
+    console.log('❌ NO se encontró base imponible')
+  }
+  
+  if (matches.cuotaIva.length > 0) {
+    console.log('✅ Cuota IVA encontrada:', matches.cuotaIva)
+  } else {
+    console.log('❌ NO se encontró cuota IVA')
+  }
+  
+  if (matches.totalBruto.length > 0) {
+    console.log('✅ Total encontrado:', matches.totalBruto)
+  } else {
+    console.log('❌ NO se encontró total')
+  }
+  
+  console.log('🔍 === FIN EXTRACCIÓN ===')
   
   // FUNCIÓN UNIVERSAL PARA PARSING DE IMPORTES
   function parseImporte(importeStr: string): number {
@@ -663,18 +542,20 @@ function extractDataFromTextFallback(text: string) {
     
     let cleanStr = importeStr.trim().replace(/[€$£¥\s]/g, '')
     
-    // Detectar formato automáticamente
+    // ✅ DETECCIÓN AUTOMÁTICA MEJORADA PARA FORMATOS ESPAÑOLES
     if (cleanStr.includes('.') && cleanStr.includes(',')) {
-      // Formato europeo: 1.234,56
+      // Formato europeo: 1.234,56 o 1,234.56
       const lastComma = cleanStr.lastIndexOf(',')
       const lastDot = cleanStr.lastIndexOf('.')
       
       if (lastComma > lastDot) {
-        // Formato español: 1.234,56
+        // Formato español: 1.234,56 (punto para miles, coma para decimales)
         cleanStr = cleanStr.replace(/\./g, '').replace(',', '.')
+        console.log('✅ Formato español detectado:', importeStr, '→', cleanStr)
       } else {
-        // Formato inglés: 1,234.56
+        // Formato inglés: 1,234.56 (coma para miles, punto para decimales)
         cleanStr = cleanStr.replace(/,/g, '')
+        console.log('✅ Formato inglés detectado:', importeStr, '→', cleanStr)
       }
     } else if (cleanStr.includes(',')) {
       // Solo coma - puede ser decimal o separador de miles
@@ -682,14 +563,30 @@ function extractDataFromTextFallback(text: string) {
       if (parts.length === 2 && parts[1].length <= 2) {
         // Decimal: 123,45
         cleanStr = cleanStr.replace(',', '.')
+        console.log('✅ Decimal detectado:', importeStr, '→', cleanStr)
       } else {
         // Miles: 1,234
         cleanStr = cleanStr.replace(/,/g, '')
+        console.log('✅ Miles detectado:', importeStr, '→', cleanStr)
+      }
+    } else if (cleanStr.includes('.')) {
+      // Solo punto - puede ser decimal o separador de miles
+      const parts = cleanStr.split('.')
+      if (parts.length === 2 && parts[1].length <= 2) {
+        // Decimal: 123.45
+        console.log('✅ Decimal con punto detectado:', importeStr, '→', cleanStr)
+      } else {
+        // Miles: 1.234
+        cleanStr = cleanStr.replace(/\./g, '')
+        console.log('✅ Miles con punto detectado:', importeStr, '→', cleanStr)
       }
     }
     
     const result = parseFloat(cleanStr)
-    return isNaN(result) ? 0 : Math.round(result * 100) / 100
+    const finalResult = isNaN(result) ? 0 : Math.round(result * 100) / 100
+    
+    console.log(`✅ Importe parseado: "${importeStr}" → ${cleanStr} → ${finalResult}`)
+    return finalResult
   }
   
   // FUNCIÓN UNIVERSAL PARA FECHAS
@@ -767,6 +664,34 @@ function extractDataFromTextFallback(text: string) {
           if (hasGoodLetterRatio) {
             proveedorNombre = candidateLine
             console.log('✅ Proveedor por proximidad al CIF:', proveedorNombre)
+            break
+          }
+        }
+        
+        if (proveedorNombre !== 'Proveedor no identificado') break
+      }
+    }
+  }
+  
+  // ✅ ESTRATEGIA 1 MEJORADA: Buscar después de "INSCRITA EN EL REGISTRO MERCANTIL"
+  if (proveedorNombre === 'Proveedor no identificado') {
+    for (let i = 0; i < lines.length; i++) {
+      if (lines[i].includes('INSCRITA EN EL REGISTRO MERCANTIL')) {
+        console.log('🔍 Encontrado registro mercantil, buscando proveedor...')
+        
+        // Buscar en las siguientes 3 líneas
+        for (let j = i + 1; j <= Math.min(i + 3, lines.length - 1); j++) {
+          const candidateLine = lines[j].trim()
+          
+          if (candidateLine.length > 5 && candidateLine.length < 120 &&
+              !candidateLine.includes('CIF') && !candidateLine.includes('TELÉFONO') &&
+              !candidateLine.includes('C/') && !candidateLine.includes('POLÍGONO') &&
+              !candidateLine.includes('INDUSTRIAL') && !candidateLine.includes('CTRA') &&
+              !candidateLine.includes('KM') && !candidateLine.includes('CÁDIZ') &&
+              !candidateLine.includes('SANLÚCAR') && !candidateLine.includes('BARRAMEDA')) {
+            
+            proveedorNombre = candidateLine
+            console.log('✅ Proveedor encontrado por registro mercantil:', proveedorNombre)
             break
           }
         }
@@ -878,13 +803,46 @@ function extractDataFromTextFallback(text: string) {
   
   // VALIDACIÓN FISCAL UNIVERSAL
   if (totalFactura > 0 && baseImponible === 0 && tipoIva > 0) {
+    // Calcular base imponible desde total e IVA
     baseImponible = totalFactura / (1 + tipoIva / 100)
     cuotaIva = totalFactura - baseImponible
-  } else if (baseImponible > 0 && cuotaIva > 0 && totalFactura === 0) {
-    totalFactura = baseImponible + cuotaIva
-  } else if (baseImponible > 0 && totalFactura === 0 && tipoIva > 0) {
+    console.log('✅ Base imponible calculada desde total e IVA:', baseImponible.toFixed(2))
+    console.log('✅ Cuota IVA calculada desde total e IVA:', cuotaIva.toFixed(2))
+  } else if (baseImponible > 0 && cuotaIva === 0 && tipoIva > 0) {
+    // Calcular cuota IVA desde base e IVA
     cuotaIva = baseImponible * (tipoIva / 100)
     totalFactura = baseImponible + cuotaIva
+    console.log('✅ Cuota IVA calculada desde base e IVA:', cuotaIva.toFixed(2))
+    console.log('✅ Total calculado desde base e IVA:', totalFactura.toFixed(2))
+  } else if (baseImponible > 0 && cuotaIva > 0 && totalFactura === 0) {
+    // Calcular total desde base e IVA
+    totalFactura = baseImponible + cuotaIva
+    console.log('✅ Total calculado desde base e IVA:', totalFactura.toFixed(2))
+  } else if (baseImponible > 0 && totalFactura > 0 && cuotaIva === 0) {
+    // Calcular cuota IVA desde base y total
+    cuotaIva = totalFactura - baseImponible
+    console.log('✅ Cuota IVA calculada desde base y total:', cuotaIva.toFixed(2))
+  }
+  
+  // ✅ VALIDACIÓN ADICIONAL: Verificar coherencia matemática
+  if (baseImponible > 0 && cuotaIva > 0 && totalFactura > 0) {
+    const diferencia = Math.abs(totalFactura - (baseImponible + cuotaIva))
+    if (diferencia > 0.01) {
+      console.log('⚠️ ADVERTENCIA: Los importes no son coherentes matemáticamente')
+      console.log(`  - Base: ${baseImponible.toFixed(2)}`)
+      console.log(`  - IVA: ${cuotaIva.toFixed(2)}`)
+      console.log(`  - Total: ${totalFactura.toFixed(2)}`)
+      console.log(`  - Diferencia: ${diferencia.toFixed(2)}`)
+      
+      // Intentar corregir el total
+      const totalCalculado = baseImponible + cuotaIva
+      if (Math.abs(totalFactura - totalCalculado) > 0.01) {
+        console.log('✅ Corrigiendo total para que sea coherente')
+        totalFactura = totalCalculado
+      }
+    } else {
+      console.log('✅ Importes matemáticamente coherentes')
+    }
   }
   
   // Redondear
@@ -918,7 +876,7 @@ function extractDataFromTextFallback(text: string) {
     confianza_datos_fiscales: Math.round(confianza * 0.9 * 100) / 100,
     confianza_importes: Math.round(confianza * 0.85 * 100) / 100,
     coordenadas_campos: {},
-    campos_con_baja_confianza: []
+    campos_con_baja_confianza: [] as string[]
   }
   
   console.log('✅ EXTRACCIÓN MANUAL COMPLETADA:', {
@@ -1065,7 +1023,7 @@ Deno.serve(async (req) => {
     console.log('🏢 Google Project ID:', GOOGLE_PROJECT_ID)
     console.log('🌍 Google Location:', GOOGLE_LOCATION)
     console.log('🔧 Google Processor ID:', GOOGLE_PROCESSOR_ID)
-    console.log('📋 Tipo de procesador: Invoice Parser (esperado)')
+    console.log('📋 Tipo de procesador: OCR Puro (solo extrae texto)')
     
     const documentAiRequest = {
       rawDocument: {

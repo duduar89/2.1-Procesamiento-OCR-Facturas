@@ -229,3 +229,65 @@ Si tienes problemas:
 ---
 
 **¡Tu modal avanzado está listo para usar! 🎉**
+
+
+const PROMPT_COMPLETO = `
+Analiza esta factura y extrae:
+
+CAMPOS PRINCIPALES:
+- proveedor_nombre: Quien EMITE la factura
+- numero_factura: Número de factura
+- fecha_factura: Fecha de emisión
+- total_factura: Importe total
+- base_imponible: Base imponible (sin IVA)
+- total_iva: Total de IVA
+
+PRODUCTOS (línea por línea):
+Para cada línea de producto extrae:
+- descripcion_original: Descripción completa del producto
+- cantidad: Cantidad (con decimales si es necesario)
+- unidad_medida: kg, litros, unidades, etc.
+- precio_unitario_sin_iva: Precio por unidad (sin IVA)
+- precio_total_linea_sin_iva: Base imponible de la línea
+- tipo_iva: % de IVA aplicado
+- cuota_iva_linea: Cuota de IVA de la línea
+- precio_total_linea_con_iva: Total de la línea (con IVA)
+- descuento_porcentaje: % de descuento aplicado
+- descuento_importe: Descuento en euros
+- codigo_producto: Código del producto si existe
+- categoria_principal: Categoría del producto
+
+IMPORTANTE: 
+- El proveedor es quien EMITE, NO quien recibe
+- Extraer TODAS las líneas de productos
+- Mantener la precisión de decimales
+- Validar que precio_total_linea_con_iva = precio_total_linea_sin_iva + cuota_iva_linea
+
+Responde en JSON válido con estructura:
+{
+  "datos_principales": {
+    "proveedor_nombre": "...",
+    "numero_factura": "...",
+    "fecha_factura": "...",
+    "total_factura": 0.00,
+    "base_imponible": 0.00,
+    "total_iva": 0.00
+  },
+  "productos": [
+    {
+      "descripcion_original": "...",
+      "cantidad": 0.0,
+      "unidad_medida": "...",
+      "precio_unitario_sin_iva": 0.00,
+      "precio_total_linea_sin_iva": 0.00,
+      "tipo_iva": 21,
+      "cuota_iva_linea": 0.00,
+      "precio_total_linea_con_iva": 0.00,
+      "descuento_porcentaje": 0,
+      "descuento_importe": 0.00,
+      "codigo_producto": "...",
+      "categoria_principal": "..."
+    }
+  ]
+}
+`;

@@ -1036,8 +1036,8 @@ function loadFacturaDataInModal(factura, mode) {
         }
 
                          // Cargar datos financieros
-                 document.getElementById('baseImponible').textContent = formatCurrency(factura.importe_neto || 0);
-                 document.getElementById('ivaAmount').textContent = formatCurrency(factura.iva || 0);
+                 document.getElementById('baseImponible').textContent = formatCurrency(factura.base_imponible || 0);
+                 document.getElementById('ivaAmount').textContent = formatCurrency(factura.cuota_iva || 0);
                  document.getElementById('totalConIva').textContent = formatCurrency(factura.total_factura || 0);
                  document.getElementById('retencion').textContent = formatCurrency(factura.retencion || 0);
 
@@ -1657,10 +1657,11 @@ async function loadRealDataFromSupabase() {
             fecha_factura: factura.fecha_factura || new Date().toISOString(),
             fecha_vencimiento: factura.fecha_vencimiento || null,
             total_factura: factura.total_factura || 0,
-            importe_neto: factura.base_imponible || factura.total_factura * 0.79,
-            iva: factura.total_iva || factura.total_factura * 0.21,
-            base_imponible: factura.base_imponible || factura.total_factura * 0.79,
-            total_iva: factura.total_iva || factura.total_factura * 0.21,
+            // ✅ CORRECCIÓN: Usar valores reales de la base de datos, NO estimaciones
+            importe_neto: factura.base_imponible || 0,
+            iva: factura.cuota_iva || 0,
+            base_imponible: factura.base_imponible || 0,
+            total_iva: factura.cuota_iva || 0,
             tipo_iva: factura.tipo_iva || 21,
             confianza_global: factura.confianza_global || 0.5,
             confianza_proveedor: factura.confianza_proveedor || 0.5,
@@ -2179,20 +2180,17 @@ async function openInvoiceAdvanced(facturaId) {
             }
         };
         
-        // Mapear coordenadas de campos específicos
-        addValidCoordinates('numero_factura', factura.coordenadas_numero_factura);
-        addValidCoordinates('proveedor_nombre', factura.coordenadas_proveedor_nombre);
-        addValidCoordinates('proveedor_cif', factura.coordenadas_proveedor_cif);
-        addValidCoordinates('fecha_factura', factura.coordenadas_fecha_factura);
-        addValidCoordinates('importe_neto', factura.coordenadas_importe_neto);
-        addValidCoordinates('iva', factura.coordenadas_iva);
-        addValidCoordinates('total_factura', factura.coordenadas_total_factura);
-        
-        // También usar coordenadas_campos si está disponible
-        if (factura.coordenadas_campos) {
+        // ✅ USAR DIRECTAMENTE coordenadas_campos (formato del backend)
+        if (factura.coordenadas_campos && Object.keys(factura.coordenadas_campos).length > 0) {
+            console.log('🔍 Procesando coordenadas_campos del backend:', factura.coordenadas_campos);
+            
             Object.entries(factura.coordenadas_campos).forEach(([fieldName, coordData]) => {
                 addValidCoordinates(fieldName, coordData);
             });
+            
+            console.log(`✅ Total de coordenadas válidas encontradas: ${Object.keys(coordinates).length}`);
+        } else {
+            console.log('⚠️ No se encontraron coordenadas_campos en la factura');
         }
         
         console.log('📍 Coordenadas preparadas:', coordinates);

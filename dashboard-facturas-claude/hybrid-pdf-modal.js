@@ -7,6 +7,7 @@ class HybridPDFModal {
         this.pdfDocument = null;
         this.coordinates = {};
         this.extractedData = {};
+        this.currentZoom = 1.0; // ✅ ZOOM INICIAL
         
         this.init();
     }
@@ -32,11 +33,116 @@ class HybridPDFModal {
             nextPageBtn.addEventListener('click', () => this.changePage(1));
         }
         
+        // ✅ AÑADIR CONTROLES DE ZOOM DINÁMICO
+        this.createZoomControls();
+        
         // Añadir controles de coordenadas
         this.createCoordinateControls();
     }
 
 
+
+    // ===== CREAR CONTROLES DE ZOOM DINÁMICO =====
+    createZoomControls() {
+        const pdfViewerHeader = document.querySelector('.pdf-viewer-header');
+        if (!pdfViewerHeader) return;
+
+        const zoomControls = document.createElement('div');
+        zoomControls.className = 'zoom-controls';
+        zoomControls.innerHTML = `
+            <div class="zoom-buttons">
+                <button id="zoomOut" title="Zoom Out (-)" class="zoom-btn">−</button>
+                <span id="zoomLevel" class="zoom-level">100%</span>
+                <button id="zoomIn" title="Zoom In (+)" class="zoom-btn">+</button>
+                <button id="zoomReset" title="Reset Zoom" class="zoom-btn">Reset</button>
+            </div>
+            <div class="zoom-presets">
+                <button class="zoom-preset" data-zoom="0.5">50%</button>
+                <button class="zoom-preset" data-zoom="0.75">75%</button>
+                <button class="zoom-preset" data-zoom="1.0">100%</button>
+                <button class="zoom-preset" data-zoom="1.5">150%</button>
+                <button class="zoom-preset" data-zoom="2.0">200%</button>
+            </div>
+        `;
+
+        // Insertar después del título
+        const title = pdfViewerHeader.querySelector('h3');
+        if (title) {
+            title.parentNode.insertBefore(zoomControls, title.nextSibling);
+        }
+
+        // ✅ EVENT LISTENERS PARA ZOOM
+        this.setupZoomEventListeners();
+    }
+
+    // ===== CONFIGURAR EVENT LISTENERS DE ZOOM =====
+    setupZoomEventListeners() {
+        const zoomOut = document.getElementById('zoomOut');
+        const zoomIn = document.getElementById('zoomIn');
+        const zoomReset = document.getElementById('zoomReset');
+        const zoomPresets = document.querySelectorAll('.zoom-preset');
+
+        if (zoomOut) {
+            zoomOut.addEventListener('click', () => this.zoomOut());
+        }
+        if (zoomIn) {
+            zoomIn.addEventListener('click', () => this.zoomIn());
+        }
+        if (zoomReset) {
+            zoomReset.addEventListener('click', () => this.zoomReset());
+        }
+
+        // Presets de zoom
+        zoomPresets.forEach(preset => {
+            preset.addEventListener('click', (e) => {
+                const zoom = parseFloat(e.target.dataset.zoom);
+                this.zoomTo(zoom);
+            });
+        });
+    }
+
+    // ===== FUNCIONES DE ZOOM =====
+    async zoomOut() {
+        const newZoom = Math.max(0.25, this.currentZoom - 0.25);
+        await this.zoomTo(newZoom);
+    }
+
+    async zoomIn() {
+        const newZoom = Math.min(3.0, this.currentZoom + 0.25);
+        await this.zoomTo(newZoom);
+    }
+
+    async zoomReset() {
+        await this.zoomTo(1.0);
+    }
+
+    async zoomTo(scale) {
+        try {
+            console.log(`🔍 Aplicando zoom: ${(scale * 100).toFixed(0)}%`);
+            this.currentZoom = scale;
+            
+            // ✅ RENDERIZAR PÁGINA CON NUEVO ZOOM
+            await this.renderPage(this.currentPage, scale);
+            
+            // ✅ ACTUALIZAR OVERLAYS CON NUEVO ZOOM
+            this.updateCoordinateOverlay(scale);
+            
+            // ✅ ACTUALIZAR INDICADOR DE ZOOM
+            this.updateZoomIndicator(scale);
+            
+            console.log(`✅ Zoom aplicado correctamente: ${(scale * 100).toFixed(0)}%`);
+        } catch (error) {
+            console.error('❌ Error aplicando zoom:', error);
+        }
+    }
+
+    // ===== ACTUALIZAR INDICADOR DE ZOOM =====
+    updateZoomIndicator(zoom) {
+        const zoomLevel = document.getElementById('zoomLevel');
+        if (zoomLevel) {
+            zoomLevel.textContent = `${(zoom * 100).toFixed(0)}%`;
+        }
+    }
 
     // ===== CREAR CONTROLES DE COORDENADAS =====
     createCoordinateControls() {
@@ -565,15 +671,10 @@ class HybridPDFModal {
                     let displayValue = extractedValue;
                     
                     if (['base_imponible', 'cuota_iva', 'total_factura', 'retencion'].includes(extractedField)) {
-                        // ✅ CONVERTIR CENTAVOS A EUROS (4000 -> 40.00)
+                        // ✅ CORRECCIÓN: Los importes ya vienen en euros, NO en centavos
                         if (typeof extractedValue === 'number') {
-                            if (extractedValue > 100) {
-                                // Es centavos, convertir a euros
-                                displayValue = (extractedValue / 100).toFixed(2);
-                            } else {
-                                // Ya está en euros, mantener formato
-                                displayValue = extractedValue.toFixed(2);
-                            }
+                            // Los importes ya están en euros, solo formatear
+                            displayValue = extractedValue.toFixed(2);
                         }
                         // ✅ APLICAR FORMATO ESPAÑOL (comas para decimales)
                         displayValue = displayValue.replace('.', ',');
@@ -683,7 +784,7 @@ class HybridPDFModal {
         }
     }
 
-    async renderPage(pageNumber) {
+    async renderPage(pageNumber, zoom = 1.0) {
         try {
             const page = await this.pdfDocument.getPage(pageNumber);
             const canvas = document.getElementById('pdfCanvas');
@@ -691,16 +792,17 @@ class HybridPDFModal {
             
             if (!canvas || !placeholder) return;
 
-            // ✅ ESCALA FIJA 1:1 - Sin manipulación
-            const viewport = page.getViewport({ scale: 1.0 });
+            // ✅ ESCALA DINÁMICA CON ZOOM
+            const viewport = page.getViewport({ scale: zoom });
             
-            console.log('🔍 PDF renderizando con escala 1:1:', { 
-                viewport: { width: viewport.width, height: viewport.height }
+            console.log(`🔍 PDF renderizando con zoom ${(zoom * 100).toFixed(0)}%:`, { 
+                viewport: { width: viewport.width, height: viewport.height },
+                zoom: zoom
             });
             
             const context = canvas.getContext('2d');
 
-            // ✅ CONFIGURAR CANVAS CORRECTAMENTE
+            // ✅ CONFIGURAR CANVAS CON ZOOM
             canvas.width = viewport.width;
             canvas.height = viewport.height;
             
@@ -708,7 +810,7 @@ class HybridPDFModal {
             // canvas.style.width = viewport.width + 'px';
             // canvas.style.height = viewport.height + 'px';
 
-            // Renderizar página con escala 1:1
+            // Renderizar página con escala dinámica
             const renderContext = {
                 canvasContext: context,
                 viewport: viewport
@@ -722,10 +824,10 @@ class HybridPDFModal {
             
             // ✅ ESPERAR A QUE EL CANVAS SE RENDERICE COMPLETAMENTE
             setTimeout(() => {
-                this.updateCoordinateOverlay();
+                this.updateCoordinateOverlay(zoom);
             }, 100);
 
-            console.log(`✅ Página ${pageNumber} renderizada con escala 1:1`);
+            console.log(`✅ Página ${pageNumber} renderizada con zoom ${(zoom * 100).toFixed(0)}%`);
 
         } catch (error) {
             console.error(`❌ Error renderizando página ${pageNumber}:`, error);
