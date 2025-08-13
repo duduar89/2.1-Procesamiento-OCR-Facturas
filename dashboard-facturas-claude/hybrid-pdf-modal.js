@@ -1,4 +1,4 @@
-// ===== MODAL HÍBRIDO DE PDF - COMBINA ESTRUCTURA ORIGINAL + FUNCIONALIDADES AVANZADAS =====
+// ===== MODAL HÍBRIDO SIMPLE - SIN ZOOM, SOLO COORDENADAS =====
 
 class HybridPDFModal {
     constructor() {
@@ -7,16 +7,22 @@ class HybridPDFModal {
         this.pdfDocument = null;
         this.coordinates = {};
         this.extractedData = {};
-        this.currentZoom = 1.0; // ✅ ZOOM INICIAL
+        this.sourcePageWidth = null;  // ancho detectado de coordenadas absolutas
+        this.sourcePageHeight = null; // alto detectado de coordenadas absolutas
+        this.defaultScale = 1.3; // zoom deseado por defecto
         
         this.init();
     }
 
     init() {
-        console.log('🚀 Inicializando Modal Híbrido de PDF...');
+        console.log('🚀 Inicializando Modal Híbrido SIMPLE...');
         this.setupEnhancedPDFControls();
         this.setupCoordinateOverlay();
         this.setupAdvancedFeatures();
+
+        // Mostrar solo el documento: ocultar cabecera del visor
+        const header = document.querySelector('.pdf-viewer-header');
+        if (header) header.style.display = 'none';
     }
 
     // ===== CONFIGURAR CONTROLES MEJORADOS DEL PDF =====
@@ -33,204 +39,67 @@ class HybridPDFModal {
             nextPageBtn.addEventListener('click', () => this.changePage(1));
         }
         
-        // ✅ AÑADIR CONTROLES DE ZOOM DINÁMICO
-        this.createZoomControls();
-        
-        // Añadir controles de coordenadas
-        this.createCoordinateControls();
-    }
-
-
-
-    // ===== CREAR CONTROLES DE ZOOM DINÁMICO =====
-    createZoomControls() {
-        const pdfViewerHeader = document.querySelector('.pdf-viewer-header');
-        if (!pdfViewerHeader) return;
-
-        const zoomControls = document.createElement('div');
-        zoomControls.className = 'zoom-controls';
-        zoomControls.innerHTML = `
-            <div class="zoom-buttons">
-                <button id="zoomOut" title="Zoom Out (-)" class="zoom-btn">−</button>
-                <span id="zoomLevel" class="zoom-level">100%</span>
-                <button id="zoomIn" title="Zoom In (+)" class="zoom-btn">+</button>
-                <button id="zoomReset" title="Reset Zoom" class="zoom-btn">Reset</button>
-            </div>
-            <div class="zoom-presets">
-                <button class="zoom-preset" data-zoom="0.5">50%</button>
-                <button class="zoom-preset" data-zoom="0.75">75%</button>
-                <button class="zoom-preset" data-zoom="1.0">100%</button>
-                <button class="zoom-preset" data-zoom="1.5">150%</button>
-                <button class="zoom-preset" data-zoom="2.0">200%</button>
-            </div>
-        `;
-
-        // Insertar después del título
-        const title = pdfViewerHeader.querySelector('h3');
-        if (title) {
-            title.parentNode.insertBefore(zoomControls, title.nextSibling);
-        }
-
-        // ✅ EVENT LISTENERS PARA ZOOM
-        this.setupZoomEventListeners();
-    }
-
-    // ===== CONFIGURAR EVENT LISTENERS DE ZOOM =====
-    setupZoomEventListeners() {
-        const zoomOut = document.getElementById('zoomOut');
-        const zoomIn = document.getElementById('zoomIn');
-        const zoomReset = document.getElementById('zoomReset');
-        const zoomPresets = document.querySelectorAll('.zoom-preset');
-
-        if (zoomOut) {
-            zoomOut.addEventListener('click', () => this.zoomOut());
-        }
-        if (zoomIn) {
-            zoomIn.addEventListener('click', () => this.zoomIn());
-        }
-        if (zoomReset) {
-            zoomReset.addEventListener('click', () => this.zoomReset());
-        }
-
-        // Presets de zoom
-        zoomPresets.forEach(preset => {
-            preset.addEventListener('click', (e) => {
-                const zoom = parseFloat(e.target.dataset.zoom);
-                this.zoomTo(zoom);
-            });
-        });
-    }
-
-    // ===== FUNCIONES DE ZOOM =====
-    async zoomOut() {
-        const newZoom = Math.max(0.25, this.currentZoom - 0.25);
-        await this.zoomTo(newZoom);
-    }
-
-    async zoomIn() {
-        const newZoom = Math.min(3.0, this.currentZoom + 0.25);
-        await this.zoomTo(newZoom);
-    }
-
-    async zoomReset() {
-        await this.zoomTo(1.0);
-    }
-
-    async zoomTo(scale) {
-        try {
-            console.log(`🔍 Aplicando zoom: ${(scale * 100).toFixed(0)}%`);
-            this.currentZoom = scale;
-            
-            // ✅ RENDERIZAR PÁGINA CON NUEVO ZOOM
-            await this.renderPage(this.currentPage, scale);
-            
-            // ✅ ACTUALIZAR OVERLAYS CON NUEVO ZOOM
-            this.updateCoordinateOverlay(scale);
-            
-            // ✅ ACTUALIZAR INDICADOR DE ZOOM
-            this.updateZoomIndicator(scale);
-            
-            console.log(`✅ Zoom aplicado correctamente: ${(scale * 100).toFixed(0)}%`);
-        } catch (error) {
-            console.error('❌ Error aplicando zoom:', error);
-        }
-    }
-
-    // ===== ACTUALIZAR INDICADOR DE ZOOM =====
-    updateZoomIndicator(zoom) {
-        const zoomLevel = document.getElementById('zoomLevel');
-        if (zoomLevel) {
-            zoomLevel.textContent = `${(zoom * 100).toFixed(0)}%`;
-        }
+        // Controles extra de coordenadas eliminados según requerimiento
     }
 
     // ===== CREAR CONTROLES DE COORDENADAS =====
-    createCoordinateControls() {
-        const pdfViewerHeader = document.querySelector('.pdf-viewer-header');
-        if (!pdfViewerHeader) return;
-
-        const coordinateControls = document.createElement('div');
-        coordinateControls.className = 'coordinate-controls';
-        coordinateControls.innerHTML = `
-            <div class="coordinate-toggle">
-                <label>
-                    <input type="checkbox" id="showCoordinates" checked>
-                    Mostrar Coordenadas
-                </label>
-            </div>
-            <div class="confidence-filter">
-                <select id="confidenceFilter">
-                    <option value="all">Todas las confianzas</option>
-                    <option value="high">Alta confianza (≥90%)</option>
-                    <option value="medium">Media confianza (70-89%)</option>
-                    <option value="low">Baja confianza (<70%)</option>
-                </select>
-            </div>
-        `;
-
-        // Insertar después del título
-        const title = pdfViewerHeader.querySelector('h3');
-        if (title) {
-            title.parentNode.insertBefore(coordinateControls, title.nextSibling);
-        }
-
-        // Event listeners
-        const showCoordinatesCheckbox = document.getElementById('showCoordinates');
-        const confidenceFilter = document.getElementById('confidenceFilter');
-
-        if (showCoordinatesCheckbox) {
-            showCoordinatesCheckbox.addEventListener('change', (e) => {
-                this.toggleCoordinateOverlay(e.target.checked);
-            });
-        }
-
-        if (confidenceFilter) {
-            confidenceFilter.addEventListener('change', (e) => {
-                this.filterCoordinatesByConfidence(e.target.value);
-            });
-        }
-    }
-    
-
+    createCoordinateControls() { /* Eliminado */ }
 
     // ===== CONFIGURAR OVERLAY DE COORDENADAS =====
     setupCoordinateOverlay() {
-        // 🔥 USAR EL CONTENEDOR EXISTENTE en lugar de crear uno nuevo
-        const existingOverlay = document.getElementById('coordinatesOverlay');
-        if (existingOverlay) {
-            console.log('✅ Usando contenedor de coordenadas existente');
-            return; // Ya existe, no crear uno nuevo
-        }
+        console.log('🔍 Configurando overlay de coordenadas...');
         
-        // Solo crear si no existe (fallback)
+        let overlayContainer = document.getElementById('coordinatesOverlay');
+        
+        if (!overlayContainer) {
+            console.log('⚠️ Contenedor de coordenadas no encontrado, creando uno nuevo...');
+            
         const pdfContainer = document.querySelector('.pdf-container');
-        if (!pdfContainer) return;
+            if (!pdfContainer) {
+                console.log('❌ No se encontró contenedor PDF, esperando...');
+                setTimeout(() => this.setupCoordinateOverlay(), 500);
+                return;
+            }
 
-        console.log('⚠️ Creando contenedor de coordenadas de respaldo');
-        const overlayContainer = document.createElement('div');
+            overlayContainer = document.createElement('div');
         overlayContainer.className = 'coordinates-overlay-container';
         overlayContainer.id = 'coordinatesOverlay';
         overlayContainer.style.cssText = `
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: 10;
-        `;
+                position: absolute !important;
+                top: 0 !important;
+                left: 0 !important;
+                width: 100% !important;
+                height: 100% !important;
+                pointer-events: none !important;
+                z-index: 9999 !important;
+                background: transparent !important;
+                border: 2px dashed red !important;
+                opacity: 1 !important;
+                visibility: visible !important;
+                display: block !important;
+            `;
 
+            if (getComputedStyle(pdfContainer).position === 'static') {
         pdfContainer.style.position = 'relative';
+            }
+            
         pdfContainer.appendChild(overlayContainer);
+            console.log('✅ Contenedor de coordenadas creado exitosamente');
+        } else {
+            console.log('✅ Usando contenedor de coordenadas existente');
+        }
+        
+        if (overlayContainer) {
+            overlayContainer.style.display = 'block';
+            overlayContainer.style.visibility = 'visible';
+            console.log('✅ Contenedor de coordenadas configurado y visible');
+        }
     }
 
     // ===== CONFIGURAR FUNCIONALIDADES AVANZADAS =====
     setupAdvancedFeatures() {
-        // Solo atajos de teclado básicos
         this.setupKeyboardShortcuts();
     }
-
-
 
     // ===== FUNCIONES DE NAVEGACIÓN =====
     changePage(delta) {
@@ -250,11 +119,8 @@ class HybridPDFModal {
         }
     }
 
-
-
-    // ===== FUNCIONES DE TECLADO Y ZOOM =====
+    // ===== FUNCIONES DE TECLADO =====
     setupKeyboardShortcuts() {
-        // ✅ TECLADO
         document.addEventListener('keydown', (e) => {
             if (e.target.closest('input, select, textarea')) return;
             
@@ -273,15 +139,14 @@ class HybridPDFModal {
                     break;
             }
         });
-        
-
     }
 
     // ===== FUNCIONES DE COORDENADAS =====
     loadCoordinates(coordinates, extractedData) {
-        // Validar y limpiar datos de entrada
         this.coordinates = {};
         this.extractedData = {};
+        this.sourcePageWidth = null;
+        this.sourcePageHeight = null;
         
         console.log('🔍 loadCoordinates llamado con:', {
             coordinates: coordinates,
@@ -289,7 +154,6 @@ class HybridPDFModal {
         });
         
         if (coordinates && typeof coordinates === 'object') {
-            // Filtrar solo coordenadas válidas
             Object.entries(coordinates).forEach(([fieldName, fieldData]) => {
                 if (fieldData && typeof fieldData === 'object' && 
                     fieldData.x !== undefined && fieldData.y !== undefined && 
@@ -311,142 +175,218 @@ class HybridPDFModal {
         
         console.log('📍 Coordenadas válidas cargadas:', Object.keys(this.coordinates).length);
         console.log('📊 Datos extraídos cargados:', Object.keys(this.extractedData).length);
-        console.log('🔍 Estado final:', {
-            coordinates: this.coordinates,
-            extractedData: this.extractedData
-        });
         
-        // ✅ VERIFICAR QUE EL CANVAS ESTÉ LISTO ANTES DE POSICIONAR
+        // ✅ Detectar dimensiones fuente si vienen en los datos o inferirlas
+        this.computeSourcePageDimensions();
+
         const canvas = document.getElementById('pdfCanvas');
         if (canvas && canvas.width > 0 && canvas.height > 0) {
+            console.log('✅ Canvas listo, configurando coordenadas...');
+            this.setupCoordinateOverlay();
             this.updateCoordinateOverlay();
             this.updateConfidenceStats();
             this.showDebugInfo();
-            
-            // ✅ RELLENAR AUTOMÁTICAMENTE LOS CAMPOS DEL FORMULARIO
             this.fillFormFields();
         } else {
             console.log('⚠️ Canvas no está listo, esperando...');
-            // ✅ REINTENTAR EN 200ms
             setTimeout(() => {
                 this.loadCoordinates(coordinates, extractedData);
-            }, 200);
+            }, 500);
         }
     }
 
-    updateCoordinateOverlay() {
-        const overlayContainer = document.getElementById('coordinatesOverlay');
-        if (!overlayContainer) return;
+    // ✅ Detectar dimensiones base de las coordenadas cuando no son normalizadas (0-1)
+    computeSourcePageDimensions() {
+        let maxRight = 0;
+        let maxBottom = 0;
+        let foundAbsolute = false;
 
-        // Limpiar overlays existentes
+        Object.values(this.coordinates).forEach((c) => {
+            if (!c || typeof c !== 'object') return;
+            const isNormalized = c.x <= 1 && c.y <= 1 && c.width <= 1 && c.height <= 1;
+            // Si vienen explícitas, usarlas
+            if (c.page_width && c.page_height) {
+                this.sourcePageWidth = c.page_width;
+                this.sourcePageHeight = c.page_height;
+            }
+            if (!isNormalized) {
+                foundAbsolute = true;
+                maxRight = Math.max(maxRight, (c.x || 0) + (c.width || 0));
+                maxBottom = Math.max(maxBottom, (c.y || 0) + (c.height || 0));
+            }
+        });
+
+        if (this.sourcePageWidth == null && this.sourcePageHeight == null && foundAbsolute) {
+            // Inferir dimensiones fuente por el máximo derecho e inferior
+            this.sourcePageWidth = maxRight || 595;
+            this.sourcePageHeight = maxBottom || 842;
+        }
+
+        console.log('📐 Dimensiones fuente detectadas:', {
+            pageWidth: this.sourcePageWidth,
+            pageHeight: this.sourcePageHeight
+        });
+    }
+
+    // ✅ ACTUALIZACIÓN DE OVERLAYS CORREGIDA
+    updateCoordinateOverlay() {
+        console.log('🔍 Actualizando overlays de coordenadas...');
+        
+        const overlayContainer = document.getElementById('coordinatesOverlay');
+		const canvas = document.getElementById('pdfCanvas');
+		const pdfContainer = document.querySelector('.pdf-container');
+		if (!overlayContainer) {
+            console.log('⚠️ Contenedor de coordenadas no encontrado');
+            return;
+        }
+		if (!canvas || !pdfContainer) {
+			console.log('⚠️ Canvas o contenedor PDF no disponibles');
+			return;
+		}
+
+		// ✅ Colocar el contenedor de overlays EXACTAMENTE sobre el canvas (en píxeles de CSS)
+		const canvasRect = canvas.getBoundingClientRect();
+		const containerRect = pdfContainer.getBoundingClientRect();
+		overlayContainer.style.left = (canvasRect.left - containerRect.left) + 'px';
+		overlayContainer.style.top = (canvasRect.top - containerRect.top) + 'px';
+		overlayContainer.style.width = canvasRect.width + 'px';
+		overlayContainer.style.height = canvasRect.height + 'px';
+
+        // ✅ LIMPIAR y recrear
         overlayContainer.innerHTML = '';
 
-        // Crear overlays para cada campo
+        let overlaysCreated = 0;
         Object.entries(this.coordinates).forEach(([fieldName, fieldData]) => {
-            if (fieldData && typeof fieldData === 'object') {
                 const overlay = this.createFieldOverlay(fieldName, fieldData);
                 if (overlay) {
                     overlayContainer.appendChild(overlay);
-                }
+                overlaysCreated++;
             }
         });
+        
+        // ✅ VERIFICAR VISIBILIDAD
+        if (overlaysCreated > 0) {
+            overlayContainer.style.display = 'block';
+            overlayContainer.style.visibility = 'visible';
+			overlayContainer.style.zIndex = '9999';
+            // Nota: evitamos forzar estilos con !important aquí para no desalinear
+        } else {
+            // No se crearon overlays
+        }
     }
 
+    // ✅ COORDENADAS SIMPLES - COORDENADAS NORMALIZADAS
     createFieldOverlay(fieldName, fieldData) {
+        // Crear overlay para cada campo
+        
         const canvas = document.getElementById('pdfCanvas');
         if (!canvas) return null;
         
-        // ✅ USAR EL TAMAÑO VISUAL REAL DEL CANVAS (getBoundingClientRect)
-        const canvasRect = canvas.getBoundingClientRect();
-        const visualWidth = canvasRect.width;   // 499 (tamaño real en pantalla)
-        const visualHeight = canvasRect.height; // 665 (tamaño real en pantalla)
-        
-        // ✅ VERIFICAR QUE EL CANVAS TENGA TAMAÑO VÁLIDO
-        if (visualWidth === 0 || visualHeight === 0) {
-            console.log('⚠️ Canvas sin tamaño visual válido, esperando...');
+        // ✅ VERIFICACIÓN: Que el canvas tenga dimensiones
+        if (canvas.width === 0 || canvas.height === 0) {
+            console.log('⚠️ Canvas sin dimensiones válidas');
             return null;
         }
         
-        // ✅ CALCULAR ESCALA VISUAL REAL (tamaño visual vs tamaño interno)
-        const scaleX = visualWidth / 595;   // 499/595 = 0.838
-        const scaleY = visualHeight / 842;  // 665/842 = 0.790
-        
-        // ✅ APLICAR ESCALA A LAS COORDENADAS
-        const x = fieldData.x * scaleX;
-        const y = fieldData.y * scaleY;
-        const width = fieldData.width * scaleX;
-        const height = fieldData.height * scaleY;
-        
-        // ✅ APLICAR OFFSET DEL CANVAS (está centrado en el contenedor)
-        const container = document.querySelector('.pdf-container');
-        let finalX = x;
-        let finalY = y;
-        
-        if (container) {
-            const containerRect = container.getBoundingClientRect();
-            const offsetX = canvasRect.left - containerRect.left;
-            const offsetY = canvasRect.top - containerRect.top;
-            
-            // ✅ POSICIÓN FINAL CON OFFSET
-            finalX = x + offsetX;
-            finalY = y + offsetY;
-            
-            console.log(`🔍 Posicionando ${fieldName}:`, {
-                scaled: { x: Math.round(x), y: Math.round(y) },
-                offset: { x: Math.round(offsetX), y: Math.round(offsetY) },
-                final: { x: Math.round(finalX), y: Math.round(finalY) }
-            });
+        // ✅ VERIFICACIÓN: Coordenadas válidas
+        if (typeof fieldData.x !== 'number' || typeof fieldData.y !== 'number' || 
+            typeof fieldData.width !== 'number' || typeof fieldData.height !== 'number') {
+            console.log('❌ Coordenadas inválidas:', fieldData);
+            return null;
+        }
+
+        // ✅ PERFORMANCE: Omitir tokens y overlays muy pequeños
+        if (fieldData.tipo === 'token') {
+            return null;
         }
         
-        console.log(`🔍 Escalando ${fieldName}:`, {
-            original: fieldData,
-            canvasInternal: { width: canvas.width, height: canvas.height },
-            canvasVisual: { width: Math.round(visualWidth), height: Math.round(visualHeight) },
-            scale: { scaleX: scaleX.toFixed(3), scaleY: scaleY.toFixed(3) },
-            scaled: { x: Math.round(x), y: Math.round(y), width: Math.round(width), height: Math.round(height) }
-        });
+        // ✅ Escalar según el tipo de coordenada
+        let scaleX, scaleY, x, y, width, height;
+        const isNormalized = fieldData.x <= 1 && fieldData.y <= 1 && fieldData.width <= 1 && fieldData.height <= 1;
+
+        if (isNormalized) {
+            // Coordenadas normalizadas (0-1)
+            const canvasRect = canvas.getBoundingClientRect();
+            scaleX = canvasRect.width;  // usar píxeles visibles
+            scaleY = canvasRect.height;
+        } else if (fieldData.page_width && fieldData.page_height) {
+            // Coordenadas absolutas con dimensiones fuente provistas
+            const canvasRect = canvas.getBoundingClientRect();
+            scaleX = canvasRect.width / fieldData.page_width;
+            scaleY = canvasRect.height / fieldData.page_height;
+        } else if (this.sourcePageWidth && this.sourcePageHeight) {
+            // Coordenadas absolutas, inferir escala por máximos
+            const canvasRect = canvas.getBoundingClientRect();
+            scaleX = canvasRect.width / this.sourcePageWidth;
+            scaleY = canvasRect.height / this.sourcePageHeight;
+        } else {
+            // Último recurso: asumir A4
+            const canvasRect = canvas.getBoundingClientRect();
+            scaleX = canvasRect.width / 595;
+            scaleY = canvasRect.height / 842;
+        }
+
+        x = fieldData.x * scaleX;
+        y = fieldData.y * scaleY;
+        width = fieldData.width * scaleX;
+        height = fieldData.height * scaleY;
+
+        // Omitir overlays diminutos para mejorar legibilidad y rendimiento
+        if (width < 6 || height < 6) {
+            return null;
+        }
         
-        // ✅ CREAR EL OVERLAY DESPUÉS DE CALCULAR TODO
+        // ✅ POSICIONAMIENTO: Relativo al canvas
         const confidence = fieldData.confidence !== undefined ? fieldData.confidence : 0.5;
-        const color = this.getConfidenceColor(confidence);
+        const color = '#4f46e5';
         
         const overlay = document.createElement('div');
         overlay.className = 'field-overlay';
         overlay.setAttribute('data-field', fieldName);
         overlay.setAttribute('data-confidence', confidence.toString());
         
+        // 🔥 CORRECCIÓN CRÍTICA: CSS más agresivo para visibilidad
         overlay.style.cssText = `
-            position: absolute;
-            left: ${finalX}px;
-            top: ${finalY}px;
-            width: ${width}px;
-            height: ${height}px;
-            border: 2px solid ${color};
-            background: ${color}20;
-            pointer-events: auto;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            z-index: 15;
+            position: absolute !important;
+            left: ${x}px !important;
+            top: ${y}px !important;
+            width: ${width}px !important;
+            height: ${height}px !important;
+            border: 1.5px solid ${color} !important;
+            background: ${color}1F !important;
+            border-radius: 6px !important;
+            pointer-events: auto !important;
+            cursor: pointer !important;
+            z-index: 9999 !important;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.25) !important;
+            opacity: 1 !important;
+            visibility: visible !important;
+            display: block !important;
+            transform: none !important;
         `;
         
-        // Tooltip con información del campo
+        // ✅ TOOLTIP mejorado
+        const tooltip = this.createTooltip(fieldName, fieldData, confidence);
+        overlay.appendChild(tooltip);
+        
+        // ✅ EVENTOS
+        this.setupOverlayEvents(overlay, tooltip, fieldName);
+        
+        return overlay;
+    }
+
+    // ===== UTILIDADES =====
+    createTooltip(fieldName, fieldData, confidence) {
         const tooltip = document.createElement('div');
         tooltip.className = 'field-tooltip';
         
-        // ✅ DEBUG: Ver qué datos tenemos disponibles
         const fieldValue = this.extractedData[fieldName];
-        console.log(`🔍 Tooltip para ${fieldName}:`, {
-            fieldName,
-            fieldValue,
-            extractedDataKeys: Object.keys(this.extractedData),
-            extractedData: this.extractedData
-        });
-        
         tooltip.innerHTML = `
             <strong>${this.getFieldLabel(fieldName)}</strong><br>
             Valor: ${fieldValue !== undefined ? fieldValue : 'N/A'}<br>
             Confianza: ${Math.round(confidence * 100)}%
         `;
+        
         tooltip.style.cssText = `
             position: absolute;
             bottom: 100%;
@@ -464,32 +404,29 @@ class HybridPDFModal {
             z-index: 20;
         `;
 
-        overlay.appendChild(tooltip);
+        return tooltip;
+    }
 
-        // Eventos del overlay
+    setupOverlayEvents(overlay, tooltip, fieldName) {
         overlay.addEventListener('mouseenter', () => {
             tooltip.style.opacity = '1';
             overlay.style.transform = 'scale(1.05)';
-            overlay.style.zIndex = '25';
         });
 
         overlay.addEventListener('mouseleave', () => {
             tooltip.style.opacity = '0';
             overlay.style.transform = 'scale(1)';
-            overlay.style.zIndex = '15';
         });
 
         overlay.addEventListener('click', () => {
             this.highlightField(fieldName);
         });
-
-        return overlay;
     }
 
     getConfidenceColor(confidence) {
-        if (confidence >= 0.9) return '#10b981'; // Verde - Alta confianza
-        if (confidence >= 0.7) return '#f59e0b'; // Amarillo - Media confianza
-        return '#ef4444'; // Rojo - Baja confianza
+        if (confidence >= 0.9) return '#10b981'; // Verde
+        if (confidence >= 0.7) return '#f59e0b'; // Amarillo
+        return '#ef4444'; // Rojo
     }
 
     getFieldLabel(fieldName) {
@@ -498,12 +435,23 @@ class HybridPDFModal {
             proveedor_nombre: 'Nombre del Proveedor',
             proveedor_cif: 'CIF del Proveedor',
             fecha_factura: 'Fecha de Factura',
-            importe_neto: 'Importe Neto',
-            iva: 'IVA',
             total_factura: 'Total Factura',
             base_imponible: 'Base Imponible'
         };
         return labels[fieldName] || fieldName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    }
+
+    highlightField(fieldName) {
+        // Resaltar en el formulario
+        const formField = document.getElementById(fieldName);
+        if (formField) {
+            formField.style.backgroundColor = '#fef3c7';
+            formField.style.borderColor = '#f59e0b';
+            setTimeout(() => {
+                formField.style.backgroundColor = '';
+                formField.style.borderColor = '';
+            }, 2000);
+        }
     }
 
     // ===== FUNCIONES DE FILTRADO =====
@@ -539,31 +487,6 @@ class HybridPDFModal {
         });
     }
 
-    // ===== FUNCIONES DE RESALTADO =====
-    highlightField(fieldName) {
-        // Remover resaltado anterior
-        document.querySelectorAll('.field-overlay').forEach(overlay => {
-            overlay.style.boxShadow = 'none';
-        });
-
-        // Resaltar campo específico
-        const fieldOverlays = document.querySelectorAll(`[data-field="${fieldName}"]`);
-        fieldOverlays.forEach(overlay => {
-            overlay.style.boxShadow = '0 0 0 4px rgba(59, 130, 246, 0.5)';
-        });
-
-        // Resaltar en el formulario
-        const formField = document.getElementById(fieldName);
-        if (formField) {
-            formField.style.backgroundColor = '#fef3c7';
-            formField.style.borderColor = '#f59e0b';
-            setTimeout(() => {
-                formField.style.backgroundColor = '';
-                formField.style.borderColor = '';
-            }, 2000);
-        }
-    }
-
     // ===== FUNCIONES DE ESTADÍSTICAS =====
     updateConfidenceStats() {
         const coordinates = Object.values(this.coordinates);
@@ -571,7 +494,6 @@ class HybridPDFModal {
         
         if (totalFields === 0) return;
 
-        // Filtrar solo coordenadas válidas con propiedades de confianza
         const validCoordinates = coordinates.filter(f => f && typeof f === 'object' && f.confidence !== undefined);
         
         if (validCoordinates.length === 0) {
@@ -585,7 +507,6 @@ class HybridPDFModal {
         
         const globalConfidence = validCoordinates.reduce((sum, f) => sum + (f.confidence || 0), 0) / validCoordinates.length;
 
-        // Actualizar estadísticas en el panel derecho si existe
         this.updateStatsDisplay({
             totalFields: validCoordinates.length,
             highConfidence,
@@ -596,14 +517,12 @@ class HybridPDFModal {
     }
 
     updateStatsDisplay(stats) {
-        // ✅ SOLO BUSCAR ELEMENTOS DENTRO DEL MODAL ACTUAL
         const modal = document.querySelector('.modal.active, .facturaModal.active');
         if (!modal) {
             console.log('⚠️ No se encontró modal activo para actualizar estadísticas');
             return;
         }
         
-        // Buscar elementos de estadísticas SOLO dentro del modal
         const confidenceElements = modal.querySelectorAll('[id*="confianza"], [id*="confidence"]');
         
         if (confidenceElements.length === 0) {
@@ -625,79 +544,109 @@ class HybridPDFModal {
     fillFormFields() {
         console.log('🔍 Rellenando campos del formulario con datos extraídos...');
         
-        // ✅ DEBUG COMPLETO: Ver TODOS los datos disponibles
-        console.log('🔍 DATOS COMPLETOS DISPONIBLES:', {
-            extractedData: this.extractedData,
-            extractedDataKeys: Object.keys(this.extractedData),
-            extractedDataValues: Object.values(this.extractedData),
-            extractedDataEntries: Object.entries(this.extractedData)
-        });
-        
-        // ✅ MAPEO DE CAMPOS: Nombre del campo extraído -> ID del campo del formulario
         const fieldMapping = {
-            'numero_factura': 'numeroFactura',
-            'fecha_factura': 'fechaFactura',
-            'proveedor_nombre': 'proveedor',
-            'proveedor_cif': 'cifProveedor',
-            'proveedor_provincia': 'provinciaProveedor',
-            'fecha_vencimiento': 'fechaVencimiento',
-            // ✅ CAMPOS MONETARIOS CON NOMBRES CORRECTOS DE LA EDGE FUNCTION
-            'base_imponible': 'importeBase',         // Campo real de la edge function
-            'cuota_iva': 'cuotaIva',                 // Campo real de la edge function
-            'total_factura': 'totalConIva',
-            'retencion': 'retencion'
+            'numero_factura': ['numeroFactura'],
+            'fecha_factura': ['fechaFactura'],
+            'proveedor_nombre': ['proveedor'],
+            'proveedor_cif': ['cifProveedor'],
+            'proveedor_provincia': ['provinciaProveedor'],
+            'fecha_vencimiento': ['fechaVencimiento'],
+            // soportar IDs antiguos y actuales
+            'base_imponible': ['baseImponible', 'importeBase'],
+            'cuota_iva': ['ivaAmount', 'cuotaIva'],
+            'total_factura': ['totalConIva'],
+            'retencion': ['retencion']
         };
         
-        // ✅ DEBUG: Ver qué campos del formulario existen
-        console.log('🔍 BUSCANDO CAMPOS DEL FORMULARIO...');
-        Object.values(fieldMapping).forEach(formFieldId => {
-            const formField = document.getElementById(formFieldId);
-            if (formField) {
-                console.log(`✅ Campo encontrado: ${formFieldId} (${formField.tagName})`);
+        const setIntoElements = (ids, value, extractedField) => {
+            const idList = Array.isArray(ids) ? ids : [ids];
+            let applied = false;
+            idList.forEach((id) => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                applied = true;
+                let displayValue = value;
+                if (['base_imponible', 'cuota_iva', 'total_factura', 'retencion'].includes(extractedField)) {
+                    if (typeof value === 'number') displayValue = value.toFixed(2);
+                    displayValue = String(displayValue).replace('.', ',');
+                    displayValue = `€${displayValue}`;
+                }
+                if (el.tagName === 'INPUT' || el.tagName === 'SELECT') {
+                    el.value = displayValue;
             } else {
-                console.log(`❌ Campo NO encontrado: ${formFieldId}`);
+                    el.textContent = displayValue;
             }
+                console.log(`✅ Campo rellenado: ${id} = ${displayValue} (de ${extractedField}: ${value})`);
         });
+            if (!applied) console.log(`⚠️ Ningún elemento encontrado para IDs: ${idList.join(', ')}`);
+        };
         
-        // ✅ RELLENAR CADA CAMPO
-        Object.entries(fieldMapping).forEach(([extractedField, formFieldId]) => {
+        Object.entries(fieldMapping).forEach(([extractedField, idList]) => {
             const extractedValue = this.extractedData[extractedField];
             
             if (extractedValue !== undefined && extractedValue !== null) {
-                const formField = document.getElementById(formFieldId);
-                
-                if (formField) {
-                    // ✅ FORMATO ESPECIAL PARA CAMPOS MONETARIOS
-                    let displayValue = extractedValue;
-                    
-                    if (['base_imponible', 'cuota_iva', 'total_factura', 'retencion'].includes(extractedField)) {
-                        // ✅ CORRECCIÓN: Los importes ya vienen en euros, NO en centavos
-                        if (typeof extractedValue === 'number') {
-                            // Los importes ya están en euros, solo formatear
-                            displayValue = extractedValue.toFixed(2);
-                        }
-                        // ✅ APLICAR FORMATO ESPAÑOL (comas para decimales)
-                        displayValue = displayValue.replace('.', ',');
-                        displayValue = `€${displayValue}`;
-                    }
-                    
-                    // ✅ APLICAR VALOR AL CAMPO
-                    if (formField.tagName === 'INPUT' || formField.tagName === 'SELECT') {
-                        formField.value = displayValue;
-                    } else {
-                        formField.textContent = displayValue;
-                    }
-                    
-                    console.log(`✅ Campo rellenado: ${formFieldId} = ${displayValue} (de ${extractedField}: ${extractedValue})`);
-                } else {
-                    console.log(`⚠️ Campo no encontrado: ${formFieldId}`);
-                }
+                setIntoElements(idList, extractedValue, extractedField);
             } else {
                 console.log(`ℹ️ Sin datos para: ${extractedField}`);
             }
         });
         
         console.log('✅ Formulario rellenado completamente');
+
+        // ✅ Aplicar estilos por confianza
+        this.updateFormConfidenceStyles();
+    }
+
+    // ===== APLICAR COLORES DE CONFIANZA A LAS CASILLAS DEL FORM =====
+    updateFormConfidenceStyles() {
+        const getColorForConfidence = (confidence) => {
+            if (confidence >= 0.9) return { bg: '#10b9811A', border: '#10b981' };
+            if (confidence >= 0.7) return { bg: '#f59e0b1A', border: '#f59e0b' };
+            return { bg: '#ef44441A', border: '#ef4444' };
+        };
+
+        const safeApply = (ids, confidence) => {
+            if (confidence == null) return;
+            const idList = Array.isArray(ids) ? ids : [ids];
+            const { bg, border } = getColorForConfidence(confidence);
+            idList.forEach((id) => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                el.style.backgroundColor = bg;
+                el.style.borderColor = border;
+                el.style.boxShadow = `0 0 0 2px ${border}22`;
+            });
+        };
+
+        // Heurísticas de confianza por campo usando las métricas ya disponibles
+        const hasValue = (v) => v !== undefined && v !== null && v !== '';
+
+        // Si vienen del backend, úsalo; si no, calcular heurística local
+        const confProveedor = (this.extractedData.confianza_proveedor != null)
+            ? this.extractedData.confianza_proveedor
+            : (hasValue(this.extractedData.proveedor_nombre) || hasValue(this.extractedData.proveedor_cif) ? 0.8 : 0.4);
+
+        const base = Number(this.extractedData.base_imponible) || 0;
+        const iva = Number(this.extractedData.cuota_iva) || 0;
+        const total = Number(this.extractedData.total_factura) || 0;
+        const coherente = base > 0 && Math.abs((base + iva) - total) <= Math.max(0.5, total * 0.02);
+        const confImportes = (this.extractedData.confianza_importes != null)
+            ? this.extractedData.confianza_importes
+            : (total > 0 ? (coherente ? 0.9 : 0.7) : 0.4);
+
+        const confDatos = (this.extractedData.confianza_datos_fiscales != null)
+            ? this.extractedData.confianza_datos_fiscales
+            : (hasValue(this.extractedData.fecha_factura) ? 0.8 : 0.4);
+
+        const confNumero = (this.extractedData.numero_factura && this.extractedData.numero_factura !== 'SIN_NUMERO') ? 0.85 : 0.4;
+
+        safeApply('proveedor', confProveedor);
+        safeApply('cifProveedor', confProveedor);
+        safeApply('numeroFactura', confNumero);
+        safeApply('fechaFactura', confDatos);
+        safeApply(['baseImponible', 'importeBase'], confImportes);
+        safeApply(['ivaAmount', 'cuotaIva'], confImportes);
+        safeApply(['totalConIva'], confImportes);
     }
     
     // 🔥 DEBUG: Mostrar información visual del contenedor y canvas
@@ -707,7 +656,6 @@ class HybridPDFModal {
         
         if (!canvas || !container) return;
         
-        // Crear overlay de debug
         const debugOverlay = document.createElement('div');
         debugOverlay.className = 'debug-overlay';
         debugOverlay.style.cssText = `
@@ -743,10 +691,8 @@ class HybridPDFModal {
             - Campos: ${Object.keys(this.coordinates).join(', ')}
         `;
         
-        // Añadir al contenedor
         container.appendChild(debugOverlay);
         
-        // Remover después de 10 segundos
         setTimeout(() => {
             if (debugOverlay.parentNode) {
                 debugOverlay.parentNode.removeChild(debugOverlay);
@@ -759,11 +705,11 @@ class HybridPDFModal {
         try {
             console.log('📄 Cargando PDF desde:', pdfUrl);
             
-            if (!pdfjsLib) {
+            if (!window.pdfjsLib) {
                 throw new Error('PDF.js no está disponible');
             }
 
-            const loadingTask = pdfjsLib.getDocument(pdfUrl);
+            const loadingTask = window.pdfjsLib.getDocument(pdfUrl);
             this.pdfDocument = await loadingTask.promise;
             
             this.totalPages = this.pdfDocument.numPages;
@@ -771,10 +717,8 @@ class HybridPDFModal {
             
             console.log(`✅ PDF cargado: ${this.totalPages} páginas`);
             
-            // Renderizar primera página
             await this.renderPage(1);
             
-            // Actualizar controles
             this.updatePageInfo();
             this.updatePageControls();
             
@@ -784,7 +728,8 @@ class HybridPDFModal {
         }
     }
 
-    async renderPage(pageNumber, zoom = 1.0) {
+    // ✅ RENDERIZADO SIMPLE - SIN ZOOM
+    async renderPage(pageNumber) {
         try {
             const page = await this.pdfDocument.getPage(pageNumber);
             const canvas = document.getElementById('pdfCanvas');
@@ -792,42 +737,21 @@ class HybridPDFModal {
             
             if (!canvas || !placeholder) return;
 
-            // ✅ ESCALA DINÁMICA CON ZOOM
-            const viewport = page.getViewport({ scale: zoom });
-            
-            console.log(`🔍 PDF renderizando con zoom ${(zoom * 100).toFixed(0)}%:`, { 
-                viewport: { width: viewport.width, height: viewport.height },
-                zoom: zoom
-            });
-            
+            // ✅ RENDERIZADO con zoom fijo al 130%
+            const viewport = page.getViewport({ scale: this.defaultScale });
             const context = canvas.getContext('2d');
 
-            // ✅ CONFIGURAR CANVAS CON ZOOM
+            // ✅ Canvas con dimensiones del viewport
             canvas.width = viewport.width;
             canvas.height = viewport.height;
             
-            // ✅ NO forzar CSS - dejar que se ajuste naturalmente
-            // canvas.style.width = viewport.width + 'px';
-            // canvas.style.height = viewport.height + 'px';
+            await page.render({ canvasContext: context, viewport }).promise;
 
-            // Renderizar página con escala dinámica
-            const renderContext = {
-                canvasContext: context,
-                viewport: viewport
-            };
-
-            await page.render(renderContext).promise;
-
-            // Mostrar canvas y ocultar placeholder
             canvas.style.display = 'block';
             placeholder.style.display = 'none';
             
-            // ✅ ESPERAR A QUE EL CANVAS SE RENDERICE COMPLETAMENTE
-            setTimeout(() => {
-                this.updateCoordinateOverlay(zoom);
-            }, 100);
-
-            console.log(`✅ Página ${pageNumber} renderizada con zoom ${(zoom * 100).toFixed(0)}%`);
+            // Reposicionar overlays tras cambio de tamaño
+            this.updateCoordinateOverlay();
 
         } catch (error) {
             console.error(`❌ Error renderizando página ${pageNumber}:`, error);
@@ -847,10 +771,7 @@ class HybridPDFModal {
         try {
             console.log('🚀 Abriendo modal híbrido con PDF y coordenadas...');
             
-            // ✅ PRIMERO CARGAR PDF, LUEGO COORDENADAS
             await this.loadPDF(pdfUrl);
-            
-            // ✅ CARGAR COORDENADAS DESPUÉS DEL PDF
             this.loadCoordinates(coordinates, extractedData);
             
             console.log('✅ Modal híbrido abierto correctamente');
@@ -869,7 +790,7 @@ let hybridPDFModal = null;
 if (typeof HybridPDFModal !== 'undefined') {
     hybridPDFModal = new HybridPDFModal();
     window.hybridPDFModal = hybridPDFModal;
-    console.log('✅ Modal Híbrido de PDF inicializado inmediatamente');
+    console.log('✅ Modal Híbrido de PDF SIMPLE inicializado inmediatamente');
 }
 
 // ✅ INICIALIZACIÓN CON DOMContentLoaded (fallback)
@@ -877,7 +798,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (!window.hybridPDFModal && typeof HybridPDFModal !== 'undefined') {
         hybridPDFModal = new HybridPDFModal();
         window.hybridPDFModal = hybridPDFModal;
-        console.log('✅ Modal Híbrido de PDF inicializado con DOMContentLoaded');
+        console.log('✅ Modal Híbrido de PDF SIMPLE inicializado con DOMContentLoaded');
     }
 });
 

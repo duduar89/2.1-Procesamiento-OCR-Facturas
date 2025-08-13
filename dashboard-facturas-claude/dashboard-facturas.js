@@ -56,6 +56,8 @@ async function initializeDashboard() {
         } else {
             console.warn('⚠️ Clase HybridPDFModal no encontrada - Verificar que hybrid-pdf-modal.js esté cargado');
         }
+        
+
 
         console.log('Dashboard inicializado correctamente');
 
@@ -166,11 +168,15 @@ function setupEventListeners() {
     const uploadZone = document.getElementById('uploadZone');
     const fileInput = document.getElementById('fileInput');
     const selectFileBtn = document.getElementById('selectFileBtn');
+    let fileDialogOpen = false; // evitar doble apertura
 
     // Click en zona de upload
     if (uploadZone) {
-        uploadZone.addEventListener('click', () => {
-            if (!processingState) {
+        uploadZone.addEventListener('click', (e) => {
+            // Evitar propagación desde el botón interno
+            if (e.target && (e.target.id === 'selectFileBtn' || e.target.closest('#selectFileBtn'))) return;
+            if (!processingState && !fileDialogOpen) {
+                fileDialogOpen = true;
                 fileInput.click();
             }
         });
@@ -178,8 +184,10 @@ function setupEventListeners() {
 
     // Click en botón de selección
     if (selectFileBtn) {
-        selectFileBtn.addEventListener('click', () => {
-            if (!processingState) {
+        selectFileBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (!processingState && !fileDialogOpen) {
+                fileDialogOpen = true;
                 fileInput.click();
             }
         });
@@ -187,14 +195,14 @@ function setupEventListeners() {
 
     // Drag & Drop
     if (uploadZone) {
-        uploadZone.addEventListener('dragover', handleDragOver);
-        uploadZone.addEventListener('drop', handleDrop);
-        uploadZone.addEventListener('dragleave', handleDragLeave);
+        uploadZone.addEventListener('dragover', (e) => { e.stopPropagation(); handleDragOver(e); });
+        uploadZone.addEventListener('drop', (e) => { e.stopPropagation(); handleDrop(e); });
+        uploadZone.addEventListener('dragleave', (e) => { e.stopPropagation(); handleDragLeave(e); });
     }
 
     // Input de archivo
     if (fileInput) {
-        fileInput.addEventListener('change', handleFileSelect);
+        fileInput.addEventListener('change', (e) => { fileDialogOpen = false; handleFileSelect(e); });
     }
 
     // Botones de filtros
@@ -2153,6 +2161,7 @@ async function openInvoiceAdvanced(facturaId) {
         console.log('🚀 Abriendo modal híbrido para factura:', facturaId);
         console.log('🚀 Función openInvoiceAdvanced ejecutándose...');
         
+
         if (!window.hybridPDFModal) {
             throw new Error('Modal híbrido no inicializado');
         }
@@ -2236,16 +2245,23 @@ async function openInvoiceAdvanced(facturaId) {
             throw new Error('URL del PDF no es válida');
         }
         
-        // Preparar datos extraídos para el modal
+        // Preparar datos extraídos para el modal (usando las claves que espera HybridPDFModal)
+        const toNumber = (v) => (v == null ? 0 : Number(v));
         const extractedData = {
-            numero_factura: factura.numero_factura || 'N/A',
-            proveedor_nombre: factura.proveedor_nombre || 'N/A',
-            proveedor_cif: factura.proveedor_cif || 'N/A',
-            fecha_factura: factura.fecha_factura || 'N/A',
-            importe_neto: factura.importe_neto || 0,
-            iva: factura.iva || 0,
-            total_factura: factura.total_factura || 0,
-            confianza_global: factura.confianza_global || 0
+            numero_factura: factura.numero_factura ?? 'N/A',
+            proveedor_nombre: factura.proveedor_nombre ?? 'N/A',
+            proveedor_cif: factura.proveedor_cif ?? 'N/A',
+            fecha_factura: factura.fecha_factura ?? 'N/A',
+            // Claves esperadas por el modal
+            base_imponible: toNumber(factura.base_imponible ?? factura.importe_neto),
+            cuota_iva: toNumber(factura.cuota_iva ?? factura.iva),
+            total_factura: toNumber(factura.total_factura),
+            retencion: toNumber(factura.retencion),
+            // Confianzas
+            confianza_global: factura.confianza_global ?? 0,
+            confianza_proveedor: factura.confianza_proveedor ?? 0,
+            confianza_datos_fiscales: factura.confianza_datos_fiscales ?? 0,
+            confianza_importes: factura.confianza_importes ?? 0,
         };
         
         console.log('📊 Datos extraídos preparados:', extractedData);

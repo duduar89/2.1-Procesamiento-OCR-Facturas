@@ -196,9 +196,9 @@ function extractCoordinates(field: any, confidence: number, fieldValue: string) 
     const height = Math.abs((vertices[2]?.y || 0) - (vertices[0]?.y || 0));
     
     // Si las coordenadas están normalizadas (0-1), convertirlas a píxeles
-    // Asumimos un PDF estándar de 595x842 puntos (A4)
-    const pdfWidth = 595;
-    const pdfHeight = 842;
+    // Preferir dimensiones reales de página si existen
+    const pageWidth = (field.pageWidth || field.width || field.layout?.width || field.layout?.pageWidth || 595);
+    const pageHeight = (field.pageHeight || field.height || field.layout?.height || field.layout?.pageHeight || 842);
     
     let finalX = x;
     let finalY = y;
@@ -208,10 +208,10 @@ function extractCoordinates(field: any, confidence: number, fieldValue: string) 
     // Detectar si son coordenadas normalizadas
     if (x <= 1 && y <= 1 && width <= 1 && height <= 1) {
       console.log('🔄 Convirtiendo coordenadas normalizadas a píxeles...');
-      finalX = Math.round(x * pdfWidth);
-      finalY = Math.round(y * pdfHeight);
-      finalWidth = Math.round(width * pdfWidth);
-      finalHeight = Math.round(height * pdfHeight);
+      finalX = Math.round(x * pageWidth);
+      finalY = Math.round(y * pageHeight);
+      finalWidth = Math.round(width * pageWidth);
+      finalHeight = Math.round(height * pageHeight);
     }
     
     console.log(`📍 Coordenadas extraídas: x=${finalX}, y=${finalY}, w=${finalWidth}, h=${finalHeight}`);
@@ -229,7 +229,10 @@ function extractCoordinates(field: any, confidence: number, fieldValue: string) 
         width: width,
         height: height,
         normalized: (x <= 1 && y <= 1)
-      }
+      },
+      // Adjuntar dimensiones de página usadas para que el frontend pueda escalar de forma exacta
+      page_width: pageWidth,
+      page_height: pageHeight
     };
     
   } catch (error) {
