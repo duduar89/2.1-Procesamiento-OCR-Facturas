@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Facturas Empresarial - Factura Pro</title>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>
+        // Configurar el worker de PDF.js
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../style.css">
+    <link rel="stylesheet" href="dashboard-facturas.css">
+    <link rel="stylesheet" href="hybrid-pdf-modal.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Header con navegación -->
+        <header class="dashboard-header">
+            <div class="header-content">
+                <div class="header-left">
+                    <h1>Gestión de Facturas Empresarial</h1>
+                    <p id="restauranteInfo">Sistema de procesamiento y validación de documentos</p>
+                </div>
+                <div class="header-actions">
+                    <button class="btn primary" id="uploadBtn">
+                        Subir Nueva Factura
+                    </button>
+                    <button class="btn secondary" id="logoutBtn" onclick="handleLogout()">
+                        Cerrar Sesión
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- ENLACE AL SISTEMA PRINCIPAL -->
+        <div class="dashboard-link">
+            <a href="../index.html" class="btn">
+                Volver al Sistema Principal
+            </a>
+        </div>
+
+        <!-- Métricas principales -->
+        <section class="metrics-section">
+            <div class="metrics-grid">
+                <div class="metric-card" data-metric="total">
+                    <div class="metric-value">2</div>
+                    <div class="metric-label">Total Procesadas</div>
+                    <div class="metric-trend">+12% vs mes anterior</div>
+                </div>
+                
+                <div class="metric-card" data-metric="pendientes">
+                    <div class="metric-value">1</div>
+                    <div class="metric-label">Pendientes Revisión</div>
+                    <div class="metric-trend">Bajo control</div>
+                </div>
+                
+                <div class="metric-card" data-metric="aprobadas">
+                    <div class="metric-value">0</div>
+                    <div class="metric-label">Aprobadas</div>
+                    <div class="metric-trend">+8% vs mes anterior</div>
+                </div>
+                
+                <div class="metric-card" data-metric="importes">
+                    <div class="metric-value">3691,17 €</div>
+                    <div class="metric-label">Total Importes</div>
+                    <div class="metric-trend">+15% vs mes anterior</div>
+                </div>
+            </div>
+        </section>
+        
+        <!-- Botón de debug temporal -->
+        <div style="text-align: center; margin: 20px 0;">
+            <button class="btn primary" onclick="debugFacturasData()" style="background: #dc3545;">
+                🔍 Debug - Ver Datos de Facturas
+            </button>
+        </div>
+
+        <!-- ZONA DE SUBIDA DE ARCHIVOS MEJORADA -->
+        <section class="upload-section">
+            <div class="upload-container">
+                <div class="upload-header">
+                    <h3>Importar Facturas (PDF)</h3>
+                    <p class="upload-subtitle">Formato: PDF • Máximo 10MB • Sin cabecera</p>
+                </div>
+                
+                <div class="upload-zone" id="uploadZone">
+                    <div class="upload-content">
+                        <div class="upload-icon-container">
+                            <div class="upload-icon">
+                                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M14 2H6C5.46957 2 4.96086 2.21071 4.58579 2.58579C4.21071 2.96086 4 3.46957 4 4V20C4 20.5304 4.21071 21.0391 4.58579 21.4142C4.96086 21.7893 5.46957 22 6 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V8L14 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    <path d="M14 2V8H20" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    <path d="M16 13H8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    <path d="M16 17H8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    <path d="M10 9H9H8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </div>
+                        </div>
+                        
+                        <div class="upload-text">
+                            <h4>Arrastra tu factura PDF aquí</h4>
+                            <p>O haz clic para seleccionar archivo</p>
+                        </div>
+                        
+                        <div class="upload-actions">
+                            <button class="btn-select-file" id="selectFileBtn">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M21 15V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    <path d="M7 10L12 15L17 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    <path d="M12 15V3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                                Seleccionar PDF
+                            </button>
+                            <span class="file-info" id="fileInfo">No hay archivo seleccionado</span>
+                        </div>
+                    </div>
+                    
+                    <input type="file" id="fileInput" accept=".pdf" hidden>
+                </div>
+                
+                <div class="upload-status" id="uploadStatus" style="display: none;">
+                    <div class="status-content">
+                        <div class="status-icon" id="statusIcon">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M22 12H18L15 21L9 3L6 12H2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </div>
+                        <div class="status-text">
+                            <p id="uploadText">Procesando documento...</p>
+                            <div class="progress-container">
+                                <div class="progress-bar">
+                                    <div class="progress-fill" id="progressFill"></div>
+                                </div>
+                                <span class="progress-text" id="progressText">0%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Filtros y búsqueda -->
+        <section class="filters-section">
+            <div class="filters-container">
+                <div class="filter-group">
+                    <label for="searchInput">Búsqueda</label>
+                    <input type="text" id="searchInput" placeholder="Proveedor, número de factura..." class="search-input">
+                </div>
+                
+                <div class="filter-group">
+                    <label for="estadoFilter">Estado</label>
+                    <select id="estadoFilter" class="filter-select">
+                        <option value="">Todos los estados</option>
+                        <option value="processed">Procesadas</option>
+                        <option value="pending">Pendientes</option>
+                        <option value="approved">Aprobadas</option>
+                        <option value="error">Con errores</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label for="confianzaFilter">Confianza</label>
+                    <select id="confianzaFilter" class="filter-select">
+                        <option value="">Todas las confianzas</option>
+                        <option value="alta">Alta (>90%)</option>
+                        <option value="media">Media (70-90%)</option>
+                        <option value="baja">Baja (<70%)</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label for="fechaDesde">Fecha desde</label>
+                    <input type="date" id="fechaDesde" class="filter-date">
+                </div>
+
+                <div class="filter-group">
+                    <label for="fechaHasta">Fecha hasta</label>
+                    <input type="date" id="fechaHasta" class="filter-date">
+                </div>
+
+                <div class="filter-buttons">
+                    <button class="btn-filter primary" id="aplicarFiltros">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polygon points="22,3 2,3 10,12.46 10,19 14,21 14,12.46 22,3"/>
+                        </svg>
+                        Filtrar
+                    </button>
+                    <button class="btn-filter secondary" id="limpiarFiltros">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                        </svg>
+                        Limpiar
+                    </button>
+                    <button class="btn-filter test" id="testStorageBtn" title="Probar conexión con Supabase Storage">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        Probar Storage
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Tabla de facturas -->
+        <section class="table-section">
+            <div class="table-container">
+                <div class="table-header">
+                    <h3 class="table-title">Facturas Procesadas</h3>
+                    <div class="table-actions">
+                        <button class="btn-table primary" id="refreshBtn">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M23 4v6h-6M1 20v-6h6M20.49 9A9 9 0 005.51 9M1 14a9 9 0 0018 0"/>
+                            </svg>
+                            Actualizar
+                        </button>
+                        <button class="btn-table secondary" id="exportBtn">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+                            </svg>
+                            Exportar
+                        </button>
+                    </div>
+                </div>
+
+                <div class="table-wrapper">
+                    <table class="facturas-table" id="facturasTable">
+                        <thead>
+                            <tr>
+                                <th class="sortable" data-field="estado">Estado</th>
+                                <th class="sortable" data-field="numero_factura">Número</th>
+                                <th class="sortable" data-field="proveedor_nombre">Proveedor</th>
+                                <th class="sortable" data-field="fecha_factura">Fecha</th>
+                                <th class="sortable" data-field="importe_neto">Importe Neto</th>
+                                <th class="sortable" data-field="iva">IVA</th>
+                                <th class="sortable" data-field="total_factura">Importe Total</th>
+                                <th class="sortable" data-field="confianza_global">Confianza</th>
+                                <th class="sortable" data-field="proveedor_nuevo">Proveedor</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="facturasTableBody">
+                            <!-- Las filas se cargan dinámicamente -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Loading y estados vacíos -->
+                <div class="table-loading" id="tableLoading">
+                    <div class="loading-spinner"></div>
+                    <p>Cargando facturas...</p>
+                </div>
+
+                <div class="table-empty" id="tableEmpty" style="display: none;">
+                    <div class="empty-icon">📄</div>
+                    <h3>No hay facturas</h3>
+                    <p>No se encontraron facturas con los filtros aplicados.</p>
+                    <button class="btn primary" onclick="window.location.href='index.html'">
+                        Subir Primera Factura
+                    </button>
+                </div>
+
+                <!-- Paginación -->
+                <div class="pagination-container" id="paginationContainer">
+                    <div class="pagination-info">
+                        <span id="paginationInfo">Mostrando 1-10 de 47 facturas</span>
+                    </div>
+                    <div class="pagination-controls">
+                        <button class="btn tertiary" id="prevPageBtn">Anterior</button>
+                        <div class="pagination-numbers" id="paginationNumbers">
+                            <!-- Números de página -->
+                        </div>
+                        <button class="btn tertiary" id="nextPageBtn">Siguiente</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Modal de Factura Expandible -->
+        <div class="modal-overlay" id="facturaModal">
+            <div class="modal-container expanded">
+                <div class="modal-header">
+                    <h2>Ver Factura</h2>
+                    <div class="modal-actions">
+                        <button class="btn-close" id="modalCloseBtn">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M18 6L6 18M6 6l12 12"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="modal-body">
+                    <!-- Panel Izquierdo - Visor de PDF -->
+                    <div class="panel-left">
+                        <div class="pdf-viewer-header">
+                            <h3>Vista previa de la factura</h3>
+                            <div class="pdf-controls">
+                                <button class="btn-pdf-control" id="prevPage" title="Página anterior">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M15 18l-6-6 6-6"/>
+                                    </svg>
+                                </button>
+                                <span class="page-info" id="pageInfo">Página 1 de 1</span>
+                                <button class="btn-pdf-control" id="nextPage" title="Página siguiente">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M9 18l6-6-6-6"/>
+                                    </svg>
+                                </button>
+                                <button class="btn-pdf-control" id="zoomIn" title="Zoom +">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M12 5v14M5 12h14"/>
+                                    </svg>
+                                </button>
+                                <button class="btn-pdf-control" id="zoomOut" title="Zoom -">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M5 12h14"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="pdf-container">
+                            <div class="pdf-placeholder" id="pdfPlaceholder">
+                                <div class="pdf-icon">
+                                    <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                        <polyline points="14,2 14,8 20,8"/>
+                                        <line x1="16" y1="13" x2="8" y2="13"/>
+                                        <line x1="16" y1="17" x2="8" y2="17"/>
+                                        <polyline points="10,9 9,9 8,9"/>
+                                    </svg>
+                                </div>
+                                <h4>Visor de PDF</h4>
+                                <p>El visor de PDF se implementará en la siguiente fase</p>
+                            </div>
+                            <canvas id="pdfCanvas" style="display: none;"></canvas>
+                            <!-- 🔥 CONTENEDOR PARA COORDENADAS Y OVERLAYS -->
+                            <div id="coordinatesOverlay" class="coordinates-overlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10;"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- Panel Derecho - Detalles de la Factura -->
+                    <div class="panel-right">
+                        <div class="detalles-header">
+                            <h3>Detalles de la Factura</h3>
+                            <div class="factura-status">
+                                <span class="status-badge" id="facturaStatus">Procesado</span>
+                            </div>
+                        </div>
+                        
+                        <div class="detalles-form">
+                            <!-- Información Principal -->
+                            <div class="form-section">
+                                <h4>Información Principal</h4>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label>Número de Factura</label>
+                                        <input type="text" id="numeroFactura" readonly class="field-readonly">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Fecha de Factura</label>
+                                        <input type="date" id="fechaFactura" class="field-editable">
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label>Proveedor</label>
+                                        <input type="text" id="proveedor" readonly class="field-readonly">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>CIF Proveedor</label>
+                                        <input type="text" id="cifProveedor" readonly class="field-readonly">
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label>Provincia del Proveedor</label>
+                                        <input type="text" id="provinciaProveedor" class="field-editable">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Fecha de Vencimiento</label>
+                                        <input type="date" id="fechaVencimiento" class="field-editable">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Información de Categorización -->
+                            <div class="form-section">
+                                <h4>Categorización</h4>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label>Categoría</label>
+                                        <input type="text" id="categoria" placeholder="Seleccionar categoría" class="field-editable">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Concepto</label>
+                                        <input type="text" id="concepto" placeholder="Ej: BEBIDA" class="field-editable">
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label>Periodo</label>
+                                        <select id="periodo" class="field-editable">
+                                            <option value="">Seleccionar periodo</option>
+                                            <option value="Enero">Enero</option>
+                                            <option value="Febrero">Febrero</option>
+                                            <option value="Marzo">Marzo</option>
+                                            <option value="Abril">Abril</option>
+                                            <option value="Mayo">Mayo</option>
+                                            <option value="Junio">Junio</option>
+                                            <option value="Julio">Julio</option>
+                                            <option value="Agosto">Agosto</option>
+                                            <option value="Septiembre">Septiembre</option>
+                                            <option value="Octubre">Octubre</option>
+                                            <option value="Noviembre">Noviembre</option>
+                                            <option value="Diciembre">Diciembre</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Método de Pago</label>
+                                        <select id="metodoPago" class="field-editable">
+                                            <option value="">Seleccionar método</option>
+                                            <option value="transferencia">Transferencia</option>
+                                            <option value="efectivo">Efectivo</option>
+                                            <option value="tarjeta">Tarjeta</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Detalles Financieros -->
+                            <div class="form-section">
+                                <h4>Detalles Financieros</h4>
+                                <div class="financial-grid">
+                                    <div class="financial-item">
+                                        <label>Importe Base (sin IVA)</label>
+                                        <span class="financial-value" id="baseImponible">€0,00</span>
+                                    </div>
+                                    <div class="financial-item">
+                                        <label>IVA</label>
+                                        <span class="financial-value" id="ivaAmount">€0,00</span>
+                                    </div>
+                                    <div class="financial-item">
+                                        <label>Total con IVA</label>
+                                        <span class="financial-value total" id="totalConIva">€0,00</span>
+                                    </div>
+                                    <div class="financial-item">
+                                        <label>Retención</label>
+                                        <span class="financial-value" id="retencion">€0,00</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Notificaciones -->
+        <div class="notifications" id="notifications"></div>
+
+        <!-- Loading overlay global -->
+        <div class="loading-overlay" id="globalLoading" style="display: none;">
+            <div class="loading-spinner"></div>
+            <div class="loading-text" id="globalLoadingText">Procesando...</div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="../config.js"></script>
+    <script src="pdf-overlay-system.js"></script>
+    <script src="hybrid-pdf-modal.js"></script>
+    <script src="dashboard-facturas.js"></script>
+    <script src="mock-data.js"></script>
+</body>
+</html>

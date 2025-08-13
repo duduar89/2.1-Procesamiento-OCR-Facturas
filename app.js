@@ -27,11 +27,11 @@ async function initializeApp() {
             CONFIG.SUPABASE.ANON_KEY
         );
 
-        console.log('✅ Aplicación inicializada correctamente');
+        console.log('Aplicación inicializada correctamente');
         updateStatus('Listo para procesar', 'success');
 
     } catch (error) {
-        console.error('❌ Error inicializando aplicación:', error);
+        console.error('Error inicializando aplicación:', error);
         updateStatus('Error de configuración', 'error');
         showNotification('Error de configuración: ' + error.message, 'error');
     }
@@ -61,11 +61,11 @@ async function checkAuthentication() {
         CONFIG.TENANT.RESTAURANTE_ID = JSON.parse(restauranteInfo).id;
         CONFIG.TENANT.RESTAURANTE_ACTUAL = JSON.parse(restauranteInfo);
 
-        console.log('✅ Usuario autenticado:', currentUser.nombre);
+        console.log('Usuario autenticado:', currentUser.nombre);
         updateUserInfo();
 
     } catch (error) {
-        console.error('❌ Error verificando autenticación:', error);
+        console.error('Error verificando autenticación:', error);
         window.location.href = 'login.html';
     }
 }
@@ -75,7 +75,7 @@ function updateUserInfo() {
     // Actualizar header con info del usuario
     const header = document.querySelector('header h1');
     if (header && currentUser) {
-        header.innerHTML = `📄 Procesador de Facturas - ${CONFIG.TENANT.RESTAURANTE_ACTUAL.nombre}`;
+        header.innerHTML = `Procesador de Facturas - ${CONFIG.TENANT.RESTAURANTE_ACTUAL.nombre}`;
     }
 }
 
@@ -157,7 +157,7 @@ async function handleFile(file) {
         await processDocument(file);
 
     } catch (error) {
-        console.error('❌ Error procesando archivo:', error);
+        console.error('Error procesando archivo:', error);
         showNotification('Error procesando archivo: ' + error.message, 'error');
         hideLoadingOverlay();
     }
@@ -254,7 +254,7 @@ async function processDocument(file) {
         showNotification('¡Documento procesado exitosamente!', 'success');
 
     } catch (error) {
-        console.error('❌ Error en procesamiento:', error);
+        console.error('Error en procesamiento:', error);
         showNotification('Error: ' + error.message, 'error');
         hideLoadingOverlay();
         processingState = false;
@@ -286,7 +286,7 @@ async function loadProcessedResults(documentId) {
         showActionsSection();
 
     } catch (error) {
-        console.error('❌ Error cargando resultados:', error);
+        console.error('Error cargando resultados:', error);
         showNotification('Error cargando resultados: ' + error.message, 'error');
     }
 }

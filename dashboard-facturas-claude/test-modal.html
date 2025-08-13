@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Modal - Dashboard</title>
+    <link rel="stylesheet" href="dashboard-facturas.css">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f9fafb;
+        }
+        .test-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+        .btn {
+            background: #10b981;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            margin: 10px;
+        }
+        .btn:hover { background: #059669; }
+        .btn.secondary { background: #6b7280; }
+        .btn.secondary:hover { background: #4b5563; }
+        .status {
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 8px;
+            font-weight: 600;
+        }
+        .status.success { background: #dcfce7; color: #166534; }
+        .status.info { background: #dbeafe; color: #1e40af; }
+        .status.error { background: #fee2e2; color: #dc2626; }
+        
+        .factura-card {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .factura-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .info-item {
+            background: white;
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid #e2e8f0;
+        }
+        .info-label {
+            font-weight: 600;
+            color: #374151;
+            font-size: 0.875rem;
+        }
+        .info-value {
+            color: #111827;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🧪 Test del Modal de Factura</h1>
+        <p>Verificación de apertura y cierre del modal</p>
+        
+        <div id="status" class="status info">Listo para probar</div>
+        
+        <div>
+            <button class="btn" onclick="testModalView()">Probar Modal Ver</button>
+            <button class="btn secondary" onclick="testModalEdit()">Probar Modal Editar</button>
+            <button class="btn" onclick="testModalClose()">Cerrar Modal</button>
+        </div>
+
+        <div class="factura-card">
+            <h3>📋 Datos de Prueba de Factura</h3>
+            <div class="factura-info">
+                <div class="info-item">
+                    <div class="info-label">ID</div>
+                    <div class="info-value">test-001</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Número</div>
+                    <div class="info-value">F-2024-001</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Proveedor</div>
+                    <div class="info-value">INDUSTRIAS GRÁFICAS S.A.</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Importe Total</div>
+                    <div class="info-value">1.164,00 €</div>
+                </div>
+            </div>
+            <p><strong>Instrucciones:</strong> Haz clic en "Probar Modal Ver" o "Probar Modal Editar" para abrir el modal. Luego puedes cerrarlo con el botón X, haciendo clic fuera, o presionando Escape.</p>
+        </div>
+    </div>
+
+    <!-- Modal de Factura Expandible -->
+    <div class="modal-overlay" id="facturaModal">
+        <div class="modal-container expanded">
+            <div class="modal-header">
+                <h2>Ver Factura</h2>
+                <div class="modal-actions">
+                    <button class="btn btn-primary">Ensellar a Talky</button>
+                    <button class="btn btn-secondary">Editar Factura</button>
+                    <button class="btn-close" id="modalCloseBtn">✕</button>
+                </div>
+            </div>
+            
+            <div class="modal-body">
+                <!-- Panel Izquierdo - Vista previa de la factura -->
+                <div class="panel-left">
+                    <h3>Vista previa de la factura</h3>
+                    <div class="table-container">
+                        <table class="factura-table">
+                            <thead>
+                                <tr>
+                                    <th>EAN</th>
+                                    <th>Descripción</th>
+                                    <th>Unidad</th>
+                                    <th>Cantidad</th>
+                                    <th>Precio</th>
+                                    <th>Dto</th>
+                                    <th>Total</th>
+                                </tr>
+                            </thead>
+                            <tbody id="productosTableBody">
+                                <tr>
+                                    <td>123456789</td>
+                                    <td>Papel A4 80g</td>
+                                    <td>Resma</td>
+                                    <td>10</td>
+                                    <td>5,50 €</td>
+                                    <td>0%</td>
+                                    <td>55,00 €</td>
+                                </tr>
+                                <tr>
+                                    <td>987654321</td>
+                                    <td>Tinta Impresora</td>
+                                    <td>Cartucho</td>
+                                    <td>5</td>
+                                    <td>25,00 €</td>
+                                    <td>10%</td>
+                                    <td>112,50 €</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <div class="suma-section">
+                            <strong>Suma: <span id="sumaTotal">167,50 €</span></strong>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Panel Derecho - Detalles de la Factura -->
+                <div class="panel-right">
+                    <h3>Detalles de la Factura</h3>
+                    <div class="detalles-form">
+                        <div class="form-group">
+                            <label>Categoría</label>
+                            <input type="text" id="categoria" placeholder="Seleccionar categoría" value="Material de Oficina">
+                        </div>
+                        <div class="form-group">
+                            <label>Número de Factura</label>
+                            <input type="text" id="numeroFactura" readonly value="F-2024-001">
+                        </div>
+                        <div class="form-group">
+                            <label>Proveedor</label>
+                            <input type="text" id="proveedor" readonly value="INDUSTRIAS GRÁFICAS S.A.">
+                        </div>
+                        <div class="form-group">
+                            <label>CIF Proveedor</label>
+                            <input type="text" id="cifProveedor" readonly value="B12345678">
+                        </div>
+                        <div class="form-group">
+                            <label>Provincia del Proveedor</label>
+                            <input type="text" id="provinciaProveedor" value="Madrid">
+                        </div>
+                        <div class="form-group">
+                            <label>Fecha de Factura</label>
+                            <input type="date" id="fechaFactura" value="2025-05-29">
+                        </div>
+                        <div class="form-group">
+                            <label>Fecha de Vencimiento</label>
+                            <input type="date" id="fechaVencimiento" value="2025-06-28">
+                        </div>
+                        <div class="form-group">
+                            <label>Periodo</label>
+                            <select id="periodo">
+                                <option value="Enero">Enero</option>
+                                <option value="Febrero">Febrero</option>
+                                <option value="Marzo">Marzo</option>
+                                <option value="Abril">Abril</option>
+                                <option value="Mayo" selected>Mayo</option>
+                                <option value="Junio">Junio</option>
+                                <option value="Julio">Julio</option>
+                                <option value="Agosto">Agosto</option>
+                                <option value="Septiembre">Septiembre</option>
+                                <option value="Octubre">Octubre</option>
+                                <option value="Noviembre">Noviembre</option>
+                                <option value="Diciembre">Diciembre</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Método de Pago</label>
+                            <select id="metodoPago">
+                                <option value="transferencia" selected>Transferencia</option>
+                                <option value="efectivo">Efectivo</option>
+                                <option value="tarjeta">Tarjeta</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Concepto</label>
+                            <input type="text" id="concepto" placeholder="Ej: BEBIDA" value="Material de Oficina">
+                        </div>
+                    </div>
+                    
+                    <div class="detalles-financieros">
+                        <h4>Detalles Financieros</h4>
+                        <div class="financial-row">
+                            <span>Importe Base (sin IVA):</span>
+                            <span id="baseImponible">167,50 €</span>
+                        </div>
+                        <div class="financial-row">
+                            <span>Total con IVA:</span>
+                            <span id="totalConIva">202,68 €</span>
+                        </div>
+                        <div class="financial-row">
+                            <span>Retención:</span>
+                            <span id="retencion">0,00 €</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notificaciones -->
+    <div class="notifications" id="notifications"></div>
+
+    <script>
+        // Datos de prueba
+        const testFactura = {
+            id: 'test-001',
+            estado: 'processed',
+            numero_factura: 'F-2024-001',
+            proveedor_nombre: 'INDUSTRIAS GRÁFICAS S.A.',
+            proveedor_cif: 'B12345678',
+            proveedor_provincia: 'Madrid',
+            fecha_factura: '2025-05-29',
+            fecha_vencimiento: '2025-06-28',
+            concepto: 'Material de Oficina',
+            importe_neto: 167.50,
+            iva: 35.18,
+            total_factura: 202.68,
+            retencion: 0,
+            productos: [
+                {
+                    ean: '123456789',
+                    descripcion: 'Papel A4 80g',
+                    unidad: 'Resma',
+                    cantidad: 10,
+                    precio: 5.50,
+                    descuento: '0%'
+                },
+                {
+                    ean: '987654321',
+                    descripcion: 'Tinta Impresora',
+                    unidad: 'Cartucho',
+                    cantidad: 5,
+                    precio: 25.00,
+                    descuento: '10%'
+                }
+            ]
+        };
+
+        // Función para formatear moneda
+        function formatCurrency(value) {
+            if (!value && value !== 0) return 'N/A';
+            return new Intl.NumberFormat('es-ES', {
+                style: 'currency',
+                currency: 'EUR'
+            }).format(value);
+        }
+
+        // Función para mostrar notificación
+        function showNotification(message, type = 'info') {
+            const notifications = document.getElementById('notifications');
+            if (!notifications) return;
+
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.textContent = message;
+
+            notifications.appendChild(notification);
+
+            // Auto-remover después de 5 segundos
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.parentNode.removeChild(notification);
+                }
+            }, 5000);
+        }
+
+        // Función para abrir modal en modo vista
+        function testModalView() {
+            updateStatus('Abriendo modal en modo vista...', 'info');
+            openFacturaModal('test-001', 'view');
+        }
+
+        // Función para abrir modal en modo edición
+        function testModalEdit() {
+            updateStatus('Abriendo modal en modo edición...', 'info');
+            openFacturaModal('test-001', 'edit');
+        }
+
+        // Función para cerrar modal
+        function testModalClose() {
+            updateStatus('Cerrando modal...', 'info');
+            closeFacturaModal();
+        }
+
+        // Función para abrir modal
+        function openFacturaModal(facturaId, mode = 'view') {
+            try {
+                // Cambiar el título del modal según el modo
+                const modalTitle = document.querySelector('#facturaModal .modal-header h2');
+                if (modalTitle) {
+                    modalTitle.textContent = mode === 'view' ? 'Ver Factura' : 'Editar Factura';
+                }
+
+                // Cargar datos en el modal
+                loadFacturaDataInModal(testFactura, mode);
+
+                // Mostrar el modal
+                const modal = document.getElementById('facturaModal');
+                if (modal) {
+                    modal.classList.add('active');
+                    document.body.style.overflow = 'hidden';
+                }
+
+                updateStatus(`Modal abierto en modo ${mode}`, 'success');
+                showNotification(`Modal abierto en modo ${mode}`, 'success');
+
+            } catch (error) {
+                console.error('Error abriendo modal:', error);
+                updateStatus('Error abriendo modal', 'error');
+                showNotification('Error abriendo modal', 'error');
+            }
+        }
+
+        // Función para cargar datos en modal
+        function loadFacturaDataInModal(factura, mode) {
+            try {
+                // Cargar datos básicos
+                document.getElementById('categoria').value = factura.concepto || '';
+                document.getElementById('numeroFactura').value = factura.numero_factura || '';
+                document.getElementById('proveedor').value = factura.proveedor_nombre || '';
+                document.getElementById('cifProveedor').value = factura.proveedor_cif || '';
+                document.getElementById('provinciaProveedor').value = factura.proveedor_provincia || '';
+                document.getElementById('fechaFactura').value = factura.fecha_factura || '';
+                document.getElementById('fechaVencimiento').value = factura.fecha_vencimiento || '';
+                document.getElementById('concepto').value = factura.concepto || '';
+
+                // Cargar datos financieros
+                document.getElementById('baseImponible').textContent = formatCurrency(factura.importe_neto || 0);
+                document.getElementById('totalConIva').textContent = formatCurrency(factura.total_factura || 0);
+                document.getElementById('retencion').textContent = formatCurrency(factura.retencion || 0);
+
+                // Configurar modo de edición
+                setModalEditMode(mode);
+
+            } catch (error) {
+                console.error('Error cargando datos en modal:', error);
+            }
+        }
+
+        // Función para configurar modo de edición
+        function setModalEditMode(mode) {
+            const isEditMode = mode === 'edit';
+            const inputs = document.querySelectorAll('#facturaModal input, #facturaModal select');
+            
+            inputs.forEach(input => {
+                if (input.hasAttribute('readonly')) {
+                    input.disabled = true;
+                } else {
+                    input.disabled = !isEditMode;
+                }
+            });
+
+            const editButton = document.querySelector('#facturaModal .btn-secondary');
+            if (editButton) {
+                editButton.style.display = isEditMode ? 'none' : 'block';
+            }
+        }
+
+        // Función para cerrar modal
+        function closeFacturaModal() {
+            try {
+                const modal = document.getElementById('facturaModal');
+                if (modal) {
+                    modal.classList.remove('active');
+                    document.body.style.overflow = '';
+                }
+                updateStatus('Modal cerrado', 'success');
+                showNotification('Modal cerrado', 'success');
+            } catch (error) {
+                console.error('Error cerrando modal:', error);
+            }
+        }
+
+        // Función para actualizar estado
+        function updateStatus(message, type) {
+            const statusEl = document.getElementById('status');
+            if (statusEl) {
+                statusEl.textContent = message;
+                statusEl.className = `status ${type}`;
+            }
+        }
+
+        // Event listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            // Modal de factura
+            const modalCloseBtn = document.getElementById('modalCloseBtn');
+            if (modalCloseBtn) {
+                modalCloseBtn.addEventListener('click', closeFacturaModal);
+            }
+
+            // Cerrar modal al hacer clic fuera
+            const facturaModal = document.getElementById('facturaModal');
+            if (facturaModal) {
+                facturaModal.addEventListener('click', (e) => {
+                    if (e.target === facturaModal) {
+                        closeFacturaModal();
+                    }
+                });
+            }
+
+            // Cerrar modal con Escape
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    closeFacturaModal();
+                }
+            });
+
+            updateStatus('Sistema de modal listo para pruebas', 'success');
+        });
+
+        console.log('🧪 Test de modal cargado');
+    </script>
+</body>
+</html>
+

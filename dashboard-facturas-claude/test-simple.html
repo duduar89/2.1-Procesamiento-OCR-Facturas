@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Simple - Dashboard</title>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="../config.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f9fafb;
+        }
+        .test-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+        .status {
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 8px;
+            font-weight: 600;
+        }
+        .status.success {
+            background: #dcfce7;
+            color: #166534;
+        }
+        .status.error {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+        .status.info {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+        .btn {
+            background: #10b981;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            margin: 10px;
+        }
+        .btn:hover {
+            background: #059669;
+        }
+        .log {
+            background: #f3f4f6;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🧪 Test Simple del Dashboard</h1>
+        <p>Prueba básica del sistema de facturas</p>
+        
+        <div id="status" class="status info">Iniciando test...</div>
+        
+        <div>
+            <button class="btn" onclick="testConfig()">Test Configuración</button>
+            <button class="btn" onclick="testSupabase()">Test Supabase</button>
+            <button class="btn" onclick="testData()">Test Datos</button>
+            <button class="btn" onclick="clearLog()">Limpiar Log</button>
+        </div>
+        
+        <div class="log" id="log"></div>
+    </div>
+
+    <script>
+        // Variables globales
+        let supabaseClient = null;
+        let currentUser = null;
+
+        // Inicialización
+        document.addEventListener('DOMContentLoaded', async function() {
+            log('🧪 Iniciando test simple...');
+            await initializeTest();
+        });
+
+        // Inicializar test
+        async function initializeTest() {
+            try {
+                // Verificar configuración
+                if (!window.CONFIG) {
+                    throw new Error('Configuración no encontrada');
+                }
+
+                log('✅ Configuración encontrada');
+                log('🔗 URL:', CONFIG.SUPABASE.URL);
+                log('🔑 Key:', CONFIG.SUPABASE.ANON_KEY.substring(0, 20) + '...');
+
+                // Simular usuario autenticado para pruebas
+                currentUser = {
+                    id: 'test-user-001',
+                    nombre: 'Usuario Test'
+                };
+
+                // Simular restaurante para pruebas
+                CONFIG.TENANT.RESTAURANTE_ID = 'test-rest-001';
+                CONFIG.TENANT.RESTAURANTE_ACTUAL = {
+                    id: 'test-rest-001',
+                    nombre: 'Restaurante Test'
+                };
+
+                log('✅ Test configurado correctamente');
+                showStatus('Test configurado correctamente', 'success');
+
+            } catch (error) {
+                log('❌ Error inicializando test:', error);
+                showStatus('Error de configuración: ' + error.message, 'error');
+            }
+        }
+
+        // Test de configuración
+        function testConfig() {
+            log('🔧 Probando configuración...');
+            
+            if (!window.CONFIG) {
+                log('❌ CONFIG no encontrado');
+                return;
+            }
+
+            if (!CONFIG.SUPABASE.URL) {
+                log('❌ URL de Supabase no encontrada');
+                return;
+            }
+
+            if (!CONFIG.SUPABASE.ANON_KEY) {
+                log('❌ ANON_KEY no encontrada');
+                return;
+            }
+
+            log('✅ Configuración válida');
+            log('📊 Configuración completa:', CONFIG);
+        }
+
+        // Test de Supabase
+        async function testSupabase() {
+            log('🔌 Probando conexión a Supabase...');
+            
+            try {
+                // Inicializar Supabase
+                supabaseClient = supabase.createClient(
+                    CONFIG.SUPABASE.URL,
+                    CONFIG.SUPABASE.ANON_KEY
+                );
+
+                log('✅ Cliente Supabase creado');
+
+                // Test de conexión básica
+                const { data, error } = await supabaseClient
+                    .from('documentos')
+                    .select('count')
+                    .limit(1);
+
+                if (error) {
+                    log('❌ Error conectando a Supabase:', error.message);
+                    return;
+                }
+
+                log('✅ Conexión a Supabase exitosa');
+                log('📊 Respuesta:', data);
+
+            } catch (error) {
+                log('❌ Error en test de Supabase:', error);
+            }
+        }
+
+        // Test de datos
+        async function testData() {
+            log('📊 Probando carga de datos...');
+            
+            try {
+                if (!supabaseClient) {
+                    log('❌ Cliente Supabase no inicializado');
+                    return;
+                }
+
+                // Test de carga de facturas
+                const { data: facturas, error: facturasError } = await supabaseClient
+                    .from('datos_extraidos_facturas')
+                    .select('*')
+                    .eq('restaurante_id', CONFIG.TENANT.RESTAURANTE_ID)
+                    .limit(5);
+
+                if (facturasError) {
+                    log('❌ Error cargando facturas:', facturasError.message);
+                    return;
+                }
+
+                log('✅ Facturas cargadas correctamente');
+                log('📊 Cantidad de facturas:', facturas.length);
+                log('📋 Datos de facturas:', facturas);
+
+            } catch (error) {
+                log('❌ Error en test de datos:', error);
+            }
+        }
+
+        // Funciones de utilidad
+        function log(message, data = null) {
+            const logEl = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            let logMessage = `[${timestamp}] ${message}`;
+            
+            if (data) {
+                logMessage += '\n' + JSON.stringify(data, null, 2);
+            }
+            
+            logEl.innerHTML += logMessage + '\n';
+            logEl.scrollTop = logEl.scrollHeight;
+            
+            // También en consola
+            if (data) {
+                console.log(message, data);
+            } else {
+                console.log(message);
+            }
+        }
+
+        function showStatus(message, type) {
+            const status = document.getElementById('status');
+            if (status) {
+                status.textContent = message;
+                status.className = `status ${type}`;
+            }
+        }
+
+        function clearLog() {
+            const logEl = document.getElementById('log');
+            logEl.innerHTML = '';
+        }
+
+        console.log('🧪 Test simple cargado');
+    </script>
+</body>
+</html>
+

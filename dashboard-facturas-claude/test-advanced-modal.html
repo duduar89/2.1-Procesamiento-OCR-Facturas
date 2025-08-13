@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🚀 Modal Avanzado de PDF - Prueba</title>
+    
+    <!-- PDF.js para renderizar PDFs -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    
+    <!-- Estilos del modal -->
+    <link rel="stylesheet" href="advanced-pdf-modal.css">
+    
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 40px;
+            border-radius: 16px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #1e293b;
+            margin-bottom: 30px;
+        }
+        
+        .demo-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f8fafc;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+        }
+        
+        .demo-section h3 {
+            margin-top: 0;
+            color: #374151;
+        }
+        
+        .btn {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            margin-right: 12px;
+            margin-bottom: 12px;
+        }
+        
+        .btn:hover {
+            background: #2563eb;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(59, 130, 246, 0.3);
+        }
+        
+        .btn.success {
+            background: #10b981;
+        }
+        
+        .btn.success:hover {
+            background: #059669;
+        }
+        
+        .btn.warning {
+            background: #f59e0b;
+        }
+        
+        .btn.warning:hover {
+            background: #d97706;
+        }
+        
+        .coordinates-preview {
+            background: #1e293b;
+            color: #e2e8f0;
+            padding: 16px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            overflow-x: auto;
+            margin-top: 16px;
+        }
+        
+        .feature-list {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .feature-list li {
+            padding: 8px 0;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .feature-list li:last-child {
+            border-bottom: none;
+        }
+        
+        .feature-icon {
+            font-size: 20px;
+            width: 24px;
+            text-align: center;
+        }
+        
+        .status-info {
+            display: flex;
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .status-item {
+            text-align: center;
+            padding: 16px;
+            background: white;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+            flex: 1;
+        }
+        
+        .status-value {
+            font-size: 24px;
+            font-weight: 600;
+            color: #1e293b;
+        }
+        
+        .status-label {
+            font-size: 14px;
+            color: #64748b;
+            margin-top: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Modal Avanzado de PDF con Coordenadas</h1>
+        
+        <div class="demo-section">
+            <h3>🎯 Funcionalidades Principales</h3>
+            <ul class="feature-list">
+                <li><span class="feature-icon">🔍</span> <strong>Zoom Avanzado:</strong> Zoom in/out con botones, teclado (+/-) y scroll (Ctrl+Wheel)</li>
+                <li><span class="feature-icon">🖱️</span> <strong>Drag & Scroll:</strong> Arrastrar PDF con mouse y navegación con flechas</li>
+                <li><span class="feature-icon">🎨</span> <strong>Colores por Confianza:</strong> Verde (alta), Amarillo (media), Rojo (baja)</li>
+                <li><span class="feature-icon">📍</span> <strong>Overlay de Coordenadas:</strong> Visualización precisa de campos extraídos</li>
+                <li><span class="feature-icon">📊</span> <strong>Estadísticas en Tiempo Real:</strong> Confianza global y por campo</li>
+                <li><span class="feature-icon">🔧</span> <strong>Controles Avanzados:</strong> Filtros, highlights y navegación</li>
+            </ul>
+        </div>
+        
+        <div class="demo-section">
+            <h3>🧪 Datos de Prueba</h3>
+            <p>Estos son los datos extraídos que se usarán para demostrar el modal:</p>
+            
+            <div class="coordinates-preview">
+{
+  "proveedor_nombre": {
+    "x": 27, "y": 85, "text": "Arcos Ibéricos\nQUALITY MEAT",
+    "width": 191, "height": 37, "confidence": 0.95
+  },
+  "proveedor_cif": {
+    "x": 346, "y": 786, "text": "B90440116",
+    "width": 40, "height": 7, "confidence": 0.88
+  },
+  "numero_factura": {
+    "x": 115, "y": 148, "text": "F25/4349",
+    "width": 33, "height": 6, "confidence": 0.92
+  },
+  "total_factura": {
+    "x": 516, "y": 675, "text": "96,80",
+    "width": 35, "height": 11, "confidence": 0.89
+  }
+}
+            </div>
+            
+            <div class="status-info">
+                <div class="status-item">
+                    <div class="status-value">4</div>
+                    <div class="status-label">Campos Extraídos</div>
+                </div>
+                <div class="status-item">
+                    <div class="status-value">91%</div>
+                    <div class="status-label">Confianza Global</div>
+                </div>
+                <div class="status-item">
+                    <div class="status-value">3</div>
+                    <div class="status-label">Alta Confianza</div>
+                </div>
+                <div class="status-item">
+                    <div class="status-value">1</div>
+                    <div class="status-label">Media Confianza</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="demo-section">
+            <h3>🎮 Controles de Prueba</h3>
+            <p>Prueba las diferentes funcionalidades del modal:</p>
+            
+            <button class="btn success" onclick="openModalWithData()">
+                🚀 Abrir Modal con Datos Reales
+            </button>
+            
+            <button class="btn warning" onclick="openModalWithMockPDF()">
+                📄 Abrir Modal con PDF de Prueba
+            </button>
+            
+            <button class="btn" onclick="showKeyboardShortcuts()">
+                ⌨️ Mostrar Atajos de Teclado
+            </button>
+        </div>
+        
+        <div class="demo-section">
+            <h3>📱 Responsive Design</h3>
+            <p>El modal se adapta automáticamente a diferentes tamaños de pantalla:</p>
+            <ul>
+                <li><strong>Desktop:</strong> Layout horizontal (PDF + Info)</li>
+                <li><strong>Tablet:</strong> Layout vertical adaptativo</li>
+                <li><strong>Mobile:</strong> Layout completamente vertical</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Scripts del modal -->
+    <script src="advanced-pdf-modal.js"></script>
+    
+    <script>
+        // 🌍 DATOS DE PRUEBA REALES
+        const testCoordinates = {
+            "proveedor_nombre": {
+                "x": 27, "y": 85, "text": "Arcos Ibéricos\nQUALITY MEAT",
+                "width": 191, "height": 37, "confidence": 0.95
+            },
+            "proveedor_cif": {
+                "x": 346, "y": 786, "text": "B90440116",
+                "width": 40, "height": 7, "confidence": 0.88
+            },
+            "numero_factura": {
+                "x": 115, "y": 148, "text": "F25/4349",
+                "width": 33, "height": 6, "confidence": 0.92
+            },
+            "total_factura": {
+                "x": 516, "y": 675, "text": "96,80",
+                "width": 35, "height": 11, "confidence": 0.89
+            }
+        };
+
+        const testExtractedData = {
+            "proveedor_nombre": "Arcos Ibéricos QUALITY MEAT",
+            "proveedor_cif": "B90440116",
+            "numero_factura": "F25/4349",
+            "fecha_factura": "2025-04-30T00:00:00.000Z",
+            "total_factura": 96.80,
+            "base_imponible": 88.00,
+            "cuota_iva": 8.80,
+            "tipo_iva": 10,
+            "confianza_global": 0.91
+        };
+
+        // 🚀 INSTANCIA DEL MODAL
+        let advancedModal;
+
+        // Inicializar modal cuando se carga la página
+        document.addEventListener('DOMContentLoaded', function() {
+            advancedModal = new AdvancedPDFModal();
+            console.log('✅ Modal avanzado inicializado');
+        });
+
+        // 🎯 FUNCIÓN: Abrir modal con datos reales
+        function openModalWithData() {
+            if (!advancedModal) {
+                alert('Modal no está inicializado. Espera un momento...');
+                return;
+            }
+
+            // URL de PDF de ejemplo (puedes cambiar por una real)
+            const pdfUrl = 'https://raw.githubusercontent.com/mozilla/pdf.js/ba2ede7/web/compressed.tracemonkey-pldi-09.pdf';
+            
+            console.log('🚀 Abriendo modal con datos reales...');
+            advancedModal.open(pdfUrl, testCoordinates, testExtractedData);
+        }
+
+        // 🎯 FUNCIÓN: Abrir modal con PDF de prueba
+        function openModalWithMockPDF() {
+            if (!advancedModal) {
+                alert('Modal no está inicializado. Espera un momento...');
+                return;
+            }
+
+            // PDF de prueba de Mozilla
+            const pdfUrl = 'https://raw.githubusercontent.com/mozilla/pdf.js/ba2ede7/web/compressed.tracemonkey-pldi-09.pdf';
+            
+            console.log('📄 Abriendo modal con PDF de prueba...');
+            advancedModal.open(pdfUrl, testCoordinates, testExtractedData);
+        }
+
+        // 🎯 FUNCIÓN: Mostrar atajos de teclado
+        function showKeyboardShortcuts() {
+            const shortcuts = `
+🎮 ATAJOS DE TECLADO DEL MODAL:
+
+🔍 ZOOM:
+  • + / = : Zoom In
+  • - : Zoom Out  
+  • 0 : Reset Zoom
+  • Ctrl + Wheel : Zoom con scroll
+
+🖱️ NAVEGACIÓN:
+  • Flechas : Scroll del PDF
+  • Mouse : Drag & Drop del PDF
+
+📄 PÁGINAS:
+  • Flechas en controles del header
+
+🎯 INTERACCIÓN:
+  • Click en campo : Resaltar campo
+  • Click en lista : Resaltar campo
+  • Hover en overlay : Ver tooltip
+            `;
+            
+            alert(shortcuts);
+        }
+
+        // 🌟 FUNCIONES ADICIONALES DE DEMO
+        function simulateProcessing() {
+            console.log('🔄 Simulando procesamiento...');
+            
+            // Simular progreso
+            let progress = 0;
+            const interval = setInterval(() => {
+                progress += 10;
+                console.log(`📊 Progreso: ${progress}%`);
+                
+                if (progress >= 100) {
+                    clearInterval(interval);
+                    console.log('✅ Procesamiento simulado completado');
+                }
+            }, 200);
+        }
+
+        // 📱 DETECCIÓN DE DISPOSITIVO
+        function detectDevice() {
+            const isMobile = window.innerWidth <= 768;
+            const isTablet = window.innerWidth <= 1200 && window.innerWidth > 768;
+            const isDesktop = window.innerWidth > 1200;
+            
+            console.log(`📱 Dispositivo detectado: ${isMobile ? 'Mobile' : isTablet ? 'Tablet' : 'Desktop'}`);
+            console.log(`📏 Ancho de pantalla: ${window.innerWidth}px`);
+            
+            return { isMobile, isTablet, isDesktop };
+        }
+
+        // 🎨 DEMO DE COLORES DE CONFIANZA
+        function showConfidenceColors() {
+            const colors = {
+                'Alta (≥80%)': '#10B981',
+                'Media (60-79%)': '#F59E0B', 
+                'Baja (<60%)': '#EF4444'
+            };
+            
+            console.log('🎨 Colores de confianza:');
+            Object.entries(colors).forEach(([level, color]) => {
+                console.log(`  ${level}: ${color}`);
+            });
+        }
+
+        // Inicializar funciones de demo
+        document.addEventListener('DOMContentLoaded', function() {
+            detectDevice();
+            showConfidenceColors();
+            
+            console.log('🎉 Demo del modal avanzado cargado completamente');
+            console.log('💡 Usa los botones para probar las funcionalidades');
+        });
+    </script>
+</body>
+</html>

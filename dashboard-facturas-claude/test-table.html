@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Tabla - Dashboard</title>
+    <link rel="stylesheet" href="dashboard-facturas.css">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f9fafb;
+        }
+        .test-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+        .btn {
+            background: #10b981;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            margin: 10px;
+        }
+        .btn:hover { background: #059669; }
+        .status {
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 8px;
+            font-weight: 600;
+        }
+        .status.success { background: #dcfce7; color: #166534; }
+        .status.info { background: #dbeafe; color: #1e40af; }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🧪 Test de la Tabla de Facturas</h1>
+        <p>Verificación del renderizado correcto de la tabla</p>
+        
+        <div id="status" class="status info">Listo para probar</div>
+        
+        <div>
+            <button class="btn" onclick="testTableRender()">Renderizar Tabla de Prueba</button>
+            <button class="btn" onclick="clearTable()">Limpiar Tabla</button>
+        </div>
+        
+        <div class="table-wrapper" style="margin-top: 30px;">
+            <table class="facturas-table" id="facturasTable">
+                <thead>
+                    <tr>
+                        <th class="sortable" data-field="estado">Estado</th>
+                        <th class="sortable" data-field="numero_factura">Número</th>
+                        <th class="sortable" data-field="proveedor_nombre">Proveedor</th>
+                        <th class="sortable" data-field="fecha_factura">Fecha</th>
+                        <th class="sortable" data-field="importe_neto">Importe Neto</th>
+                        <th class="sortable" data-field="iva">IVA</th>
+                        <th class="sortable" data-field="total_factura">Importe Total</th>
+                        <th class="sortable" data-field="confianza_global">Confianza</th>
+                        <th class="sortable" data-field="proveedor_nuevo">Proveedor</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="facturasTableBody">
+                    <!-- Las filas se cargan dinámicamente -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // Datos de prueba
+        const testFacturas = [
+            {
+                id: 'test-001',
+                estado: 'processed',
+                numero_factura: 'F-2024-001',
+                proveedor_nombre: 'INDUSTRIAS GRÁFICAS S.A.',
+                fecha_factura: '2025-05-29',
+                importe_neto: 961.98,
+                iva: 244.44,
+                total_factura: 1164.00,
+                confianza_global: 0.85,
+                proveedor_nuevo: false
+            },
+            {
+                id: 'test-002',
+                estado: 'approved',
+                numero_factura: 'F-2024-002',
+                proveedor_nombre: 'SUSANA CORDERO HERNANDEZ',
+                fecha_factura: '2025-04-30',
+                importe_neto: 72.73,
+                iva: 18.48,
+                total_factura: 88.00,
+                confianza_global: 0.92,
+                proveedor_nuevo: true
+            },
+            {
+                id: 'test-003',
+                estado: 'pending',
+                numero_factura: 'F-2024-003',
+                proveedor_nombre: 'CL GESSAMÍ N° 13',
+                fecha_factura: '2025-03-15',
+                importe_neto: 150.00,
+                iva: 31.50,
+                total_factura: 181.50,
+                confianza_global: 0.75,
+                proveedor_nuevo: false
+            }
+        ];
+
+        // Función para formatear moneda
+        function formatCurrency(value) {
+            if (!value && value !== 0) return 'N/A';
+            return new Intl.NumberFormat('es-ES', {
+                style: 'currency',
+                currency: 'EUR'
+            }).format(value);
+        }
+
+        // Función para formatear fecha
+        function formatDate(dateString) {
+            if (!dateString) return 'N/A';
+            const date = new Date(dateString);
+            return date.toLocaleDateString('es-ES');
+        }
+
+        // Función para obtener clase de confianza
+        function getConfidenceClass(confidence) {
+            if (confidence >= 0.9) return 'high';
+            if (confidence >= 0.7) return 'medium';
+            return 'low';
+        }
+
+        // Función para obtener etiqueta de confianza
+        function getConfidenceLabel(confidence) {
+            if (confidence >= 0.9) return 'Alta';
+            if (confidence >= 0.7) return 'Media';
+            return 'Baja';
+        }
+
+        // Función para obtener clase de estado
+        function getEstadoClass(estado) {
+            switch (estado) {
+                case 'processed': return 'estado-procesado';
+                case 'approved': return 'estado-aprobado';
+                case 'pending': return 'estado-pendiente';
+                case 'error': return 'estado-error';
+                case 'uploaded': return 'estado-subido';
+                default: return 'estado-default';
+            }
+        }
+
+        // Función para obtener etiqueta de estado
+        function getEstadoLabel(estado) {
+            switch (estado) {
+                case 'processed': return 'Procesado';
+                case 'approved': return 'Aprobado';
+                case 'pending': return 'Pendiente';
+                case 'error': return 'Error';
+                case 'uploaded': return 'Subido';
+                default: return 'Desconocido';
+            }
+        }
+
+        // Función para renderizar tabla
+        function renderFacturasTable(data = testFacturas) {
+            const tbody = document.getElementById('facturasTableBody');
+            if (!tbody) return;
+
+            tbody.innerHTML = data.map(factura => `
+                <tr>
+                    <td>
+                        <span class="estado-badge ${getEstadoClass(factura.estado)}">
+                            ${getEstadoLabel(factura.estado)}
+                        </span>
+                    </td>
+                    <td>${factura.numero_factura || 'N/A'}</td>
+                    <td>${factura.proveedor_nombre || 'N/A'}</td>
+                    <td>${formatDate(factura.fecha_factura)}</td>
+                    <td>${formatCurrency(factura.importe_neto || 0)}</td>
+                    <td>${formatCurrency(factura.iva || 0)}</td>
+                    <td class="total-factura">${formatCurrency(factura.total_factura || 0)}</td>
+                    <td>
+                        <div class="confidence-display">
+                            <span class="confidence-value">${Math.round((factura.confianza_global || 0) * 100)}%</span>
+                            <span class="confidence-badge ${getConfidenceClass(factura.confianza_global)}">
+                                ${getConfidenceLabel(factura.confianza_global)}
+                            </span>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="proveedor-indicator ${factura.proveedor_nuevo ? 'proveedor-nuevo' : 'proveedor-existente'}">
+                            ${factura.proveedor_nuevo ? 'Nuevo' : 'Existente'}
+                        </div>
+                    </td>
+                    <td>
+                        <div class="action-buttons">
+                            <button class="btn-action btn-view" onclick="viewFactura('${factura.id}')">
+                                Ver
+                            </button>
+                            <button class="btn-action btn-edit" onclick="editFactura('${factura.id}')">
+                                Editar
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+
+            updateStatus(`Tabla renderizada con ${data.length} facturas de prueba`, 'success');
+        }
+
+        // Función para limpiar tabla
+        function clearTable() {
+            const tbody = document.getElementById('facturasTableBody');
+            if (tbody) {
+                tbody.innerHTML = '';
+                updateStatus('Tabla limpiada', 'info');
+            }
+        }
+
+        // Función para probar renderizado
+        function testTableRender() {
+            updateStatus('Renderizando tabla de prueba...', 'info');
+            setTimeout(() => {
+                renderFacturasTable();
+            }, 500);
+        }
+
+        // Función para actualizar estado
+        function updateStatus(message, type) {
+            const statusEl = document.getElementById('status');
+            if (statusEl) {
+                statusEl.textContent = message;
+                statusEl.className = `status ${type}`;
+            }
+        }
+
+        // Funciones de acción (simuladas)
+        function viewFactura(id) {
+            alert(`Viendo factura: ${id}`);
+        }
+
+        function editFactura(id) {
+            alert(`Editando factura: ${id}`);
+        }
+
+        // Inicialización
+        document.addEventListener('DOMContentLoaded', function() {
+            updateStatus('Sistema de tabla listo para pruebas', 'success');
+        });
+
+        console.log('🧪 Test de tabla cargado');
+    </script>
+</body>
+</html>
+

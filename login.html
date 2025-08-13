@@ -293,10 +293,10 @@
                     CONFIG.SUPABASE.ANON_KEY
                 );
 
-                console.log('✅ Supabase inicializado correctamente');
+                console.log('Supabase inicializado correctamente');
 
             } catch (error) {
-                console.error('❌ Error inicializando Supabase:', error);
+                console.error('Error inicializando Supabase:', error);
                 showError('Error de configuración: ' + error.message);
             }
         }
@@ -304,12 +304,13 @@
         // ===== VERIFICAR SI YA ESTÁ LOGUEADO =====
         async function checkIfAlreadyLoggedIn() {
             try {
+                // Verificar sesión de Supabase
                 const { data: { session } } = await supabaseClient.auth.getSession();
                 
                 if (session) {
                     showSuccess('Ya tienes sesión activa, redirigiendo...');
                     setTimeout(() => {
-                        window.location.href = 'index.html';
+                        window.location.href = 'dashboard-facturas-claude/dashboard-facturas.html';
                     }, 1500);
                 }
             } catch (error) {
@@ -403,7 +404,7 @@
                 showSuccess(`¡Bienvenido ${userData.nombre}! Redirigiendo...`);
                 
                 setTimeout(() => {
-                    window.location.href = 'index.html';
+                    window.location.href = 'dashboard-facturas-claude/dashboard-facturas.html';
                 }, 1500);
 
             } catch (error) {

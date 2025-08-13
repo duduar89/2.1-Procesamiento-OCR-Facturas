@@ -3,8 +3,8 @@
 // 🔑 CREDENCIALES DE SUPABASE
 const CONFIG = {
     SUPABASE: {
-        URL: 'https://yurqgcpgwsgdnxnpyxes.supabase.co',    // ✅ TU URL
-        ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl1cnFnY3Bnd3NnZG54bnB5eGVzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5MjgzODIsImV4cCI6MjA3MDUwNDM4Mn0.iOPGaCYvtE9EQgkl7ytKAymvKKQzsfwlPUyM5ChDiRg', // ⚠️ REEMPLAZA CON TU ANON KEY REAL
+        URL: 'https://yurqgcpgwsgdnxnpyxes.supabase.co',
+        ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl1cnFnY3Bnd3NnZG54bnB5eGVzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5MjgzODIsImV4cCI6MjA3MDUwNDM4Mn0.iOPGaCYvtE9EQgkl7ytKAymvKKQzsfwlPUyM5ChDiRg',
         STORAGE_BUCKET: 'documentos'
     },
     
@@ -112,6 +112,22 @@ const CONFIG = {
             FADE_DURATION: 300,
             SLIDE_DURATION: 400,
             BOUNCE_DURATION: 600
+        },
+        
+        // 📊 CONFIGURACIÓN DEL DASHBOARD
+        DASHBOARD: {
+            ITEMS_PER_PAGE: 10,
+            AUTO_REFRESH_INTERVAL: 30000, // 30 segundos
+            PDF_VIEWER: {
+                DEFAULT_SCALE: 1,
+                MAX_SCALE: 3,
+                MIN_SCALE: 0.25
+            },
+            CONFIDENCE_THRESHOLDS: {
+                HIGH: 0.9,
+                MEDIUM: 0.7,
+                LOW: 0.0
+            }
         }
     },
     
@@ -123,6 +139,181 @@ const CONFIG = {
         MOCK_PROCESSING: false
     }
 };
+
+// 🔧 SISTEMA DE CONFIGURACIÓN DINÁMICA
+function loadSupabaseConfig() {
+    // 1. Intentar cargar desde variables de entorno (si están disponibles)
+    if (typeof process !== 'undefined' && process.env) {
+        if (process.env.SUPABASE_URL && process.env.SUPABASE_ANON_KEY) {
+            CONFIG.SUPABASE.URL = process.env.SUPABASE_URL;
+            CONFIG.SUPABASE.ANON_KEY = process.env.SUPABASE_ANON_KEY;
+            console.log('Configuración cargada desde variables de entorno');
+            return;
+        }
+    }
+
+    // 2. Intentar cargar desde localStorage (para desarrollo)
+    const savedConfig = localStorage.getItem('supabase_config');
+    if (savedConfig) {
+        try {
+            const parsed = JSON.parse(savedConfig);
+            if (parsed.URL && parsed.ANON_KEY) {
+                CONFIG.SUPABASE.URL = parsed.URL;
+                CONFIG.SUPABASE.ANON_KEY = parsed.ANON_KEY;
+                console.log('Configuración cargada desde localStorage');
+                return;
+            }
+        } catch (error) {
+            console.warn('Error parseando configuración guardada:', error);
+        }
+    }
+
+    // 3. Verificar si la configuración actual es válida
+    if (CONFIG.SUPABASE.ANON_KEY && CONFIG.SUPABASE.ANON_KEY.length > 100) {
+        console.log('Usando configuración hardcodeada');
+        return;
+    }
+
+    // 4. Mostrar error y solicitar configuración
+    console.error('❌ CONFIGURACIÓN DE SUPABASE INVÁLIDA');
+    console.error('Por favor, configura las credenciales de Supabase:');
+    console.error('1. Ve a tu proyecto de Supabase');
+    console.error('2. Settings > API');
+    console.error('3. Copia la URL y la anon key');
+    console.error('4. Actualiza config.js o usa el formulario de configuración');
+    
+    // Mostrar formulario de configuración
+    showConfigForm();
+}
+
+// 🎯 FORMULARIO DE CONFIGURACIÓN
+function showConfigForm() {
+    // Crear overlay de configuración
+    const overlay = document.createElement('div');
+    overlay.id = 'configOverlay';
+    overlay.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.8);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10000;
+    `;
+
+    overlay.innerHTML = `
+        <div style="
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            max-width: 500px;
+            width: 90%;
+            text-align: center;
+        ">
+            <h2 style="color: #dc2626; margin-bottom: 20px;">⚠️ Configuración Requerida</h2>
+            <p style="margin-bottom: 20px; color: #374151;">
+                Las credenciales de Supabase no son válidas. Por favor, configura tu proyecto:
+            </p>
+            
+            <div style="text-align: left; margin-bottom: 20px;">
+                <label style="display: block; margin-bottom: 8px; font-weight: 600;">URL de Supabase:</label>
+                <input type="text" id="configUrl" placeholder="https://tu-proyecto.supabase.co" 
+                       style="width: 100%; padding: 10px; border: 2px solid #e5e7eb; border-radius: 8px;">
+            </div>
+            
+            <div style="text-align: left; margin-bottom: 20px;">
+                <label style="display: block; margin-bottom: 8px; font-weight: 600;">Anon Key:</label>
+                <input type="text" id="configKey" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." 
+                       style="width: 100%; padding: 10px; border: 2px solid #e5e7eb; border-radius: 8px;">
+            </div>
+            
+            <div style="display: flex; gap: 10px; justify-content: center;">
+                <button onclick="saveConfig()" style="
+                    background: #2563eb;
+                    color: white;
+                    border: none;
+                    padding: 12px 24px;
+                    border-radius: 8px;
+                    cursor: pointer;
+                    font-weight: 600;
+                ">Guardar Configuración</button>
+                
+                <button onclick="document.getElementById('configOverlay').remove()" style="
+                    background: #6b7280;
+                    color: white;
+                    border: none;
+                    padding: 12px 24px;
+                    border-radius: 8px;
+                    cursor: pointer;
+                    font-weight: 600;
+                ">Cancelar</button>
+            </div>
+            
+            <div style="margin-top: 20px; padding: 15px; background: #f3f4f6; border-radius: 8px; text-align: left;">
+                <strong>📋 Cómo obtener las credenciales:</strong><br>
+                1. Ve a <a href="https://supabase.com" target="_blank" style="color: #2563eb;">supabase.com</a><br>
+                2. Accede a tu proyecto<br>
+                3. Settings > API<br>
+                4. Copia "Project URL" y "anon public" key
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(overlay);
+}
+
+// 💾 GUARDAR CONFIGURACIÓN
+function saveConfig() {
+    const url = document.getElementById('configUrl').value.trim();
+    const key = document.getElementById('configKey').value.trim();
+    
+    if (!url || !key) {
+        alert('Por favor, completa ambos campos');
+        return;
+    }
+    
+    // Validar formato básico
+    if (!url.includes('supabase.co')) {
+        alert('La URL debe ser de Supabase (contener "supabase.co")');
+        return;
+    }
+    
+    if (!key.startsWith('eyJ')) {
+        alert('La anon key debe ser un token JWT válido (empieza con "eyJ")');
+        return;
+    }
+    
+    // Guardar configuración
+    CONFIG.SUPABASE.URL = url;
+    CONFIG.SUPABASE.ANON_KEY = key;
+    
+    // Guardar en localStorage
+    localStorage.setItem('supabase_config', JSON.stringify({ URL: url, ANON_KEY: key }));
+    
+    // Ocultar formulario
+    document.getElementById('configOverlay').remove();
+    
+    // Recargar página para aplicar nueva configuración
+    location.reload();
+}
+
+// 🔍 VALIDAR CONFIGURACIÓN
+function validateSupabaseConfig() {
+    const errors = [];
+    
+    if (!CONFIG.SUPABASE.URL || !CONFIG.SUPABASE.URL.includes('supabase.co')) {
+        errors.push('URL de Supabase inválida');
+    }
+    
+    if (!CONFIG.SUPABASE.ANON_KEY || CONFIG.SUPABASE.ANON_KEY.length < 100) {
+        errors.push('Anon Key de Supabase inválida');
+    }
+    
+    return errors;
+}
 
 // 🏢 GESTOR MULTI-TENANT
 class TenantManager {
@@ -244,16 +435,16 @@ function validateConfig() {
     
     // Verificar Supabase
     if (!CONFIG.SUPABASE.URL || CONFIG.SUPABASE.URL.includes('tu-proyecto')) {
-        errors.push('❌ URL de Supabase no configurada');
+        errors.push('URL de Supabase no configurada');
     }
     
     if (!CONFIG.SUPABASE.ANON_KEY || CONFIG.SUPABASE.ANON_KEY.includes('tu-anon-key')) {
-        errors.push('❌ Anon Key de Supabase no configurada');
+        errors.push('Anon Key de Supabase no configurada');
     }
     
     // Verificar tamaño máximo
     if (CONFIG.APP.MAX_FILE_SIZE < 1024 * 1024) {
-        errors.push('⚠️ Tamaño máximo de archivo muy pequeño');
+        errors.push('Tamaño máximo de archivo muy pequeño');
     }
     
     return errors;
@@ -307,22 +498,34 @@ window.CONFIG = CONFIG;
 window.TenantManager = TenantManager;
 window.TenantUtils = TenantUtils;
 window.validateConfig = validateConfig;
+window.loadSupabaseConfig = loadSupabaseConfig;
+window.showConfigForm = showConfigForm;
+window.saveConfig = saveConfig;
+window.validateSupabaseConfig = validateSupabaseConfig;
 
 // 📝 LOGS DE DEBUG
 if (window.location.hostname === 'localhost' || CONFIG.DEBUG.ENABLED) {
-    console.log('🔧 Configuración Multi-Tenant cargada:', CONFIG);
-    const configErrors = validateConfig();
+    console.log('Configuración Multi-Tenant cargada:', CONFIG);
+    
+    // Validar configuración de Supabase
+    const configErrors = validateSupabaseConfig();
     if (configErrors.length > 0) {
-        console.warn('⚠️ Errores de configuración:', configErrors);
-        // Mostrar errores en la interfaz también
+        console.warn('❌ Errores de configuración de Supabase:', configErrors);
+        // Mostrar formulario de configuración si hay errores
         setTimeout(() => {
-            if (window.showNotification) {
-                configErrors.forEach(error => {
-                    window.showNotification(error, 'error');
-                });
-            }
+            showConfigForm();
         }, 1000);
     } else {
-        console.log('✅ Configuración válida');
+        console.log('✅ Configuración de Supabase válida');
+        console.log('🔗 URL:', CONFIG.SUPABASE.URL);
+        console.log('🔑 Anon Key:', CONFIG.SUPABASE.ANON_KEY.substring(0, 20) + '...');
+    }
+    
+    // Validar configuración general
+    const generalErrors = validateConfig();
+    if (generalErrors.length > 0) {
+        console.warn('⚠️ Errores de configuración general:', generalErrors);
+    } else {
+        console.log('✅ Configuración general válida');
     }
 }

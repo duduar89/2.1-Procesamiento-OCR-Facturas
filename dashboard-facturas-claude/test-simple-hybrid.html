@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Modal Híbrido Simple</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    </script>
+    <link rel="stylesheet" href="hybrid-pdf-modal.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px;
+        }
+        .test-button:hover {
+            background: #0056b3;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        .status.success { background: #d4edda; color: #155724; }
+        .status.error { background: #f8d7da; color: #721c24; }
+        .status.info { background: #d1ecf1; color: #0c5460; }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🧪 Test Modal Híbrido Simple</h1>
+        
+        <div id="status" class="status info">
+            Estado: Inicializando...
+        </div>
+        
+        <div class="test-buttons">
+            <button class="test-button" onclick="testInitialization()">
+                🔍 Probar Inicialización
+            </button>
+            <button class="test-button" onclick="testModalCreation()">
+                📱 Crear Modal
+            </button>
+            <button class="test-button" onclick="testPDFLoading()">
+                📄 Probar Carga PDF
+            </button>
+        </div>
+        
+        <div id="results"></div>
+    </div>
+
+    <script src="hybrid-pdf-modal.js"></script>
+    <script>
+        let testResults = [];
+        
+        function updateStatus(message, type = 'info') {
+            const statusEl = document.getElementById('status');
+            statusEl.textContent = `Estado: ${message}`;
+            statusEl.className = `status ${type}`;
+        }
+        
+        function addResult(message, type = 'info') {
+            const resultsEl = document.getElementById('results');
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `status ${type}`;
+            resultDiv.textContent = message;
+            resultsEl.appendChild(resultDiv);
+        }
+        
+        function testInitialization() {
+            try {
+                updateStatus('Probando inicialización...', 'info');
+                
+                // Verificar que la clase existe
+                if (window.HybridPDFModal) {
+                    addResult('✅ Clase HybridPDFModal encontrada', 'success');
+                } else {
+                    addResult('❌ Clase HybridPDFModal NO encontrada', 'error');
+                    return;
+                }
+                
+                // Verificar que la instancia global existe
+                if (window.hybridPDFModal) {
+                    addResult('✅ Instancia global hybridPDFModal encontrada', 'success');
+                } else {
+                    addResult('⚠️ Instancia global hybridPDFModal NO encontrada', 'error');
+                }
+                
+                updateStatus('Inicialización completada', 'success');
+                
+            } catch (error) {
+                addResult(`❌ Error en inicialización: ${error.message}`, 'error');
+                updateStatus('Error en inicialización', 'error');
+            }
+        }
+        
+        function testModalCreation() {
+            try {
+                updateStatus('Probando creación de modal...', 'info');
+                
+                if (!window.HybridPDFModal) {
+                    addResult('❌ Clase HybridPDFModal no disponible', 'error');
+                    return;
+                }
+                
+                // Crear nueva instancia
+                const testModal = new window.HybridPDFModal();
+                addResult('✅ Modal creado correctamente', 'success');
+                
+                // Verificar métodos
+                if (typeof testModal.open === 'function') {
+                    addResult('✅ Método open() disponible', 'success');
+                } else {
+                    addResult('❌ Método open() NO disponible', 'error');
+                }
+                
+                if (typeof testModal.zoomIn === 'function') {
+                    addResult('✅ Método zoomIn() disponible', 'success');
+                } else {
+                    addResult('❌ Método zoomIn() NO disponible', 'error');
+                }
+                
+                updateStatus('Creación de modal completada', 'success');
+                
+            } catch (error) {
+                addResult(`❌ Error creando modal: ${error.message}`, 'error');
+                updateStatus('Error creando modal', 'error');
+            }
+        }
+        
+        function testPDFLoading() {
+            try {
+                updateStatus('Probando carga de PDF...', 'info');
+                
+                if (!window.hybridPDFModal) {
+                    addResult('❌ Modal híbrido no inicializado', 'error');
+                    return;
+                }
+                
+                // Datos de prueba
+                const testCoordinates = {
+                    numero_factura: { x: 100, y: 100, width: 200, height: 30, text: 'F-2024-001' },
+                    proveedor_nombre: { x: 100, y: 150, width: 300, height: 40, text: 'Proveedor Test' }
+                };
+                
+                const testData = {
+                    numero_factura: 'F-2024-001',
+                    proveedor_nombre: 'Proveedor Test',
+                    confianza_global: 0.85
+                };
+                
+                // URL de PDF de prueba (debería fallar pero no crashear)
+                const testPdfUrl = 'https://example.com/test.pdf';
+                
+                addResult('✅ Datos de prueba preparados', 'success');
+                addResult('📍 Coordenadas: ' + JSON.stringify(testCoordinates), 'info');
+                addResult('📊 Datos: ' + JSON.stringify(testData), 'info');
+                
+                updateStatus('Prueba de PDF completada', 'success');
+                
+            } catch (error) {
+                addResult(`❌ Error en prueba de PDF: ${error.message}`, 'error');
+                updateStatus('Error en prueba de PDF', 'error');
+            }
+        }
+        
+        // Auto-ejecutar al cargar
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(() => {
+                updateStatus('Listo para pruebas', 'success');
+                addResult('🚀 Página cargada correctamente', 'success');
+            }, 1000);
+        });
+    </script>
+</body>
+</html>

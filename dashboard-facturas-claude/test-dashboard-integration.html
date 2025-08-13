@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Dashboard Integration - Modal Híbrido</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    </script>
+    <link rel="stylesheet" href="hybrid-pdf-modal.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px;
+        }
+        .test-button:hover {
+            background: #0056b3;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        .status.success { background: #d4edda; color: #155724; }
+        .status.error { background: #f8d7da; color: #721c24; }
+        .status.info { background: #d1ecf1; color: #0c5460; }
+        .factura-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            border: 1px solid #ddd;
+            margin: 10px 0;
+            border-radius: 5px;
+            background: #f9f9f9;
+        }
+        .factura-info {
+            flex: 1;
+        }
+        .factura-actions {
+            display: flex;
+            gap: 10px;
+        }
+        .btn-advanced {
+            background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .btn-advanced:hover {
+            background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+            transform: translateY(-1px);
+        }
+        .mock-data-section {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .mock-data-section h3 {
+            margin-top: 0;
+            color: #495057;
+        }
+        .mock-data-section pre {
+            background: #e9ecef;
+            padding: 10px;
+            border-radius: 3px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🧪 Test Dashboard Integration - Modal Híbrido</h1>
+        
+        <div id="status" class="status info">
+            Estado: Inicializando...
+        </div>
+        
+        <div class="mock-data-section">
+            <h3>📊 Datos Mock de Facturas</h3>
+            <p>Estos son los datos que se usarán para probar el modal híbrido:</p>
+            <pre id="mockDataDisplay"></pre>
+        </div>
+        
+        <div class="test-buttons">
+            <button class="test-button" onclick="testModalInitialization()">
+                🔍 Probar Inicialización Modal
+            </button>
+            <button class="test-button" onclick="testFacturaData()">
+                📋 Ver Datos de Facturas
+            </button>
+            <button class="test-button" onclick="testModalWithMockData()">
+                📱 Probar Modal con Datos Mock
+            </button>
+        </div>
+        
+        <div id="facturasTable">
+            <h3>📋 Tabla de Facturas Mock</h3>
+            <div id="facturasList"></div>
+        </div>
+        
+        <div id="results"></div>
+    </div>
+
+    <script src="hybrid-pdf-modal.js"></script>
+    <script>
+        // Datos mock de facturas para simular el dashboard
+        const mockFacturas = [
+            {
+                id: 'mock-001',
+                documento_id: 'doc-001.pdf',
+                restaurante_id: 'rest-001',
+                numero_factura: 'F-2024-001',
+                proveedor_nombre: 'Proveedor Test 1',
+                proveedor_cif: 'B12345678',
+                total_factura: 150.00,
+                importe_neto: 123.97,
+                iva: 26.03,
+                confianza_global: 0.85,
+                estado: 'processed',
+                archivo_nombre: 'doc-001.pdf',
+                coordenadas_numero_factura: { x: 100, y: 100, width: 200, height: 30, confidence: 0.9 },
+                coordenadas_proveedor_nombre: { x: 100, y: 150, width: 300, height: 40, confidence: 0.85 },
+                coordenadas_total_factura: { x: 500, y: 200, width: 100, height: 25, confidence: 0.95 }
+            },
+            {
+                id: 'mock-002',
+                documento_id: 'doc-002.pdf',
+                restaurante_id: 'rest-001',
+                numero_factura: 'F-2024-002',
+                proveedor_nombre: 'Proveedor Test 2',
+                proveedor_cif: 'B87654321',
+                total_factura: 89.50,
+                importe_neto: 73.97,
+                iva: 15.53,
+                confianza_global: 0.78,
+                estado: 'processed',
+                archivo_nombre: 'doc-002.pdf',
+                coordenadas_numero_factura: { x: 120, y: 120, width: 180, height: 28, confidence: 0.88 },
+                coordenadas_proveedor_nombre: { x: 120, y: 170, width: 280, height: 35, confidence: 0.78 }
+            }
+        ];
+
+        let hybridPDFModal = null;
+        
+        function updateStatus(message, type = 'info') {
+            const statusEl = document.getElementById('status');
+            statusEl.textContent = `Estado: ${message}`;
+            statusEl.className = `status ${type}`;
+        }
+        
+        function addResult(message, type = 'info') {
+            const resultsEl = document.getElementById('results');
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `status ${type}`;
+            resultDiv.textContent = message;
+            resultsEl.appendChild(resultDiv);
+        }
+        
+        function testModalInitialization() {
+            try {
+                updateStatus('Probando inicialización del modal...', 'info');
+                
+                if (window.hybridPDFModal) {
+                    hybridPDFModal = window.hybridPDFModal;
+                    addResult('✅ Modal híbrido encontrado en window', 'success');
+                } else if (window.HybridPDFModal) {
+                    hybridPDFModal = new window.HybridPDFModal();
+                    addResult('✅ Modal híbrido creado desde clase', 'success');
+                } else {
+                    addResult('❌ Modal híbrido no disponible', 'error');
+                    return;
+                }
+                
+                updateStatus('Modal inicializado correctamente', 'success');
+                
+            } catch (error) {
+                addResult(`❌ Error inicializando modal: ${error.message}`, 'error');
+                updateStatus('Error en inicialización', 'error');
+            }
+        }
+        
+        function testFacturaData() {
+            try {
+                updateStatus('Mostrando datos de facturas...', 'info');
+                
+                const mockDataDisplay = document.getElementById('mockDataDisplay');
+                mockDataDisplay.textContent = JSON.stringify(mockFacturas, null, 2);
+                
+                addResult('✅ Datos de facturas mostrados', 'success');
+                updateStatus('Datos de facturas cargados', 'success');
+                
+            } catch (error) {
+                addResult(`❌ Error mostrando datos: ${error.message}`, 'error');
+                updateStatus('Error mostrando datos', 'error');
+            }
+        }
+        
+        function testModalWithMockData() {
+            try {
+                updateStatus('Probando modal con datos mock...', 'info');
+                
+                if (!hybridPDFModal) {
+                    addResult('❌ Modal híbrido no inicializado', 'error');
+                    return;
+                }
+                
+                // Usar la primera factura mock
+                const factura = mockFacturas[0];
+                
+                // Simular la función openInvoiceAdvanced del dashboard
+                const pdfUrl = `https://example.com/storage/v1/object/public/facturas/${factura.archivo_nombre}`;
+                
+                // Preparar coordenadas válidas
+                const coordinates = {};
+                if (factura.coordenadas_numero_factura) coordinates.numero_factura = factura.coordenadas_numero_factura;
+                if (factura.coordenadas_proveedor_nombre) coordinates.proveedor_nombre = factura.coordenadas_proveedor_nombre;
+                if (factura.coordenadas_total_factura) coordinates.total_factura = factura.coordenadas_total_factura;
+                
+                // Preparar datos extraídos
+                const extractedData = {
+                    numero_factura: factura.numero_factura,
+                    proveedor_nombre: factura.proveedor_nombre,
+                    proveedor_cif: factura.proveedor_cif,
+                    total_factura: factura.total_factura,
+                    confianza_global: factura.confianza_global
+                };
+                
+                addResult('✅ Datos preparados para modal', 'success');
+                addResult(`📍 Coordenadas: ${Object.keys(coordinates).length} campos`, 'info');
+                addResult(`📊 Datos: ${Object.keys(extractedData).length} campos`, 'info');
+                
+                // Intentar abrir el modal (esto fallará porque no hay PDF real)
+                try {
+                    hybridPDFModal.open(pdfUrl, coordinates, extractedData);
+                    addResult('✅ Modal abierto correctamente', 'success');
+                } catch (error) {
+                    addResult(`⚠️ Modal falló al cargar PDF (esperado): ${error.message}`, 'info');
+                }
+                
+                updateStatus('Prueba de modal completada', 'success');
+                
+            } catch (error) {
+                addResult(`❌ Error en prueba de modal: ${error.message}`, 'error');
+                updateStatus('Error en prueba de modal', 'error');
+            }
+        }
+        
+        function renderFacturasTable() {
+            const facturasList = document.getElementById('facturasList');
+            
+            facturasList.innerHTML = mockFacturas.map(factura => `
+                <div class="factura-row">
+                    <div class="factura-info">
+                        <strong>${factura.numero_factura}</strong> - ${factura.proveedor_nombre}<br>
+                        <small>Total: €${factura.total_factura} | Confianza: ${Math.round(factura.confianza_global * 100)}%</small>
+                    </div>
+                    <div class="factura-actions">
+                        <button class="btn-advanced" onclick="openFacturaModal('${factura.id}')">
+                            📍 Avanzado
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        function openFacturaModal(facturaId) {
+            try {
+                const factura = mockFacturas.find(f => f.id === facturaId);
+                if (!factura) {
+                    addResult('❌ Factura no encontrada', 'error');
+                    return;
+                }
+                
+                if (!hybridPDFModal) {
+                    addResult('❌ Modal híbrido no inicializado', 'error');
+                    return;
+                }
+                
+                // Simular la función del dashboard
+                const pdfUrl = `https://example.com/storage/v1/object/public/facturas/${factura.archivo_nombre}`;
+                
+                const coordinates = {};
+                if (factura.coordenadas_numero_factura) coordinates.numero_factura = factura.coordenadas_numero_factura;
+                if (factura.coordenadas_proveedor_nombre) coordinates.proveedor_nombre = factura.coordenadas_proveedor_nombre;
+                if (factura.coordenadas_total_factura) coordinates.total_factura = factura.coordenadas_total_factura;
+                
+                const extractedData = {
+                    numero_factura: factura.numero_factura,
+                    proveedor_nombre: factura.proveedor_nombre,
+                    proveedor_cif: factura.proveedor_cif,
+                    total_factura: factura.total_factura,
+                    confianza_global: factura.confianza_global
+                };
+                
+                addResult(`🚀 Abriendo modal para factura: ${factura.numero_factura}`, 'info');
+                
+                try {
+                    hybridPDFModal.open(pdfUrl, coordinates, extractedData);
+                    addResult('✅ Modal abierto correctamente', 'success');
+                } catch (error) {
+                    addResult(`⚠️ Modal falló al cargar PDF: ${error.message}`, 'info');
+                }
+                
+            } catch (error) {
+                addResult(`❌ Error abriendo modal: ${error.message}`, 'error');
+            }
+        }
+        
+        // Auto-ejecutar al cargar
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(() => {
+                updateStatus('Listo para pruebas', 'success');
+                addResult('🚀 Página cargada correctamente', 'success');
+                renderFacturasTable();
+                addResult('📋 Tabla de facturas renderizada', 'success');
+            }, 1000);
+        });
+    </script>
+</body>
+</html>

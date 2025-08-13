@@ -1,0 +1,102 @@
+¡**PERFECTO**! Ya veo exactamente todos los campos que tienes. Basándome en las imágenes de tu tabla `datos_extraidos_facturas`, aquí están **TODOS los campos** para entrenar Document AI:
+
+## 🎯 **CAMPOS PARA ENTRENAR GOOGLE DOCUMENT AI**
+
+### **🏢 DATOS DEL PROVEEDOR (8 campos):**
+1. **proveedor_codigo_postal** → `supplier_postal_code`
+2. **proveedor_ciudad** → `supplier_city`  
+3. **proveedor_telefono** → `supplier_phone`
+4. **proveedor_email** → `supplier_email`
+5. **proveedor_web** → `supplier_website`
+6. **confianza_proveedor** → `supplier_confidence` (se calcula automáticamente)
+7. supplier_bank_iban
+
+### **📋 DATOS FISCALES (7 campos):**
+7. **numero_factura** → `invoice_number` ⭐ **CRÍTICO**
+8. **fecha_factura** → `invoice_date` ⭐ **CRÍTICO**
+9. **fecha_vencimiento** → `due_date`
+10. **fecha_operacion** → `operation_date`
+11. **periodo_facturacion** → `billing_period`
+12. **numero_pedido** → `purchase_order_number`
+13. **numero_albaran_relacionado** → `delivery_note_number`
+
+### **💰 IMPORTES (8 campos principales):**
+14. **base_imponible** → `taxable_amount` ⭐ **CRÍTICO**
+15. **total_factura** → `total_amount` ⭐ **CRÍTICO**
+16. **iva_tipos** → `tax_breakdown` (JSONB - detalles de múltiples IVAs)
+17. **total_iva** → `total_tax` ⭐ **CRÍTICO**
+18. **retencion_irpf** → `withholding_tax`
+19. **porcentaje_retencion** → `withholding_percentage`
+20. **recargo_equivalencia** → `equivalence_surcharge`
+21. **total_descuentos** → `total_discounts`
+
+### **📦 ENTREGA Y LOGÍSTICA (5 campos):**
+22. **direccion_entrega** → `delivery_address`
+23. **fecha_entrega** → `delivery_date`
+24. **transportista** → `carrier`
+25. **condiciones_pago** → `payment_terms`
+26. **metodo_pago_preferido** → `preferred_payment_method`
+27. **albranes_dentro_facturas_** related_delivery_note_number"
+
+### **📊 CAMPOS DE IVA DETALLADOS (2 campos):**
+27. **cuota_iva** → `tax_amount` ⭐ **CRÍTICO**
+28. **tipo_iva** → `tax_rate` ⭐ **CRÍTICO**
+
+---
+
+## ⭐ **CAMPOS MÁS CRÍTICOS PARA EMPEZAR (TOP 8):**
+
+Si quieres empezar con lo esencial, entrena estos primero:
+
+1. **invoice_number** (numero_factura)
+2. **invoice_date** (fecha_factura)  
+3. **total_amount** (total_factura)
+4. **taxable_amount** (base_imponible)
+5. **tax_amount** (cuota_iva)
+6. **tax_rate** (tipo_iva)
+7. **total_tax** (total_iva)
+8. **supplier_name** (el que falta - proveedor_nombre)
+
+## 🤖 **CÓMO NOMBRAR EN DOCUMENT AI:**
+
+**Usa nombres en inglés** para Document AI (más universal) y luego mapeas a tus campos en español en la función.
+
+¿Empezamos con estos 8 críticos o prefieres configurar todos los 28 campos de una vez?// Pseudo-código para tu función
+async function getOrCreateProveedor(restauranteId, datosProveedor) {
+  // 1. Buscar si ya existe por CIF
+  let proveedor = await buscarProveedorPorCIF(restauranteId, datosProveedor.cif)
+  
+  if (!proveedor) {
+    // 2. Crear nuevo proveedor
+    proveedor = await crearNuevoProveedor(restauranteId, datosProveedor)
+  } else {
+    // 3. Actualizar datos si han cambiado
+    await actualizarProveedorSiNecesario(proveedor.id, datosProveedor)
+  }
+  
+  return proveedor.id
+}
+
+
+❌ ANTES (actual):
+typescript// Solo guarda datos del proveedor como texto
+.insert({
+  documento_id: documentId,
+  restaurante_id: documentInfo.restaurante_id,
+  proveedor_nombre: extractedData.proveedor_nombre,
+  proveedor_cif: extractedData.proveedor_cif,
+  // ... resto
+})
+✅ DESPUÉS (necesario):
+typescript// 1. Crear/encontrar proveedor
+const proveedorId = await getOrCreateProveedor(restauranteId, datosProveedor)
+
+// 2. Guardar factura con proveedor_id
+.insert({
+  documento_id: documentId,
+  restaurante_id: documentInfo.restaurante_id,
+  proveedor_id: proveedorId, // ⬅️ NUEVO
+  // ... resto SIN campos proveedor_*
+})
+
+// 3. Procesar productos y conectar con productos_maestro

@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Datos - Dashboard</title>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="../config.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f9fafb;
+        }
+        .debug-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+        .status {
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 8px;
+            font-weight: 600;
+        }
+        .status.success { background: #dcfce7; color: #166534; }
+        .status.error { background: #fee2e2; color: #dc2626; }
+        .status.info { background: #dbeafe; color: #1e40af; }
+        .btn {
+            background: #10b981;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            margin: 10px;
+        }
+        .btn:hover { background: #059669; }
+        .data-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+        }
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+        .data-table th, .data-table td {
+            border: 1px solid #d1d5db;
+            padding: 8px 12px;
+            text-align: left;
+            font-size: 12px;
+        }
+        .data-table th {
+            background: #f9fafb;
+            font-weight: 600;
+        }
+        .log {
+            background: #f3f4f6;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+            font-family: monospace;
+            font-size: 11px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="debug-container">
+        <h1>🐛 Debug de Datos del Dashboard</h1>
+        <p>Verificación completa del sistema de carga de datos</p>
+        
+        <div id="status" class="status info">Iniciando debug...</div>
+        
+        <div>
+            <button class="btn" onclick="debugConfig()">Debug Configuración</button>
+            <button class="btn" onclick="debugSupabase()">Debug Supabase</button>
+            <button class="btn" onclick="debugData()">Debug Datos</button>
+            <button class="btn" onclick="debugTable()">Debug Tabla</button>
+            <button class="btn" onclick="clearLog()">Limpiar Log</button>
+        </div>
+        
+        <div class="data-section">
+            <h3>📊 Estado de Datos</h3>
+            <div id="dataStatus">Cargando...</div>
+        </div>
+        
+        <div class="data-section">
+            <h3>📋 Datos Cargados</h3>
+            <div id="dataContent">Sin datos</div>
+        </div>
+        
+        <div class="log" id="log"></div>
+    </div>
+
+    <script>
+        // Variables globales
+        let supabaseClient = null;
+        let currentUser = null;
+        let facturasData = [];
+
+        // Inicialización
+        document.addEventListener('DOMContentLoaded', async function() {
+            log('🐛 Iniciando debug de datos...');
+            await initializeDebug();
+        });
+
+        // Inicializar debug
+        async function initializeDebug() {
+            try {
+                // Verificar configuración
+                if (!window.CONFIG) {
+                    throw new Error('Configuración no encontrada');
+                }
+
+                log('✅ Configuración encontrada');
+                log('🔗 URL:', CONFIG.SUPABASE.URL);
+                log('🔑 Key:', CONFIG.SUPABASE.ANON_KEY.substring(0, 20) + '...');
+
+                // Simular usuario autenticado para pruebas
+                currentUser = {
+                    id: 'test-user-001',
+                    nombre: 'Usuario Test'
+                };
+
+                // Simular restaurante para pruebas
+                CONFIG.TENANT.RESTAURANTE_ID = '550e8400-e29b-41d4-a716-446655440001';
+                CONFIG.TENANT.RESTAURANTE_ACTUAL = {
+                    id: '550e8400-e29b-41d4-a716-446655440001',
+                    nombre: 'Bar Manolo S.L.'
+                };
+
+                log('✅ Debug configurado correctamente');
+                showStatus('Debug configurado correctamente', 'success');
+
+            } catch (error) {
+                log('❌ Error inicializando debug:', error);
+                showStatus('Error de configuración: ' + error.message, 'error');
+            }
+        }
+
+        // Debug de configuración
+        function debugConfig() {
+            log('🔧 Debug de configuración...');
+            
+            if (!window.CONFIG) {
+                log('❌ CONFIG no encontrado');
+                return;
+            }
+
+            log('✅ CONFIG encontrado');
+            log('📊 Configuración completa:', CONFIG);
+            log('🏢 Tenant ID:', CONFIG.TENANT.RESTAURANTE_ID);
+            log('👤 Usuario:', currentUser);
+        }
+
+        // Debug de Supabase
+        async function debugSupabase() {
+            log('🔌 Debug de Supabase...');
+            
+            try {
+                // Inicializar Supabase
+                supabaseClient = supabase.createClient(
+                    CONFIG.SUPABASE.URL,
+                    CONFIG.SUPABASE.ANON_KEY
+                );
+
+                log('✅ Cliente Supabase creado');
+
+                // Test de conexión básica
+                const { data, error } = await supabaseClient
+                    .from('documentos')
+                    .select('count')
+                    .limit(1);
+
+                if (error) {
+                    log('❌ Error conectando a Supabase:', error.message);
+                    return;
+                }
+
+                log('✅ Conexión a Supabase exitosa');
+                log('📊 Respuesta:', data);
+
+            } catch (error) {
+                log('❌ Error en debug de Supabase:', error);
+            }
+        }
+
+        // Debug de datos
+        async function debugData() {
+            log('📊 Debug de datos...');
+            
+            try {
+                if (!supabaseClient) {
+                    log('❌ Cliente Supabase no inicializado');
+                    return;
+                }
+
+                // Cargar facturas reales
+                const { data: facturas, error: facturasError } = await supabaseClient
+                    .from('datos_extraidos_facturas')
+                    .select('*')
+                    .eq('restaurante_id', CONFIG.TENANT.RESTAURANTE_ID)
+                    .order('fecha_extraccion', { ascending: false });
+
+                if (facturasError) {
+                    log('❌ Error cargando facturas:', facturasError.message);
+                    return;
+                }
+
+                log('✅ Facturas cargadas correctamente');
+                log('📊 Cantidad de facturas:', facturas.length);
+                
+                // Transformar datos
+                facturasData = facturas.map(factura => ({
+                    id: factura.documento_id || factura.id,
+                    documento_id: factura.documento_id,
+                    restaurante_id: factura.restaurante_id,
+                    numero_factura: factura.numero_factura || 'N/A',
+                    proveedor_nombre: factura.proveedor_nombre || 'Proveedor Desconocido',
+                    proveedor_cif: factura.proveedor_cif || 'Sin CIF',
+                    proveedor_direccion: factura.proveedor_direccion || 'Sin dirección',
+                    fecha_factura: factura.fecha_factura || new Date().toISOString(),
+                    fecha_vencimiento: factura.fecha_vencimiento || null,
+                    total_factura: factura.total_factura || 0,
+                    importe_neto: factura.base_imponible || factura.total_factura * 0.79,
+                    iva: factura.total_iva || factura.total_factura * 0.21,
+                    base_imponible: factura.base_imponible || factura.total_factura * 0.79,
+                    total_iva: factura.total_iva || factura.total_factura * 0.21,
+                    tipo_iva: factura.tipo_iva || 21,
+                    confianza_global: factura.confianza_global || 0.5,
+                    confianza_proveedor: factura.confianza_proveedor || 0.5,
+                    confianza_datos_fiscales: factura.confianza_datos_fiscales || 0.5,
+                    confianza_importes: factura.confianza_importes || 0.5,
+                    requiere_revision: factura.requiere_revision || false,
+                    proveedor_nuevo: factura.proveedor_nuevo || false,
+                    campos_con_baja_confianza: factura.campos_con_baja_confianza || [],
+                    estado: factura.estado || 'processed',
+                    fecha_extraccion: factura.fecha_extraccion || new Date().toISOString(),
+                    coordenadas_campos: factura.coordenadas_campos || {},
+                    productos: []
+                }));
+
+                log('🔄 Datos transformados:', facturasData.length, 'facturas');
+                log('📋 Primera factura transformada:', facturasData[0]);
+
+                // Actualizar UI
+                updateDataStatus();
+                updateDataContent();
+
+            } catch (error) {
+                log('❌ Error en debug de datos:', error);
+            }
+        }
+
+        // Debug de tabla
+        function debugTable() {
+            log('🎨 Debug de tabla...');
+            
+            if (facturasData.length === 0) {
+                log('❌ No hay datos para renderizar');
+                return;
+            }
+
+            log('📊 Renderizando tabla con:', facturasData.length, 'facturas');
+            
+            // Simular renderizado
+            const sampleData = facturasData.slice(0, 3);
+            log('📋 Datos de muestra para tabla:', sampleData);
+            
+            // Verificar estructura de datos
+            sampleData.forEach((factura, index) => {
+                log(`📄 Factura ${index + 1}:`, {
+                    id: factura.id,
+                    proveedor: factura.proveedor_nombre,
+                    numero: factura.numero_factura,
+                    total: factura.total_factura,
+                    confianza: factura.confianza_global
+                });
+            });
+        }
+
+        // Funciones de utilidad
+        function updateDataStatus() {
+            const statusEl = document.getElementById('dataStatus');
+            if (statusEl) {
+                statusEl.innerHTML = `
+                    <strong>Estado:</strong> ${facturasData.length > 0 ? '✅ Datos cargados' : '❌ Sin datos'}<br>
+                    <strong>Cantidad:</strong> ${facturasData.length} facturas<br>
+                    <strong>Última actualización:</strong> ${new Date().toLocaleTimeString()}
+                `;
+            }
+        }
+
+        function updateDataContent() {
+            const contentEl = document.getElementById('dataContent');
+            if (contentEl && facturasData.length > 0) {
+                const tableHTML = `
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Proveedor</th>
+                                <th>Número</th>
+                                <th>Fecha</th>
+                                <th>Total</th>
+                                <th>Confianza</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${facturasData.slice(0, 10).map(factura => `
+                                <tr>
+                                    <td>${factura.id?.substring(0, 8)}...</td>
+                                    <td>${factura.proveedor_nombre}</td>
+                                    <td>${factura.numero_factura}</td>
+                                    <td>${new Date(factura.fecha_factura).toLocaleDateString()}</td>
+                                    <td>${factura.total_factura?.toFixed(2)}€</td>
+                                    <td>${Math.round((factura.confianza_global || 0) * 100)}%</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                    ${facturasData.length > 10 ? `<p><em>Mostrando 10 de ${facturasData.length} facturas</em></p>` : ''}
+                `;
+                contentEl.innerHTML = tableHTML;
+            }
+        }
+
+        function log(message, data = null) {
+            const logEl = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            let logMessage = `[${timestamp}] ${message}`;
+            
+            if (data) {
+                logMessage += '\n' + JSON.stringify(data, null, 2);
+            }
+            
+            logEl.innerHTML += logMessage + '\n';
+            logEl.scrollTop = logEl.scrollHeight;
+            
+            // También en consola
+            if (data) {
+                console.log(message, data);
+            } else {
+                console.log(message);
+            }
+        }
+
+        function showStatus(message, type) {
+            const status = document.getElementById('status');
+            if (status) {
+                status.textContent = message;
+                status.className = `status ${type}`;
+            }
+        }
+
+        function clearLog() {
+            const logEl = document.getElementById('log');
+            logEl.innerHTML = '';
+        }
+
+        console.log('🐛 Debug de datos cargado');
+    </script>
+</body>
+</html>
+

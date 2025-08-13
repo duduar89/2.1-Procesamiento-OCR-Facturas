@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Upload - Dashboard</title>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="../config.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f9fafb;
+        }
+        .test-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+        .upload-zone {
+            border: 2px dashed #10b981;
+            border-radius: 12px;
+            padding: 40px;
+            text-align: center;
+            margin: 20px 0;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .upload-zone:hover {
+            border-color: #059669;
+            background: #f0fdf4;
+        }
+        .upload-zone.drag-over {
+            border-color: #059669;
+            background: #f0fdf4;
+            transform: scale(1.02);
+        }
+        .file-input {
+            display: none;
+        }
+        .status {
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 8px;
+            font-weight: 600;
+        }
+        .status.uploading {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+        .status.success {
+            background: #dcfce7;
+            color: #166534;
+        }
+        .status.error {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+        .btn {
+            background: #10b981;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            margin: 10px;
+        }
+        .btn:hover {
+            background: #059669;
+        }
+        .btn:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🧪 Test de Subida de Archivos</h1>
+        <p>Prueba el sistema de subida de archivos al dashboard</p>
+        
+        <div class="upload-zone" id="uploadZone">
+            <h3>📁 Arrastra un PDF aquí o haz clic</h3>
+            <p>Máximo 10MB • Solo archivos PDF</p>
+            <button class="btn" id="selectBtn">Seleccionar Archivo</button>
+        </div>
+        
+        <input type="file" id="fileInput" accept=".pdf" class="file-input">
+        
+        <div id="status" class="status" style="display: none;"></div>
+        
+        <div id="fileInfo"></div>
+    </div>
+
+    <script>
+        // Variables globales
+        let supabaseClient = null;
+        let currentUser = null;
+        let processingState = false;
+
+        // Inicialización
+        document.addEventListener('DOMContentLoaded', async function() {
+            console.log('🧪 Iniciando test de upload...');
+            await initializeTest();
+        });
+
+        // Inicializar test
+        async function initializeTest() {
+            try {
+                // Verificar configuración
+                if (!window.CONFIG) {
+                    throw new Error('Configuración no encontrada');
+                }
+
+                // Inicializar Supabase
+                supabaseClient = supabase.createClient(
+                    CONFIG.SUPABASE.URL,
+                    CONFIG.SUPABASE.ANON_KEY
+                );
+
+                console.log('✅ Supabase inicializado');
+                console.log('🔗 URL:', CONFIG.SUPABASE.URL);
+                console.log('🔑 Key:', CONFIG.SUPABASE.ANON_KEY.substring(0, 20) + '...');
+
+                // Configurar event listeners
+                setupEventListeners();
+
+                // Simular usuario autenticado para pruebas
+                currentUser = {
+                    id: 'test-user-001',
+                    nombre: 'Usuario Test'
+                };
+
+                // Simular restaurante para pruebas
+                CONFIG.TENANT.RESTAURANTE_ID = 'test-rest-001';
+                CONFIG.TENANT.RESTAURANTE_ACTUAL = {
+                    id: 'test-rest-001',
+                    nombre: 'Restaurante Test'
+                };
+
+                console.log('✅ Test configurado correctamente');
+
+            } catch (error) {
+                console.error('❌ Error inicializando test:', error);
+                showStatus('Error de configuración: ' + error.message, 'error');
+            }
+        }
+
+        // Configurar event listeners
+        function setupEventListeners() {
+            const uploadZone = document.getElementById('uploadZone');
+            const fileInput = document.getElementById('fileInput');
+            const selectBtn = document.getElementById('selectBtn');
+
+            // Click en zona de upload
+            uploadZone.addEventListener('click', () => {
+                if (!processingState) {
+                    fileInput.click();
+                }
+            });
+
+            // Click en botón de selección
+            selectBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (!processingState) {
+                    fileInput.click();
+                }
+            });
+
+            // Drag & Drop
+            uploadZone.addEventListener('dragover', handleDragOver);
+            uploadZone.addEventListener('drop', handleDrop);
+            uploadZone.addEventListener('dragleave', handleDragLeave);
+
+            // Input de archivo
+            fileInput.addEventListener('change', handleFileSelect);
+        }
+
+        // Manejo de archivos
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.currentTarget.classList.add('drag-over');
+        }
+
+        function handleDragLeave(e) {
+            e.preventDefault();
+            e.currentTarget.classList.remove('drag-over');
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            e.currentTarget.classList.remove('drag-over');
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFiles(files);
+            }
+        }
+
+        function handleFileSelect(e) {
+            const file = e.target.files[0];
+            if (file) {
+                handleFiles([file]);
+            }
+        }
+
+        // Función principal de manejo de archivos
+        async function handleFiles(files) {
+            if (files.length === 0) return;
+            
+            const file = files[0];
+            
+            try {
+                // Validaciones
+                if (!validateFile(file)) {
+                    return;
+                }
+
+                // Iniciar procesamiento
+                await processDocument(file);
+
+            } catch (error) {
+                console.error('❌ Error procesando archivo:', error);
+                showStatus('Error: ' + error.message, 'error');
+            }
+        }
+
+        // Validar archivo
+        function validateFile(file) {
+            if (!CONFIG.APP.ALLOWED_TYPES.includes(file.type)) {
+                showStatus('❌ Solo se permiten archivos PDF', 'error');
+                return false;
+            }
+
+            if (file.size > CONFIG.APP.MAX_FILE_SIZE) {
+                showStatus('❌ El archivo es demasiado grande. Máximo 10MB', 'error');
+                return false;
+            }
+
+            return true;
+        }
+
+        // Procesar documento
+        async function processDocument(file) {
+            try {
+                processingState = true;
+                showStatus('📤 Subiendo archivo...', 'uploading');
+                updateFileInfo(file.name, file.size);
+
+                // 1. Subir archivo a Supabase Storage
+                const fileName = `${Date.now()}_${file.name}`;
+                const filePath = `${CONFIG.TENANT.RESTAURANTE_ID}/${fileName}`;
+
+                showStatus('📤 Subiendo archivo a storage...', 'uploading');
+                
+                const { data: uploadData, error: uploadError } = await supabaseClient.storage
+                    .from(CONFIG.SUPABASE.STORAGE_BUCKET)
+                    .upload(filePath, file);
+
+                if (uploadError) {
+                    throw new Error(`Error subiendo archivo: ${uploadError.message}`);
+                }
+
+                showStatus('🔄 Archivo subido, iniciando procesamiento...', 'uploading');
+
+                // 2. Crear registro en tabla documentos
+                const documentId = crypto.randomUUID();
+                
+                const { data: docData, error: docError } = await supabaseClient
+                    .from('documentos')
+                    .insert({
+                        id: documentId,
+                        restaurante_id: CONFIG.TENANT.RESTAURANTE_ID,
+                        nombre_archivo: file.name,
+                        tipo_documento: 'factura',
+                        url_storage: filePath,
+                        tamaño_bytes: file.size,
+                        numero_paginas: 1,
+                        estado: 'uploaded',
+                        confianza_clasificacion: 0.5,
+                        calidad_estimada: 'media',
+                        checksum_archivo: await calculateFileHash(file),
+                        usuario_subida: currentUser?.id
+                    })
+                    .select()
+                    .single();
+
+                if (docError) {
+                    throw new Error(`Error creando registro: ${docError.message}`);
+                }
+
+                showStatus('🤖 Procesando con IA...', 'uploading');
+
+                // 3. Llamar a la Edge Function process-invoice
+                const { data: processData, error: processError } = await supabaseClient.functions
+                    .invoke('process-invoice', {
+                        body: {
+                            record: {
+                                name: documentId,
+                                bucket_id: CONFIG.SUPABASE.STORAGE_BUCKET
+                            }
+                        }
+                    });
+
+                if (processError) {
+                    throw new Error(`Error en procesamiento: ${processError.message}`);
+                }
+
+                showStatus('✅ ¡Archivo procesado exitosamente!', 'success');
+                console.log('🎉 Procesamiento completado:', processData);
+
+            } catch (error) {
+                console.error('❌ Error en procesamiento:', error);
+                showStatus('❌ Error: ' + error.message, 'error');
+            } finally {
+                processingState = false;
+            }
+        }
+
+        // Funciones de utilidad
+        async function calculateFileHash(file) {
+            const buffer = await file.arrayBuffer();
+            const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+            return hashHex;
+        }
+
+        function updateFileInfo(fileName, fileSize) {
+            const fileInfo = document.getElementById('fileInfo');
+            if (fileInfo) {
+                fileInfo.innerHTML = `
+                    <div style="margin: 20px 0; padding: 15px; background: #f0fdf4; border-radius: 8px; border: 1px solid #bbf7d0;">
+                        <strong>📁 Archivo seleccionado:</strong><br>
+                        Nombre: ${fileName}<br>
+                        Tamaño: ${formatBytes(fileSize)}
+                    </div>
+                `;
+            }
+        }
+
+        function formatBytes(bytes, decimals = 2) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const dm = decimals < 0 ? 0 : decimals;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+        }
+
+        function showStatus(message, type) {
+            const status = document.getElementById('status');
+            if (status) {
+                status.textContent = message;
+                status.className = `status ${type}`;
+                status.style.display = 'block';
+            }
+        }
+
+        console.log('🧪 Test de upload cargado');
+    </script>
+</body>
+</html>
+

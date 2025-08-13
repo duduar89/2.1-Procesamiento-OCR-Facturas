@@ -5,19 +5,50 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>🤖 Procesador OCR v2.1</title>
     <link rel="stylesheet" href="style.css">
+    <style>
+        .dashboard-link {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+
+        .dashboard-link .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 25px;
+            text-decoration: none;
+            font-weight: 600;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+        }
+
+        .dashboard-link .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+    </style>
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>📄 Procesador Inteligente de Facturas</h1>
+            <h1>Procesador Inteligente de Facturas</h1>
             <div class="status" id="status">Listo para procesar</div>
         </header>
+
+        <!-- ENLACE AL DASHBOARD -->
+        <div class="dashboard-link">
+            <a href="dashboard-facturas-claude/dashboard-facturas.html" class="btn primary">
+                📊 Dashboard de Facturas
+            </a>
+        </div>
 
         <main>
             <!-- Zona de subida -->
             <section class="upload-section" id="uploadSection">
                 <div class="upload-zone" id="uploadZone">
-                    <div class="upload-icon">📤</div>
+                    <div class="upload-icon">Subir</div>
                     <h3>Arrastra tu factura PDF aquí</h3>
                     <p>O haz clic para seleccionar archivo</p>
                     <small>Máximo 10MB • Solo PDF</small>
@@ -26,7 +57,7 @@
 
                 <!-- Queue de documentos -->
                 <div class="queue-section" id="queueSection" style="display: none;">
-                    <h3>📋 Documentos en Cola</h3>
+                    <h3>Documentos en Cola</h3>
                     <div class="queue-list" id="queueList">
                         <!-- Los documentos aparecerán aquí -->
                     </div>
@@ -36,7 +67,7 @@
             <!-- Área de procesamiento -->
             <section class="processing-section" id="processingSection" style="display: none;">
                 <div class="document-viewer">
-                    <h3>📋 Documento</h3>
+                    <h3>Documento</h3>
                     <div class="pdf-container" id="pdfContainer">
                         <div class="pdf-placeholder">
                             <p>Cargando documento...</p>
@@ -63,9 +94,9 @@
 
             <!-- Botones de acción -->
             <section class="actions-section" id="actionsSection" style="display: none;">
-                <button class="btn primary" id="downloadBtn">📥 Descargar JSON</button>
-                <button class="btn secondary" id="newDocBtn">🔄 Procesar Otro</button>
-                <button class="btn tertiary" id="copyBtn">📋 Copiar Datos</button>
+                <button class="btn primary" id="downloadBtn">Descargar JSON</button>
+                <button class="btn secondary" id="newDocBtn">Procesar Otro</button>
+                <button class="btn tertiary" id="copyBtn">Copiar Datos</button>
             </section>
         </main>
 
@@ -74,10 +105,10 @@
             <div class="loading-spinner"></div>
             <div class="loading-text" id="loadingText">Procesando documento...</div>
             <div class="loading-steps" id="loadingSteps">
-                <div class="step">✅ Archivo subido</div>
-                <div class="step">🔄 Extrayendo texto...</div>
-                <div class="step">🤖 Analizando contenido...</div>
-                <div class="step">📊 Calculando confianza...</div>
+                <div class="step">Archivo subido</div>
+                <div class="step">Extrayendo texto...</div>
+                <div class="step">Analizando contenido...</div>
+                <div class="step">Calculando confianza...</div>
             </div>
         </div>
 

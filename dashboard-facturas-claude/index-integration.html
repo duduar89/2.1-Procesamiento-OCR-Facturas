@@ -1,0 +1,93 @@
+// ===== MODIFICACIONES PARA index.html =====
+// Estas modificaciones se añaden a tu app.js actual
+
+// MODIFICACIÓN 1: En la función showActionsSection()
+// ANTES (línea ~XXX de tu app.js):
+function showActionsSection() {
+    document.getElementById('actionsSection').style.display = 'block';
+    updateStatus('Documento procesado', 'success');
+}
+
+// DESPUÉS:
+function showActionsSection() {
+    document.getElementById('actionsSection').style.display = 'block';
+    updateStatus('Documento procesado', 'success');
+    
+    // NUEVO: Añadir botón dashboard
+    addDashboardButton();
+}
+
+// NUEVA FUNCIÓN a añadir en app.js:
+function addDashboardButton() {
+    const actionsSection = document.getElementById('actionsSection');
+    
+    // Verificar si ya existe el botón
+    if (document.getElementById('dashboardBtn')) return;
+    
+    const dashboardBtn = document.createElement('button');
+    dashboardBtn.id = 'dashboardBtn';
+    dashboardBtn.className = 'btn primary';
+    dashboardBtn.innerHTML = 'Ver Dashboard de Facturas';
+    dashboardBtn.style.marginLeft = '10px';
+    
+    dashboardBtn.addEventListener('click', () => {
+        window.location.href = 'dashboard-facturas.html';
+    });
+    
+    actionsSection.appendChild(dashboardBtn);
+}
+
+// MODIFICACIÓN 2: En index.html, añadir al <head>:
+/*
+<style>
+.dashboard-link {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1000;
+}
+
+.dashboard-link .btn {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 12px 20px;
+    border-radius: 25px;
+    text-decoration: none;
+    font-weight: 600;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    transition: all 0.3s ease;
+}
+
+.dashboard-link .btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+}
+</style>
+*/
+
+// MODIFICACIÓN 3: En index.html, añadir al <body> (después del header):
+/*
+<div class="dashboard-link">
+    <a href="dashboard-facturas.html" class="btn primary">
+        📊 Dashboard de Facturas
+    </a>
+</div>
+*/
+
+// MODIFICACIÓN 4: En config.js, añadir configuración del dashboard:
+/*
+CONFIG.DASHBOARD = {
+    ITEMS_PER_PAGE: 10,
+    AUTO_REFRESH_INTERVAL: 30000, // 30 segundos
+    PDF_VIEWER: {
+        DEFAULT_SCALE: 1,
+        MAX_SCALE: 3,
+        MIN_SCALE: 0.25
+    },
+    CONFIDENCE_THRESHOLDS: {
+        HIGH: 0.9,
+        MEDIUM: 0.7,
+        LOW: 0.0
+    }
+};
+*/

@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Loading - Dashboard</title>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f9fafb;
+        }
+        .test-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f4f6;
+            border-top: 4px solid #10b981;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .btn {
+            background: #10b981;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            margin: 10px;
+        }
+        .btn:hover { background: #059669; }
+        .btn.secondary {
+            background: #6b7280;
+        }
+        .btn.secondary:hover { background: #4b5563; }
+        .status {
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 8px;
+            font-weight: 600;
+        }
+        .status.success { background: #dcfce7; color: #166534; }
+        .status.info { background: #dbeafe; color: #1e40af; }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🧪 Test del Sistema de Loading</h1>
+        <p>Prueba el comportamiento del indicador de carga</p>
+        
+        <div id="status" class="status info">Listo para probar</div>
+        
+        <div>
+            <button class="btn" onclick="testLoading()">Mostrar Loading</button>
+            <button class="btn secondary" onclick="hideLoading()">Ocultar Loading</button>
+            <button class="btn" onclick="testLoadingCycle()">Ciclo Completo de Loading</button>
+        </div>
+        
+        <div class="table-loading" id="tableLoading" style="display: none;">
+            <div class="loading-spinner"></div>
+            <p>Cargando facturas...</p>
+        </div>
+        
+        <div style="margin-top: 30px;">
+            <h3>📋 Instrucciones de Prueba:</h3>
+            <ol>
+                <li><strong>Mostrar Loading:</strong> Muestra el indicador de carga</li>
+                <li><strong>Ocultar Loading:</strong> Oculta el indicador de carga</li>
+                <li><strong>Ciclo Completo:</strong> Simula el proceso completo de carga</li>
+            </ol>
+        </div>
+    </div>
+
+    <script>
+        // Variables globales
+        let loadingState = false;
+
+        // Función para mostrar loading
+        function showTableLoading() {
+            const loadingEl = document.getElementById('tableLoading');
+            if (loadingEl) {
+                loadingEl.style.display = 'block';
+                loadingState = true;
+                updateStatus('Loading mostrado', 'info');
+            }
+        }
+
+        // Función para ocultar loading
+        function hideTableLoading() {
+            const loadingEl = document.getElementById('tableLoading');
+            if (loadingEl) {
+                loadingEl.style.display = 'none';
+                loadingState = false;
+                updateStatus('Loading ocultado', 'success');
+            }
+        }
+
+        // Función para probar loading
+        function testLoading() {
+            showTableLoading();
+        }
+
+        // Función para ocultar loading
+        function hideLoading() {
+            hideTableLoading();
+        }
+
+        // Función para probar ciclo completo
+        function testLoadingCycle() {
+            updateStatus('Iniciando ciclo de loading...', 'info');
+            
+            // Mostrar loading
+            showTableLoading();
+            
+            // Simular carga de datos
+            setTimeout(() => {
+                updateStatus('Datos cargados, ocultando loading...', 'info');
+                
+                // Ocultar loading después de un delay
+                setTimeout(() => {
+                    hideTableLoading();
+                    updateStatus('Ciclo de loading completado', 'success');
+                }, 1000);
+                
+            }, 2000);
+        }
+
+        // Función para actualizar estado
+        function updateStatus(message, type) {
+            const statusEl = document.getElementById('status');
+            if (statusEl) {
+                statusEl.textContent = message;
+                statusEl.className = `status ${type}`;
+            }
+        }
+
+        // Inicialización
+        document.addEventListener('DOMContentLoaded', function() {
+            updateStatus('Sistema de loading listo para pruebas', 'success');
+        });
+
+        console.log('🧪 Test de loading cargado');
+    </script>
+</body>
+</html>
+

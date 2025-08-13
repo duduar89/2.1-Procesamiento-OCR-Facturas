@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Modal Simple - Dashboard</title>
+    <link rel="stylesheet" href="dashboard-facturas.css">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f9fafb;
+        }
+        .test-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+        .btn {
+            background: #10b981;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            margin: 10px;
+        }
+        .btn:hover { background: #059669; }
+        .status {
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 8px;
+            font-weight: 600;
+        }
+        .status.success { background: #dcfce7; color: #166534; }
+        .status.info { background: #dbeafe; color: #1e40af; }
+        .status.error { background: #fee2e2; color: #dc2626; }
+        
+        .factura-item {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .factura-item:hover {
+            background: #f1f5f9;
+            border-color: #10b981;
+        }
+        .factura-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .factura-id {
+            font-weight: 600;
+            color: #374151;
+        }
+        .factura-actions {
+            display: flex;
+            gap: 10px;
+        }
+        .btn-small {
+            padding: 6px 12px;
+            font-size: 0.875rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🧪 Test Modal Simple</h1>
+        <p>Prueba básica del modal de factura</p>
+        
+        <div id="status" class="status info">Listo para probar</div>
+        
+        <div>
+            <button class="btn" onclick="loadTestData()">Cargar Datos de Prueba</button>
+            <button class="btn" onclick="clearData()">Limpiar Datos</button>
+        </div>
+
+        <div id="facturasList" style="margin-top: 30px;">
+            <!-- Las facturas se cargan aquí -->
+        </div>
+    </div>
+
+    <!-- Modal de Factura -->
+    <div class="modal-overlay" id="facturaModal">
+        <div class="modal-container expanded">
+            <div class="modal-header">
+                <h2>Ver Factura</h2>
+                <div class="modal-actions">
+                    <button class="btn btn-primary">Ensellar a Talky</button>
+                    <button class="btn btn-secondary">Editar Factura</button>
+                    <button class="btn-close" id="modalCloseBtn">✕</button>
+                </div>
+            </div>
+            
+            <div class="modal-body">
+                <!-- Panel Izquierdo -->
+                <div class="panel-left">
+                    <h3>Vista previa de la factura</h3>
+                    <div class="table-container">
+                        <table class="factura-table">
+                            <thead>
+                                <tr>
+                                    <th>EAN</th>
+                                    <th>Descripción</th>
+                                    <th>Unidad</th>
+                                    <th>Cantidad</th>
+                                    <th>Precio</th>
+                                    <th>Dto</th>
+                                    <th>Total</th>
+                                </tr>
+                            </thead>
+                            <tbody id="productosTableBody">
+                                <!-- Productos dinámicos -->
+                            </tbody>
+                        </table>
+                        <div class="suma-section">
+                            <strong>Suma: <span id="sumaTotal">€0,00</span></strong>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Panel Derecho -->
+                <div class="panel-right">
+                    <h3>Detalles de la Factura</h3>
+                    <div class="detalles-form">
+                        <div class="form-group">
+                            <label>Categoría</label>
+                            <input type="text" id="categoria" placeholder="Seleccionar categoría">
+                        </div>
+                        <div class="form-group">
+                            <label>Número de Factura</label>
+                            <input type="text" id="numeroFactura" readonly>
+                        </div>
+                        <div class="form-group">
+                            <label>Proveedor</label>
+                            <input type="text" id="proveedor" readonly>
+                        </div>
+                        <div class="form-group">
+                            <label>CIF Proveedor</label>
+                            <input type="text" id="cifProveedor" readonly>
+                        </div>
+                        <div class="form-group">
+                            <label>Provincia del Proveedor</label>
+                            <input type="text" id="provinciaProveedor">
+                        </div>
+                        <div class="form-group">
+                            <label>Fecha de Factura</label>
+                            <input type="date" id="fechaFactura">
+                        </div>
+                        <div class="form-group">
+                            <label>Fecha de Vencimiento</label>
+                            <input type="date" id="fechaVencimiento">
+                        </div>
+                        <div class="form-group">
+                            <label>Periodo</label>
+                            <select id="periodo">
+                                <option value="Enero">Enero</option>
+                                <option value="Febrero">Febrero</option>
+                                <option value="Marzo">Marzo</option>
+                                <option value="Abril">Abril</option>
+                                <option value="Mayo">Mayo</option>
+                                <option value="Junio">Junio</option>
+                                <option value="Julio">Julio</option>
+                                <option value="Agosto">Agosto</option>
+                                <option value="Septiembre">Septiembre</option>
+                                <option value="Octubre">Octubre</option>
+                                <option value="Noviembre">Noviembre</option>
+                                <option value="Diciembre">Diciembre</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Método de Pago</label>
+                            <select id="metodoPago">
+                                <option value="transferencia">Transferencia</option>
+                                <option value="efectivo">Efectivo</option>
+                                <option value="tarjeta">Tarjeta</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Concepto</label>
+                            <input type="text" id="concepto" placeholder="Ej: BEBIDA">
+                        </div>
+                    </div>
+                    
+                    <div class="detalles-financieros">
+                        <h4>Detalles Financieros</h4>
+                        <div class="financial-row">
+                            <span>Importe Base (sin IVA):</span>
+                            <span id="baseImponible">€0,00</span>
+                        </div>
+                        <div class="financial-row">
+                            <span>Total con IVA:</span>
+                            <span id="totalConIva">€0,00</span>
+                        </div>
+                        <div class="financial-row">
+                            <span>Retención:</span>
+                            <span id="retencion">€0,00</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Datos de prueba
+        const testFacturas = [
+            {
+                id: 'test-001',
+                numero_factura: 'F-2024-001',
+                proveedor_nombre: 'INDUSTRIAS GRÁFICAS S.A.',
+                proveedor_cif: 'B12345678',
+                proveedor_provincia: 'Madrid',
+                fecha_factura: '2025-05-29',
+                fecha_vencimiento: '2025-06-28',
+                concepto: 'Material de Oficina',
+                importe_neto: 167.50,
+                iva: 35.18,
+                total_factura: 202.68,
+                retencion: 0,
+                productos: [
+                    {
+                        ean: '123456789',
+                        descripcion: 'Papel A4 80g',
+                        unidad: 'Resma',
+                        cantidad: 10,
+                        precio: 5.50,
+                        descuento: '0%'
+                    },
+                    {
+                        ean: '987654321',
+                        descripcion: 'Tinta Impresora',
+                        unidad: 'Cartucho',
+                        cantidad: 5,
+                        precio: 25.00,
+                        descuento: '10%'
+                    }
+                ]
+            },
+            {
+                id: 'test-002',
+                numero_factura: 'F-2024-002',
+                proveedor_nombre: 'SUSANA CORDERO HERNANDEZ',
+                proveedor_cif: '12345678A',
+                proveedor_provincia: 'Barcelona',
+                fecha_factura: '2025-04-30',
+                fecha_vencimiento: '2025-05-30',
+                concepto: 'Servicios',
+                importe_neto: 72.73,
+                iva: 18.48,
+                total_factura: 88.00,
+                retencion: 0,
+                productos: []
+            }
+        ];
+
+        // Función para formatear moneda
+        function formatCurrency(value) {
+            if (!value && value !== 0) return 'N/A';
+            return new Intl.NumberFormat('es-ES', {
+                style: 'currency',
+                currency: 'EUR'
+            }).format(value);
+        }
+
+        // Función para mostrar notificación
+        function showNotification(message, type = 'info') {
+            const notifications = document.getElementById('notifications');
+            if (!notifications) return;
+
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.textContent = message;
+
+            notifications.appendChild(notification);
+
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.parentNode.removeChild(notification);
+                }
+            }, 5000);
+        }
+
+        // Función para cargar datos de prueba
+        function loadTestData() {
+            // Simular window.facturasData
+            window.facturasData = testFacturas;
+            
+            // Renderizar lista
+            renderFacturasList();
+            
+            updateStatus(`Datos de prueba cargados: ${testFacturas.length} facturas`, 'success');
+            console.log('📊 Datos de prueba cargados:', window.facturasData);
+        }
+
+        // Función para limpiar datos
+        function clearData() {
+            window.facturasData = [];
+            renderFacturasList();
+            updateStatus('Datos limpiados', 'info');
+        }
+
+        // Función para renderizar lista de facturas
+        function renderFacturasList() {
+            const container = document.getElementById('facturasList');
+            if (!container) return;
+
+            if (!window.facturasData || window.facturasData.length === 0) {
+                container.innerHTML = '<p>No hay facturas disponibles</p>';
+                return;
+            }
+
+            container.innerHTML = window.facturasData.map(factura => `
+                <div class="factura-item">
+                    <div class="factura-header">
+                        <div>
+                            <div class="factura-id">${factura.numero_factura}</div>
+                            <div style="color: #6b7280; font-size: 0.875rem;">${factura.proveedor_nombre}</div>
+                        </div>
+                        <div class="factura-actions">
+                            <button class="btn btn-small" onclick="openFacturaModal('${factura.id}', 'view')">Ver</button>
+                            <button class="btn btn-small" onclick="openFacturaModal('${factura.id}', 'edit')">Editar</button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Función para abrir modal
+        function openFacturaModal(facturaId, mode = 'view') {
+            try {
+                console.log('🔍 Buscando factura con ID:', facturaId);
+                console.log('📊 Datos disponibles:', window.facturasData);
+                console.log('📋 Total de facturas:', (window.facturasData || []).length);
+                
+                // Buscar la factura en los datos
+                const factura = (window.facturasData || []).find(f => f.id === facturaId);
+                console.log('✅ Factura encontrada:', factura);
+                
+                if (!factura) {
+                    console.error('❌ Factura no encontrada con ID:', facturaId);
+                    console.log('🔍 IDs disponibles:', (window.facturasData || []).map(f => f.id));
+                    showNotification('Factura no encontrada', 'error');
+                    return;
+                }
+
+                // Cambiar el título del modal según el modo
+                const modalTitle = document.querySelector('#facturaModal .modal-header h2');
+                if (modalTitle) {
+                    modalTitle.textContent = mode === 'view' ? 'Ver Factura' : 'Editar Factura';
+                }
+
+                // Cargar datos en el modal
+                loadFacturaDataInModal(factura, mode);
+
+                // Mostrar el modal
+                const modal = document.getElementById('facturaModal');
+                if (modal) {
+                    modal.classList.add('active');
+                    document.body.style.overflow = 'hidden';
+                }
+
+                updateStatus(`Modal abierto en modo ${mode}`, 'success');
+                console.log('Modal abierto para factura:', facturaId, 'Modo:', mode);
+
+            } catch (error) {
+                console.error('Error abriendo modal:', error);
+                updateStatus('Error abriendo modal', 'error');
+                showNotification('Error abriendo modal', 'error');
+            }
+        }
+
+        // Función para cargar datos en modal
+        function loadFacturaDataInModal(factura, mode) {
+            try {
+                // Cargar datos básicos
+                document.getElementById('categoria').value = factura.concepto || '';
+                document.getElementById('numeroFactura').value = factura.numero_factura || '';
+                document.getElementById('proveedor').value = factura.proveedor_nombre || '';
+                document.getElementById('cifProveedor').value = factura.proveedor_cif || '';
+                document.getElementById('provinciaProveedor').value = factura.proveedor_provincia || '';
+                document.getElementById('fechaFactura').value = factura.fecha_factura || '';
+                document.getElementById('fechaVencimiento').value = factura.fecha_vencimiento || '';
+                document.getElementById('concepto').value = factura.concepto || '';
+
+                // Cargar datos financieros
+                document.getElementById('baseImponible').textContent = formatCurrency(factura.importe_neto || 0);
+                document.getElementById('totalConIva').textContent = formatCurrency(factura.total_factura || 0);
+                document.getElementById('retencion').textContent = formatCurrency(factura.retencion || 0);
+
+                // Cargar productos si existen
+                if (factura.productos && Array.isArray(factura.productos)) {
+                    loadProductosInModal(factura.productos);
+                } else {
+                    // Limpiar tabla de productos
+                    const productosTable = document.getElementById('productosTableBody');
+                    if (productosTable) {
+                        productosTable.innerHTML = '<tr><td colspan="7" class="text-center">No hay productos disponibles</td></tr>';
+                    }
+                }
+
+                // Configurar modo de edición
+                setModalEditMode(mode);
+
+                console.log('Datos cargados en modal:', factura);
+
+            } catch (error) {
+                console.error('Error cargando datos en modal:', error);
+            }
+        }
+
+        // Función para cargar productos en modal
+        function loadProductosInModal(productos) {
+            try {
+                const productosTable = document.getElementById('productosTableBody');
+                if (!productosTable) return;
+
+                let totalSuma = 0;
+
+                productosTable.innerHTML = productos.map(producto => {
+                    const total = (producto.precio || 0) * (producto.cantidad || 0);
+                    totalSuma += total;
+
+                    return `
+                        <tr>
+                            <td>${producto.ean || 'N/A'}</td>
+                            <td>${producto.descripcion || 'N/A'}</td>
+                            <td>${producto.unidad || 'N/A'}</td>
+                            <td>${producto.cantidad || 0}</td>
+                            <td>${formatCurrency(producto.precio || 0)}</td>
+                            <td>${producto.descuento || '0%'}</td>
+                            <td>${formatCurrency(total)}</td>
+                        </tr>
+                    `;
+                }).join('');
+
+                // Actualizar suma total
+                const sumaTotalElement = document.getElementById('sumaTotal');
+                if (sumaTotalElement) {
+                    sumaTotalElement.textContent = formatCurrency(totalSuma);
+                }
+
+                console.log('Productos cargados en modal:', productos.length);
+
+            } catch (error) {
+                console.error('Error cargando productos en modal:', error);
+            }
+        }
+
+        // Función para configurar modo de edición
+        function setModalEditMode(mode) {
+            const isEditMode = mode === 'edit';
+            const inputs = document.querySelectorAll('#facturaModal input, #facturaModal select');
+            
+            inputs.forEach(input => {
+                if (input.hasAttribute('readonly')) {
+                    input.disabled = true;
+                } else {
+                    input.disabled = !isEditMode;
+                }
+            });
+
+            const editButton = document.querySelector('#facturaModal .btn-secondary');
+            if (editButton) {
+                editButton.style.display = isEditMode ? 'none' : 'block';
+            }
+        }
+
+        // Función para cerrar modal
+        function closeFacturaModal() {
+            try {
+                const modal = document.getElementById('facturaModal');
+                if (modal) {
+                    modal.classList.remove('active');
+                    document.body.style.overflow = '';
+                }
+                updateStatus('Modal cerrado', 'success');
+            } catch (error) {
+                console.error('Error cerrando modal:', error);
+            }
+        }
+
+        // Función para actualizar estado
+        function updateStatus(message, type) {
+            const statusEl = document.getElementById('status');
+            if (statusEl) {
+                statusEl.textContent = message;
+                statusEl.className = `status ${type}`;
+            }
+        }
+
+        // Event listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            // Modal de factura
+            const modalCloseBtn = document.getElementById('modalCloseBtn');
+            if (modalCloseBtn) {
+                modalCloseBtn.addEventListener('click', closeFacturaModal);
+            }
+
+            // Cerrar modal al hacer clic fuera
+            const facturaModal = document.getElementById('facturaModal');
+            if (facturaModal) {
+                facturaModal.addEventListener('click', (e) => {
+                    if (e.target === facturaModal) {
+                        closeFacturaModal();
+                    }
+                });
+            }
+
+            // Cerrar modal con Escape
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    closeFacturaModal();
+                }
+            });
+
+            updateStatus('Sistema de modal listo para pruebas', 'success');
+        });
+
+        console.log('🧪 Test modal simple cargado');
+    </script>
+</body>
+</html>
+

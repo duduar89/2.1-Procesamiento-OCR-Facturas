@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prueba de Integración - Modal Avanzado</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>
+        // Configurar el worker de PDF.js
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    </script>
+    <link rel="stylesheet" href="advanced-pdf-modal.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #f5f5f5;
+        }
+        .test-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-button {
+            background: #8b5cf6;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px;
+        }
+        .test-button:hover {
+            background: #7c3aed;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .status.success { background: #d1fae5; color: #065f46; }
+        .status.error { background: #fee2e2; color: #991b1b; }
+        .status.info { background: #dbeafe; color: #1e40af; }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🧪 Prueba de Integración - Modal Avanzado</h1>
+        
+        <div id="status" class="status info">
+            Estado: Inicializando...
+        </div>
+        
+        <h2>Funcionalidades del Modal Avanzado:</h2>
+        <ul>
+            <li>✅ Zoom in/out con botones, scroll y teclado</li>
+            <li>✅ Arrastrar y hacer scroll del PDF</li>
+            <li>✅ Colores según nivel de confianza</li>
+            <li>✅ Overlay de coordenadas extraídas</li>
+            <li>✅ Panel de información detallada</li>
+            <li>✅ Navegación entre páginas</li>
+            <li>✅ Filtros y estadísticas</li>
+        </ul>
+        
+        <h2>Pruebas Disponibles:</h2>
+        
+        <button class="test-button" onclick="testModalInitialization()">
+            🔍 Probar Inicialización
+        </button>
+        
+        <button class="test-button" onclick="testModalWithData()">
+            📄 Abrir Modal con Datos de Prueba
+        </button>
+        
+        <button class="test-button" onclick="testModalWithMockPDF()">
+            🎯 Abrir Modal con PDF de Prueba
+        </button>
+        
+        <h2>Datos de Prueba:</h2>
+        <div id="testData" style="background: #f8f9fa; padding: 15px; border-radius: 4px; font-family: monospace; font-size: 12px;">
+            Cargando datos de prueba...
+        </div>
+    </div>
+
+    <script src="advanced-pdf-modal.js"></script>
+    <script>
+        let advancedPDFModal = null;
+        let testCoordinates = {};
+        let testExtractedData = {};
+        
+        // Datos de prueba basados en las coordenadas reales que tienes
+        const mockData = {
+            coordinates: {
+                numero_factura: { x: 115, y: 148, width: 33, height: 6, confidence: 0.95 },
+                proveedor_cif: { x: 346, y: 786, width: 40, height: 7, confidence: 0.88 },
+                proveedor_nombre: { x: 27, y: 85, width: 191, height: 37, confidence: 0.92 },
+                total_factura: { x: 516, y: 675, width: 35, height: 11, confidence: 0.97 }
+            },
+            extractedData: {
+                numero_factura: 'F25/4349',
+                proveedor_cif: 'B90440116',
+                proveedor_nombre: 'Arcos Ibéricos QUALITY MEAT',
+                total_factura: '96,80',
+                confianza_global: 0.93
+            }
+        };
+        
+        // Función para actualizar el estado
+        function updateStatus(message, type = 'info') {
+            const statusDiv = document.getElementById('status');
+            statusDiv.textContent = `Estado: ${message}`;
+            statusDiv.className = `status ${type}`;
+        }
+        
+        // Función para mostrar datos de prueba
+        function showTestData() {
+            const testDataDiv = document.getElementById('testData');
+            testDataDiv.innerHTML = `
+                <strong>Coordenadas de Prueba:</strong><br>
+                ${JSON.stringify(mockData.coordinates, null, 2)}<br><br>
+                <strong>Datos Extraídos:</strong><br>
+                ${JSON.stringify(mockData.extractedData, null, 2)}
+            `;
+        }
+        
+        // Probar inicialización del modal
+        function testModalInitialization() {
+            try {
+                if (window.AdvancedPDFModal) {
+                    advancedPDFModal = new window.AdvancedPDFModal();
+                    updateStatus('Modal avanzado inicializado correctamente', 'success');
+                    console.log('✅ Modal avanzado inicializado:', advancedPDFModal);
+                } else {
+                    throw new Error('Clase AdvancedPDFModal no encontrada');
+                }
+            } catch (error) {
+                updateStatus(`Error inicializando modal: ${error.message}`, 'error');
+                console.error('❌ Error:', error);
+            }
+        }
+        
+        // Probar modal con datos de prueba
+        function testModalWithData() {
+            try {
+                if (!advancedPDFModal) {
+                    throw new Error('Modal no inicializado. Ejecuta primero "Probar Inicialización"');
+                }
+                
+                // PDF de prueba (puedes cambiar por uno real)
+                const testPdfUrl = 'https://mozilla.github.io/pdf.js/web/compressed.tracemonkey-pldi-09.pdf';
+                
+                updateStatus('Abriendo modal con datos de prueba...', 'info');
+                
+                advancedPDFModal.open(testPdfUrl, mockData.coordinates, mockData.extractedData);
+                
+                updateStatus('Modal abierto correctamente', 'success');
+                
+            } catch (error) {
+                updateStatus(`Error abriendo modal: ${error.message}`, 'error');
+                console.error('❌ Error:', error);
+            }
+        }
+        
+        // Probar modal con PDF de prueba
+        function testModalWithMockPDF() {
+            try {
+                if (!advancedPDFModal) {
+                    throw new Error('Modal no inicializado. Ejecuta primero "Probar Inicialización"');
+                }
+                
+                // PDF de prueba de Mozilla
+                const testPdfUrl = 'https://mozilla.github.io/pdf.js/web/compressed.tracemonkey-pldi-09.pdf';
+                
+                updateStatus('Abriendo modal con PDF de prueba...', 'info');
+                
+                advancedPDFModal.open(testPdfUrl, mockData.coordinates, mockData.extractedData);
+                
+                updateStatus('Modal abierto con PDF de prueba', 'success');
+                
+            } catch (error) {
+                updateStatus(`Error abriendo modal: ${error.message}`, 'error');
+                console.error('❌ Error:', error);
+            }
+        }
+        
+        // Inicializar página
+        document.addEventListener('DOMContentLoaded', function() {
+            updateStatus('Página cargada. Ejecuta las pruebas en orden.', 'info');
+            showTestData();
+            
+            // Verificar que la clase esté disponible
+            if (window.AdvancedPDFModal) {
+                updateStatus('Clase AdvancedPDFModal disponible', 'success');
+            } else {
+                updateStatus('Clase AdvancedPDFModal NO encontrada', 'error');
+            }
+        });
+    </script>
+</body>
+</html>
