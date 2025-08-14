@@ -1,0 +1,147 @@
+¡Absolutamente\! Analizando a fondo el código que me has pasado, te digo que tu idea es no solo factible, sino que tienes una base **excepcional** para crear algo mucho más potente y preciso que un sistema RAG convencional.
+
+Tu intuición es perfecta, pero en lugar de usar RAG sobre el texto bruto de las facturas, puedes crear un agente que razone sobre la **base de datos estructurada** que ya estás construyendo con tanto detalle. Es un enfoque más avanzado y fiable.
+
+Aquí te desgloso el análisis y la propuesta.
+
+-----
+
+### Análisis de tu Sistema Actual
+
+Lo que has construido es impresionante y muy bien pensado. No es solo un script, es una pipeline de datos robusta:
+
+1.  **Extracción Híbrida:** Usas Google AI para un OCR de alta calidad y luego OpenAI (GPT-4o) para la extracción inteligente de datos estructurados. Esto te da lo mejor de ambos mundos.
+2.  **Modelo de Datos Excelente:** La clave de todo tu sistema está en las tablas de Supabase. Has separado perfectamente:
+      * `datos_extraidos_facturas`: La cabecera de cada factura.
+      * `productos_extraidos`: Las líneas de producto de cada factura.
+      * `proveedores`: Un maestro de proveedores.
+      * `productos_maestro`: Un maestro de productos, normalizando descripciones.
+      * `historial_precios_productos`: ¡Una joya\! Guardas el histórico de precios de cada producto.
+3.  **UI de Verificación:** El `hybrid-pdf-modal.js` es una herramienta de validación (human-in-the-loop) de altísimo nivel, permitiendo ver las coordenadas sobre el propio PDF.
+
+En resumen: ya has hecho el 80% del trabajo difícil, que es convertir documentos caóticos (PDFs) en una base de datos SQL relacional, limpia y lista para ser consultada.
+
+-----
+
+### La Propuesta: De RAG a "Text-to-SQL" (El Agente Inteligente)
+
+En lugar de crear vectores del texto crudo (lo cual sería un paso atrás, perdiendo la estructura que tanto te ha costado conseguir), el agente que debes construir es un **traductor de lenguaje natural a consultas SQL**.
+
+Así es como funcionaría:
+
+1.  **El Usuario Pregunta:** "Oye, ¿cuánto me he gastado en aceite de oliva este mes?"
+2.  **El Agente Recibe la Pregunta:** Una nueva Edge Function en Supabase (ej: `ask-my-invoices`) recibe la pregunta.
+3.  **Generación Aumentada por Recuperación (RAG):**
+      * **Recuperación (Retrieval):** El agente no recupera chunks de texto de la factura. En su lugar, recupera el **esquema de tu base de datos**. Le proporcionas la estructura de las tablas `datos_extraidos_facturas`, `productos_extraidos`, `proveedores`, y `productos_maestro`.
+      * **Generación (Generation):** El LLM (GPT-4o, por ejemplo) usa la pregunta del usuario y el conocimiento del esquema de la base de datos para **escribir una consulta SQL precisa**.
+4.  **Ejecución Segura:** La Edge Function ejecuta la consulta SQL generada contra tu base de datos de Supabase.
+5.  **Respuesta Final:** El LLM recibe el resultado de la consulta (que será un número o una tabla de datos) y lo convierte en una respuesta amigable para el usuario: "Este mes has gastado **127,50 €** en aceite de oliva."
+
+#### ¿Por qué este enfoque es superior?
+
+  * **Precisión Absoluta:** Para cálculos matemáticos (`SUM`, `AVG`, `COUNT`), una consulta SQL es 100% precisa. Un RAG sobre texto podría alucinar, equivocarse en la suma o no encontrar todos los productos.
+  * **Velocidad y Coste:** Ejecutar una consulta SQL es órdenes de magnitud más rápido y barato que hacer una búsqueda por vectores y luego pedirle a un LLM que razone sobre varios chunks de texto.
+  * **Aprovechamiento Máximo:** Capitaliza el excelente modelo de datos que ya has creado.
+
+-----
+
+### Plan de Acción para Implementarlo
+
+#### Paso 1: Crear la Edge Function del Agente (`ask-my-invoices`)
+
+Esta función recibirá la pregunta del usuario y orquestará todo el proceso.
+
+#### Paso 2: Diseñar el Prompt "Maestro" para el LLM
+
+Este es el cerebro del agente. Tu prompt para GPT-4o dentro de la nueva Edge Function se vería así:
+
+```
+Eres un asistente experto en análisis de datos para restaurantes, conectado a una base de datos Supabase.
+Tu tarea es convertir la pregunta del usuario en una consulta SQL precisa y ejecutable.
+
+Aquí está el esquema de las tablas relevantes:
+
+- **datos_extraidos_facturas**: Contiene los datos de la cabecera de las facturas.
+  - Columnas: id (text), restaurante_id (uuid), proveedor_nombre (text), proveedor_cif (text), numero_factura (text), fecha_factura (date), total_factura (numeric), base_imponible (numeric), cuota_iva (numeric).
+
+- **productos_extraidos**: Contiene cada línea de producto de cada factura.
+  - Columnas: id (uuid), documento_id (text), producto_maestro_id (uuid), descripcion_original (text), cantidad (numeric), precio_unitario_sin_iva (numeric), precio_total_linea_sin_iva (numeric).
+
+- **proveedores**: Maestro de proveedores.
+  - Columnas: id (uuid), nombre (text), cif (text).
+
+- **productos_maestro**: Maestro de productos únicos.
+  - Columnas: id (uuid), nombre_normalizado (text), categoria_principal (text).
+
+- **historial_precios_productos**: Historial de precios de cada producto.
+  - Columnas: id (uuid), producto_maestro_id (uuid), fecha_compra (date), precio_unitario_sin_iva (numeric).
+
+REGLAS MUY IMPORTANTES:
+1.  SIEMPRE responde SÓLO con el código SQL. No añadas explicaciones.
+2.  Usa la columna `restaurante_id` en tus cláusulas WHERE para asegurar que los datos pertenecen al usuario correcto. El restaurante_id actual es: '${restauranteId}'.
+3.  Para preguntas sobre gastos de productos, usa `productos_extraidos` y su campo `descripcion_original` con `ILIKE '%termino%'`.
+4.  Para preguntas sobre evolución de precios, usa la tabla `historial_precios_productos`.
+5.  Las fechas están en formato 'YYYY-MM-DD'.
+
+Pregunta del usuario:
+"${preguntaDelUsuario}"
+
+SQL:
+```
+
+#### Paso 3: Añadir una Interfaz de Chat al Dashboard
+
+En `dashboard-facturas.js`, puedes añadir un pequeño widget de chat que envíe las preguntas a tu nueva Edge Function `ask-my-invoices` y muestre la respuesta final.
+
+### Respondiendo a tus Preguntas Específicas (Cómo lo haría el Agente)
+
+1.  **"¿Cuánto he gastado en aceite?"**
+
+      * **Pregunta del usuario:** `¿Cuánto he gastado en aceite?`
+      * **SQL generado por el agente:**
+        ```sql
+        SELECT SUM(precio_total_linea_sin_iva)
+        FROM productos_extraidos
+        WHERE restaurante_id = 'tu-restaurante-id'
+        AND descripcion_original ILIKE '%aceite%';
+        ```
+      * **Respuesta del agente:** "Has gastado un total de X € en aceite."
+
+2.  **"¿Cuánto llevo en este proveedor?"** (Asumiendo que el usuario está viendo una factura de "Makro")
+
+      * **Pregunta del usuario:** `¿Cuánto llevo gastado con Makro?`
+      * **SQL generado por el agente:**
+        ```sql
+        SELECT SUM(total_factura)
+        FROM datos_extraidos_facturas
+        WHERE restaurante_id = 'tu-restaurante-id'
+        AND proveedor_nombre ILIKE '%Makro%';
+        ```
+      * **Respuesta del agente:** "Llevas gastados Y € con el proveedor Makro."
+
+3.  **"¿Me ha subido el precio de esto?"** (Asumiendo que el usuario pregunta por "Pringá Casera Abuelo Juan")
+
+      * **Pregunta del usuario:** `¿Ha cambiado el precio de la Pringá Casera Abuelo Juan últimamente?`
+      * **SQL generado por el agente:**
+        ```sql
+        SELECT h.fecha_compra, h.precio_unitario_sin_iva
+        FROM historial_precios_productos h
+        JOIN productos_maestro p ON h.producto_maestro_id = p.id
+        WHERE h.restaurante_id = 'tu-restaurante-id'
+        AND p.nombre_normalizado ILIKE '%pringa casera abuelo juan%'
+        ORDER BY h.fecha_compra DESC
+        LIMIT 5;
+        ```
+      * **Respuesta del agente:** "Sí, el precio ha variado. Aquí tienes los últimos precios registrados:
+          * 15/08/2025: 11,50 €
+          * 02/07/2025: 11,20 €
+          * 14/06/2025: 11,20 €
+            Ha subido 30 céntimos en la última compra."
+
+-----
+
+### Conclusión
+
+Sí, sabes perfectamente lo que te digo. Tienes la infraestructura perfecta para crear este agente. Olvídate del RAG sobre texto crudo por ahora; eso sería como tener un coche de Fórmula 1 y usarlo solo para ir a por el pan.
+
+Tu próximo paso es crear un agente **Text-to-SQL** que aproveche la mina de oro de datos estructurados que ya estás generando. Será más preciso, más rápido, más barato y te permitirá hacer análisis increíblemente complejos con preguntas muy sencillas.

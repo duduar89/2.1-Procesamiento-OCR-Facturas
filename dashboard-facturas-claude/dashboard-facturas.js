@@ -422,6 +422,12 @@ function setupEventListeners() {
         
         // Controles del PDF (placeholder para la siguiente fase)
         setupPdfControls();
+        
+        // Botón de prueba del agente
+        const testAgenteBtn = document.getElementById('testAgenteBtn');
+        if (testAgenteBtn) {
+            testAgenteBtn.addEventListener('click', testAgente);
+        }
 }
 
 // ===== MANEJO DE ARCHIVOS =====
@@ -1297,6 +1303,11 @@ async function openFacturaModal(facturaId, mode = 'view') {
 
 function loadFacturaDataInModal(factura, mode) {
     try {
+        console.log('📝 Cargando datos en modal para factura:', factura.id);
+        
+        // 🆕 GUARDAR ID DE FACTURA ACTUAL
+        window.currentFacturaId = factura.documento_id || factura.id;
+        
         // Cargar datos básicos con colores de confianza
         document.getElementById('numeroFactura').value = factura.numero_factura || '';
         document.getElementById('proveedor').value = factura.proveedor_nombre || '';
@@ -1316,54 +1327,73 @@ function loadFacturaDataInModal(factura, mode) {
             statusElement.className = `status-badge ${getEstadoClass(factura.estado || 'processed')}`;
         }
 
-                         // Cargar datos financieros
-                 document.getElementById('baseImponible').textContent = formatCurrency(factura.base_imponible || 0);
-                 document.getElementById('ivaAmount').textContent = formatCurrency(factura.cuota_iva || 0);
-                 document.getElementById('totalConIva').textContent = formatCurrency(factura.total_factura || 0);
-                 document.getElementById('retencion').textContent = formatCurrency(factura.retencion || 0);
+        // Cargar datos financieros
+        document.getElementById('baseImponible').textContent = formatCurrency(factura.base_imponible || 0);
+        document.getElementById('ivaAmount').textContent = formatCurrency(factura.cuota_iva || 0);
+        document.getElementById('totalConIva').textContent = formatCurrency(factura.total_factura || 0);
+        document.getElementById('retencion').textContent = formatCurrency(factura.retencion || 0);
 
-        // Cargar productos si existen
-        if (factura.productos && Array.isArray(factura.productos)) {
-            loadProductosInModal(factura.productos);
-        } else {
-            // Limpiar tabla de productos
-            const productosTable = document.getElementById('productosTableBody');
-            if (productosTable) {
-                productosTable.innerHTML = '<tr><td colspan="7" class="text-center">No hay productos disponibles</td></tr>';
-            }
-        }
+        // 🆕 CARGAR PRODUCTOS AUTOMÁTICAMENTE
+        loadProductosInModal(factura.productos || []);
 
         // Configurar modo de edición
         setModalEditMode(mode);
 
-        console.log('Datos cargados en modal:', factura);
+        console.log('✅ Datos cargados en modal:', factura);
 
     } catch (error) {
-        console.error('Error cargando datos en modal:', error);
+        console.error('❌ Error cargando datos en modal:', error);
         showNotification('Error cargando datos de la factura', 'error');
     }
 }
 
-function loadProductosInModal(productos) {
+async function loadProductosInModal(productos) {
     try {
+        console.log('🛒 Cargando productos en modal:', productos);
+        
+        // Si no hay productos, cargar desde la base de datos
+        if (!productos || productos.length === 0) {
+            console.log('📊 No hay productos en factura, cargando desde BD...');
+            await loadProductsInModalFromDB();
+            return;
+        }
+
         const productosTable = document.getElementById('productosTableBody');
-        if (!productosTable) return;
+        if (!productosTable) {
+            console.error('❌ Tabla de productos no encontrada');
+            return;
+        }
 
         let totalSuma = 0;
 
         productosTable.innerHTML = productos.map(producto => {
             const total = (producto.precio || 0) * (producto.cantidad || 0);
             totalSuma += total;
+            
+            // 🎨 APLICAR COLORES DE CONFIANZA
+            const confianza = producto.confianza_linea || 0.5;
+            const confianzaClass = getConfidenceClass(confianza);
+            const confianzaPercent = Math.round(confianza * 100);
 
             return `
-                <tr>
-                    <td>${producto.ean || 'N/A'}</td>
-                    <td>${producto.descripcion || 'N/A'}</td>
-                    <td>${producto.unidad || 'N/A'}</td>
-                    <td>${producto.cantidad || 0}</td>
-                    <td>${formatCurrency(producto.precio || 0)}</td>
-                    <td>${producto.descuento || '0%'}</td>
-                    <td>${formatCurrency(total)}</td>
+                <tr class="producto-row ${confianzaClass}" data-confianza="${confianza}">
+                    <td class="producto-ean">${producto.ean || 'N/A'}</td>
+                    <td class="producto-descripcion">
+                        <div class="producto-info">
+                            <span class="producto-nombre">${producto.descripcion || 'N/A'}</span>
+                            <span class="producto-confianza ${confianzaClass}">${confianzaPercent}%</span>
+                        </div>
+                    </td>
+                    <td class="producto-unidad">${producto.unidad || 'N/A'}</td>
+                    <td class="producto-cantidad">${producto.cantidad || 0}</td>
+                    <td class="producto-precio">${formatCurrency(producto.precio || 0)}</td>
+                    <td class="producto-descuento">${producto.descuento || '0%'}</td>
+                    <td class="producto-total">${formatCurrency(total)}</td>
+                    <td class="producto-acciones">
+                        <button class="btn-edit-producto" onclick="editProducto('${producto.id || ''}')" title="Editar producto">
+                            ✏️
+                        </button>
+                    </td>
                 </tr>
             `;
         }).join('');
@@ -1374,16 +1404,207 @@ function loadProductosInModal(productos) {
             sumaTotalElement.textContent = formatCurrency(totalSuma);
         }
 
-        console.log('Productos cargados en modal:', productos.length);
+        console.log('✅ Productos cargados en modal:', productos.length);
 
     } catch (error) {
-        console.error('Error cargando productos en modal:', error);
+        console.error('❌ Error cargando productos en modal:', error);
+    }
+}
+
+// 🆕 FUNCIÓN PARA CARGAR PRODUCTOS DESDE LA BASE DE DATOS
+async function loadProductsInModalFromDB() {
+    try {
+        console.log('🔄 Cargando productos desde BD...');
+        
+        // Obtener el documento_id de la factura actual
+        const facturaId = window.currentFacturaId;
+        if (!facturaId) {
+            console.error('❌ No hay factura actual');
+            return;
+        }
+        
+        const { data: productos, error } = await supabaseClient
+            .from('productos_extraidos')
+            .select(`
+                *,
+                productos_maestro!fk_productos_extraidos_maestro (
+                    nombre_normalizado,
+                    categoria_principal,
+                    precio_ultimo
+                )
+            `)
+            .eq('documento_id', facturaId)
+            .order('id', { ascending: true });
+            
+        if (error) {
+            console.error('❌ Error cargando productos:', error);
+            return;
+        }
+        
+        console.log('📊 Productos encontrados:', productos?.length || 0);
+        
+        // Renderizar productos con intervalos de confianza cromáticos
+        renderProductosInModalWithConfidence(productos || []);
+        
+    } catch (error) {
+        console.error('❌ Error en loadProductsInModalFromDB:', error);
+    }
+}
+
+// 🆕 FUNCIÓN PARA RENDERIZAR PRODUCTOS CON CONFIANZA CROMÁTICA
+function renderProductosInModalWithConfidence(productos) {
+    const productosTable = document.getElementById('productosTableBody');
+    if (!productosTable) return;
+    
+    if (productos.length === 0) {
+        productosTable.innerHTML = `
+            <tr>
+                <td colspan="8" class="text-center no-products">
+                    📦 No se encontraron productos extraídos
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    productosTable.innerHTML = productos.map(producto => {
+        const confianza = producto.confianza_linea || 0.5;
+        const confianzaClass = getConfidenceClass(confianza);
+        const confianzaPercent = Math.round(confianza * 100);
+        const maestro = producto.productos_maestro;
+        
+        return `
+            <tr class="producto-row ${confianzaClass}" data-confianza="${confianza}">
+                <td class="producto-codigo">${producto.codigo_producto || 'N/A'}</td>
+                <td class="producto-descripcion">
+                    <div class="producto-info">
+                        <span class="producto-nombre">${producto.descripcion_original || 'N/A'}</span>
+                        <span class="producto-confianza ${confianzaClass}">${confianzaPercent}%</span>
+                    </div>
+                </td>
+                <td class="producto-unidad">${producto.unidad_medida || 'ud'}</td>
+                <td class="producto-cantidad">${producto.cantidad || 0}</td>
+                <td class="producto-precio">${formatCurrency(producto.precio_unitario_sin_iva || 0)}</td>
+                <td class="producto-iva">${producto.tipo_iva || 21}%</td>
+                <td class="producto-total">${formatCurrency(producto.precio_total_linea_sin_iva || 0)}</td>
+                <td class="producto-acciones">
+                    <button class="btn-edit-producto" onclick="editProducto('${producto.id}')" title="Editar producto">
+                        ✏️
+                    </button>
+                </td>
+            </tr>
+        `;
+    }).join('');
+    
+    console.log('✅ Productos renderizados con confianza cromática:', productos.length);
+}
+
+// 🆕 FUNCIÓN PARA EDITAR PRODUCTO
+function editProducto(productoId) {
+    try {
+        console.log('✏️ Editando producto:', productoId);
+        
+        // Buscar el producto en la tabla
+        const productoRow = document.querySelector(`tr[data-producto-id="${productoId}"]`);
+        if (!productoRow) {
+            console.error('❌ Producto no encontrado en la tabla');
+            return;
+        }
+        
+        // Convertir la fila en modo edición
+        const celdas = productoRow.querySelectorAll('td:not(.producto-acciones)');
+        celdas.forEach((celda, index) => {
+            const valorActual = celda.textContent.trim();
+            
+            // Crear input de edición
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.value = valorActual;
+            input.className = 'edit-producto-input';
+            input.style.width = '100%';
+            input.style.padding = '4px';
+            input.style.border = '1px solid #d1d5db';
+            input.style.borderRadius = '4px';
+            
+            // Reemplazar contenido de la celda
+            celda.innerHTML = '';
+            celda.appendChild(input);
+            
+            // Enfocar el input
+            input.focus();
+        });
+        
+        // Cambiar botón de editar por guardar/cancelar
+        const accionesCell = productoRow.querySelector('.producto-acciones');
+        accionesCell.innerHTML = `
+            <button class="btn-save-producto" onclick="saveProducto('${productoId}')" title="Guardar cambios">
+                💾
+            </button>
+            <button class="btn-cancel-producto" onclick="cancelEditProducto('${productoId}')" title="Cancelar">
+                ❌
+            </button>
+        `;
+        
+        console.log('✅ Producto en modo edición');
+        
+    } catch (error) {
+        console.error('❌ Error editando producto:', error);
+    }
+}
+
+// 🆕 FUNCIÓN PARA GUARDAR CAMBIOS DE PRODUCTO
+async function saveProducto(productoId) {
+    try {
+        console.log('💾 Guardando producto:', productoId);
+        
+        // Recopilar datos editados
+        const productoRow = document.querySelector(`tr[data-producto-id="${productoId}"]`);
+        const inputs = productoRow.querySelectorAll('.edit-producto-input');
+        
+        const datosEditados = {
+            descripcion_original: inputs[1]?.value || '',
+            cantidad: parseFloat(inputs[3]?.value) || 0,
+            precio_unitario_sin_iva: parseFloat(inputs[4]?.value) || 0,
+            tipo_iva: parseFloat(inputs[5]?.value) || 21
+        };
+        
+        // Actualizar en base de datos
+        const { error } = await supabaseClient
+            .from('productos_extraidos')
+            .update(datosEditados)
+            .eq('id', productoId);
+            
+        if (error) {
+            throw new Error(`Error guardando producto: ${error.message}`);
+        }
+        
+        // Recargar productos
+        await loadProductsInModalFromDB();
+        
+        showNotification('Producto actualizado correctamente', 'success');
+        
+    } catch (error) {
+        console.error('❌ Error guardando producto:', error);
+        showNotification(`Error guardando producto: ${error.message}`, 'error');
+    }
+}
+
+// 🆕 FUNCIÓN PARA CANCELAR EDICIÓN DE PRODUCTO
+function cancelEditProducto(productoId) {
+    try {
+        console.log('❌ Cancelando edición de producto:', productoId);
+        
+        // Recargar productos sin guardar cambios
+        loadProductsInModalFromDB();
+        
+    } catch (error) {
+        console.error('❌ Error cancelando edición:', error);
     }
 }
 
 function setModalEditMode(mode) {
     const isEditMode = mode === 'edit';
-    const inputs = document.querySelectorAll('#facturaModal input, #facturaModal select');
+    const inputs = document.querySelectorAll('#facturaModal input, #facturaModal select, #facturaModal textarea');
     
     inputs.forEach(input => {
         // Los campos readonly siempre están deshabilitados
@@ -1392,6 +1613,15 @@ function setModalEditMode(mode) {
         } else {
             // Los demás campos se habilitan/deshabilitan según el modo
             input.disabled = !isEditMode;
+            
+            // 🎨 MANTENER COLORES DE CONFIANZA PERO HACER EDITABLE
+            if (isEditMode) {
+                input.style.opacity = '1';
+                input.style.cursor = 'text';
+                // Remover cualquier estilo que haga parecer deshabilitado
+                input.style.backgroundColor = '';
+                input.style.color = '';
+            }
         }
     });
 
@@ -2678,47 +2908,49 @@ function renderProductsInRow(facturaId, productos) {
                     ${producto.descripcion_original || 'Producto sin descripción'}
                 </div>
                 
-                        <!-- Grid horizontal de datos -->
+                        <!-- Grid horizontal de datos REORGANIZADO - PRECIO ANTERIOR MÁS IMPORTANTE -->
                         <div class="product-data-horizontal">
                             <!-- Cantidad -->
                             <div class="data-block">
                                 <div class="data-label-compact">Cantidad:</div>
                                 <div class="data-value-compact quantity">${producto.cantidad || 0} ${producto.unidad_medida || 'ud'}</div>
-                    </div>
-                    
-                            <!-- Precio Unit -->
-                            <div class="data-block">
+                            </div>
+                            
+                            <!-- Precio Unit con Precio Anterior PROMINENTE -->
+                            <div class="data-block precio-anterior-block">
                                 <div class="data-label-compact">Precio unit.:</div>
                                 <div class="data-value-compact price ${getPriceChangeClass(producto.precio_unitario_sin_iva, producto.precio_anterior)}">
                                     ${producto.precio_unitario_sin_iva ? formatCurrency(producto.precio_unitario_sin_iva) : '-'}
-                                    ${producto.precio_anterior ? `<span class="precio-anterior">(Ant: ${formatCurrency(producto.precio_anterior)})</span>` : '<span class="precio-anterior">(Primera compra)</span>'}
+                                    ${producto.precio_anterior ? `<span class="precio-anterior-highlight">(Ant: ${formatCurrency(producto.precio_anterior)})</span>` : '<span class="precio-anterior-highlight">(Primera compra)</span>'}
                                 </div>
-                    </div>
-                    
+                            </div>
+                            
+                            <!-- IVA (MENOS PROMINENTE) -->
+                            <div class="data-block">
+                                <div class="data-label-compact">IVA:</div>
+                                <div class="data-value-compact iva">${producto.tipo_iva || 21}%</div>
+                            </div>
+                            
                             <!-- Total línea -->
                             <div class="data-block">
                                 <div class="data-label-compact">Total línea:</div>
                                 <div class="data-value-compact total">${formatCurrency(producto.precio_total_linea_sin_iva || 0)}</div>
-                    </div>
-                    
+                            </div>
+                            
                             <!-- Formato -->
                             ${(() => {
-                                // Intentar obtener formato de formato_comercial o extraer de la descripción
                                 let formato = producto.formato_comercial;
-                                
                                 if (!formato && producto.descripcion_original) {
-                                    // Buscar patrones de formato en la descripción
                                     const formatoMatch = producto.descripcion_original.match(/(\d+(?:[.,]\d+)?\s*(?:KG|kg|Kg|L|l|LITRO|litro|ML|ml|GR|gr|GRAMOS|gramos|UNIDADES|ud|UD))/i);
                                     if (formatoMatch) {
                                         formato = formatoMatch[1].toUpperCase();
                                     }
                                 }
-                                
                                 return formato ? `
                                     <div class="data-block">
                                         <div class="data-label-compact">📦 Formato:</div>
                                         <div class="data-value-compact format">${formato}</div>
-                    </div>
+                                    </div>
                                 ` : '';
                             })()}
                             
@@ -2729,15 +2961,9 @@ function renderProductsInRow(facturaId, productos) {
                                     <div class="data-value-compact unit-prices">
                                         ${producto.precio_por_kg ? `${formatCurrency(producto.precio_por_kg)}/kg` : ''}
                                         ${producto.precio_por_litro ? `${formatCurrency(producto.precio_por_litro)}/L` : ''}
-                        </div>
+                                    </div>
                                 </div>
                             ` : ''}
-                            
-                            <!-- IVA -->
-                            <div class="data-block">
-                                <div class="data-label-compact">IVA:</div>
-                                <div class="data-value-compact iva">${producto.tipo_iva || 21}%</div>
-                            </div>
                             
                             <!-- Categoría -->
                             <div class="data-block">
@@ -2750,9 +2976,9 @@ function renderProductsInRow(facturaId, productos) {
                                 <div class="data-block">
                                     <div class="data-label-compact">Normalizado:</div>
                                     <div class="data-value-compact normalized">${maestro.nombre_normalizado}</div>
+                                </div>
+                            ` : ''}
                         </div>
-                    ` : ''}
-                </div>
                 
                         <!-- Confianza -->
                         <div class="product-confidence-compact ${confidenceClass}">
@@ -3456,3 +3682,300 @@ async function openInvoiceAdvanced(facturaId) {
         }
     }
 }
+
+// ===== FUNCIÓN DE PRUEBA DEL AGENTE IA =====
+async function testAgente() {
+    try {
+        console.log('🤖 === PROBANDO AGENTE IA ===');
+        console.log('📝 Pregunta: ¿Cuántas facturas tengo?');
+        console.log('🏢 Restaurante ID:', CONFIG.TENANT.RESTAURANTE_ID);
+        
+        // Mostrar loading
+        const btn = document.getElementById('testAgenteBtn');
+        const originalText = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = `
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="animate-spin">
+                <path d="M21 12a9 9 0 11-6.219-8.56"/>
+            </svg>
+            Probando...
+        `;
+        
+        // Llamar a la Edge Function
+        const { data, error } = await supabaseClient.functions.invoke('ask-my-invoices', {
+            body: {
+                pregunta: "¿Cuántas facturas tengo?",
+                restaurante_id: CONFIG.TENANT.RESTAURANTE_ID
+            }
+        });
+        
+        if (error) {
+            throw error;
+        }
+        
+        console.log('✅ Respuesta completa del agente:', data);
+        
+        // Mostrar resultado
+        showNotification(`🤖 Agente IA: ${data.respuesta}`, 'success');
+        
+        // Mostrar detalles en consola
+        console.log('📊 SQL generado:', data.sql);
+        console.log('📊 Datos obtenidos:', data.datos);
+        
+    } catch (error) {
+        console.error('❌ Error probando agente:', error);
+        showNotification(`❌ Error: ${error.message}`, 'error');
+    } finally {
+        // Restaurar botón
+        const btn = document.getElementById('testAgenteBtn');
+        btn.disabled = false;
+        btn.innerHTML = `
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M9 12l2 2 4-4"/>
+                <path d="M21 12c-1 0-2-1-2-2s1-2 2-2 2 1 2 2-1 2-2 2z"/>
+                <path d="M3 12c1 0 2-1 2-2s-1-2-2-2-2 1-2 2 1 2 2 2z"/>
+            </svg>
+            Probar Agente IA
+        `;
+    }
+}
+
+// ===== FUNCIÓN PARA PROBAR CON PREGUNTAS PERSONALIZADAS =====
+async function testAgenteConPregunta(pregunta) {
+    try {
+        console.log('🤖 === PROBANDO AGENTE IA CON PREGUNTA PERSONALIZADA ===');
+        console.log('📝 Pregunta:', pregunta);
+        console.log('🏢 Restaurante ID:', CONFIG.TENANT.RESTAURANTE_ID);
+        
+        // Llamar a la Edge Function
+        const { data, error } = await supabaseClient.functions.invoke('ask-my-invoices', {
+            body: {
+                pregunta: pregunta,
+                restaurante_id: CONFIG.TENANT.RESTAURANTE_ID
+            }
+        });
+        
+        if (error) {
+            throw error;
+        }
+        
+        console.log('✅ Respuesta completa del agente:', data);
+        
+        // Mostrar resultado
+        showNotification(`🤖 Agente IA: ${data.respuesta}`, 'success');
+        
+        // Mostrar detalles en consola
+        console.log('📊 SQL generado:', data.sql);
+        console.log('📊 Datos obtenidos:', data.datos);
+        
+        return data;
+        
+    } catch (error) {
+        console.error('❌ Error probando agente:', error);
+        showNotification(`❌ Error: ${error.message}`, 'error');
+        throw error;
+    }
+}
+
+// ===== CHAT AGENTE IA - FUNCIONES COMPLETAS =====
+let chatHistory = [];
+
+// Inicializar chat
+function initChat() {
+    console.log('💬 === INICIANDO CHAT AGENTE IA ===');
+    
+    const chatButton = document.getElementById('chatButton');
+    const chatPanel = document.getElementById('chatPanel');
+    const chatClose = document.getElementById('chatClose');
+    const chatInput = document.getElementById('chatInput');
+    const chatSend = document.getElementById('chatSend');
+    const quickQuestions = document.querySelectorAll('.quick-question');
+    
+    // Abrir/cerrar chat
+    chatButton.addEventListener('click', () => {
+        chatPanel.classList.add('active');
+        chatInput.focus();
+    });
+    
+    chatClose.addEventListener('click', () => {
+        chatPanel.classList.remove('active');
+    });
+    
+    // Enviar mensaje con Enter
+    chatInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendMessage();
+        }
+    });
+    
+    // Enviar mensaje con botón
+    chatSend.addEventListener('click', sendMessage);
+    
+    // Preguntas rápidas
+    quickQuestions.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const question = btn.getAttribute('data-question');
+            addUserMessage(question);
+            processMessage(question);
+        });
+    });
+    
+    console.log('✅ Chat inicializado correctamente');
+}
+
+// Añadir mensaje del usuario
+function addUserMessage(message) {
+    const chatMessages = document.getElementById('chatMessages');
+    const messageDiv = document.createElement('div');
+    messageDiv.className = 'message user-message';
+    
+    const time = new Date().toLocaleTimeString('es-ES', { 
+        hour: '2-digit', 
+        minute: '2-digit' 
+    });
+    
+    messageDiv.innerHTML = `
+        <div class="message-content">
+            <p>${message}</p>
+        </div>
+        <div class="message-time">${time}</div>
+    `;
+    
+    chatMessages.appendChild(messageDiv);
+    scrollToBottom();
+    
+    // Guardar en historial
+    chatHistory.push({
+        type: 'user',
+        message: message,
+        timestamp: new Date()
+    });
+}
+
+// Añadir mensaje del agente
+function addAgentMessage(message) {
+    const chatMessages = document.getElementById('chatMessages');
+    const messageDiv = document.createElement('div');
+    messageDiv.className = 'message agent-message';
+    
+    const time = new Date().toLocaleTimeString('es-ES', { 
+        hour: '2-digit', 
+        minute: '2-digit' 
+    });
+    
+    messageDiv.innerHTML = `
+        <div class="message-content">
+            <p>${message}</p>
+        </div>
+        <div class="message-time">${time}</div>
+    `;
+    
+    chatMessages.appendChild(messageDiv);
+    scrollToBottom();
+    
+    // Guardar en historial
+    chatHistory.push({
+        type: 'agent',
+        message: message,
+        timestamp: new Date()
+    });
+}
+
+// Añadir mensaje de loading
+function addLoadingMessage() {
+    const chatMessages = document.getElementById('chatMessages');
+    const messageDiv = document.createElement('div');
+    messageDiv.className = 'message agent-message';
+    messageDiv.id = 'loadingMessage';
+    
+    const time = new Date().toLocaleTimeString('es-ES', { 
+        hour: '2-digit', 
+        minute: '2-digit' 
+    });
+    
+    messageDiv.innerHTML = `
+        <div class="message-content">
+            <p>🤔 Pensando...</p>
+        </div>
+        <div class="message-time">${time}</div>
+    `;
+    
+    chatMessages.appendChild(messageDiv);
+    scrollToBottom();
+}
+
+// Remover mensaje de loading
+function removeLoadingMessage() {
+    const loadingMessage = document.getElementById('loadingMessage');
+    if (loadingMessage) {
+        loadingMessage.remove();
+    }
+}
+
+// Scroll al final del chat
+function scrollToBottom() {
+    const chatMessages = document.getElementById('chatMessages');
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+// Enviar mensaje
+async function sendMessage() {
+    const chatInput = document.getElementById('chatInput');
+    const message = chatInput.value.trim();
+    
+    if (!message) return;
+    
+    // Limpiar input
+    chatInput.value = '';
+    
+    // Añadir mensaje del usuario
+    addUserMessage(message);
+    
+    // Procesar mensaje
+    await processMessage(message);
+}
+
+// Procesar mensaje con el agente
+async function processMessage(message) {
+    try {
+        // Mostrar loading
+        addLoadingMessage();
+        
+        console.log('🤖 === PROCESANDO MENSAJE EN CHAT ===');
+        console.log('📝 Mensaje:', message);
+        
+        // Llamar al agente
+        const { data, error } = await supabaseClient.functions.invoke('ask-my-invoices', {
+            body: {
+                pregunta: message,
+                restaurante_id: CONFIG.TENANT.RESTAURANTE_ID
+            }
+        });
+        
+        // Remover loading
+        removeLoadingMessage();
+        
+        if (error) {
+            throw error;
+        }
+        
+        console.log('✅ Respuesta del agente:', data);
+        
+        // Añadir respuesta del agente
+        addAgentMessage(data.respuesta);
+        
+    } catch (error) {
+        console.error('❌ Error en chat:', error);
+        removeLoadingMessage();
+        addAgentMessage(`❌ Lo siento, ha ocurrido un error: ${error.message}`);
+    }
+}
+
+// Inicializar chat cuando se carga la página
+document.addEventListener('DOMContentLoaded', () => {
+    // Esperar a que se cargue todo lo demás
+    setTimeout(() => {
+        initChat();
+    }, 1000);
+});

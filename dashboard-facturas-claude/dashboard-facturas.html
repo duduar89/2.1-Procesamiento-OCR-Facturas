@@ -1674,6 +1674,17 @@
     margin-top: 2px;
 }
 
+/* Precio anterior más pequeño (mantener por compatibilidad) */
+.precio-anterior-small {
+    font-size: 0.65em;
+    opacity: 0.6;
+    display: block;
+    font-weight: 400;
+    margin-top: 1px;
+    color: #6b7280;
+    font-style: italic;
+}
+
 /* Sobrescribir el CSS del contenedor products-grid cuando contiene productos compactos */
 .products-grid:has(.products-compact-horizontal) {
     display: block !important;
@@ -1773,6 +1784,35 @@
     font-size: 12px;
 }
 
+/* PRECIO ANTERIOR MÁS PROMINENTE */
+.data-block.precio-anterior-block {
+    background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+    padding: 6px 10px;
+    border-radius: 8px;
+    border: 2px solid #3b82f6;
+    box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
+}
+
+.precio-anterior-highlight {
+    font-size: 0.85em;
+    font-weight: 600;
+    display: block;
+    margin-top: 2px;
+    color: #1e40af;
+    background: rgba(59, 130, 246, 0.1);
+    padding: 2px 6px;
+    border-radius: 4px;
+    border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+/* IVA MENOS PROMINENTE */
+.data-block.iva-block {
+    background: #f8fafc;
+    padding: 4px 8px;
+    border-radius: 6px;
+    border: 1px solid #e2e8f0;
+}
+
 .data-value-compact.iva {
     color: #8b5cf6;
     font-weight: 600;
@@ -1823,6 +1863,87 @@
     background: rgba(239, 68, 68, 0.1);
     color: #dc2626;
     border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+/* 🎨 ESTILOS PARA PRODUCTOS EN MODAL CON CONFIANZA CROMÁTICA */
+.producto-row {
+    transition: all 0.3s ease;
+    border-left: 4px solid transparent;
+}
+
+.producto-row.alta {
+    background: linear-gradient(90deg, rgba(16, 185, 129, 0.05), transparent);
+    border-left-color: #10b981;
+}
+
+.producto-row.media {
+    background: linear-gradient(90deg, rgba(245, 158, 11, 0.05), transparent);
+    border-left-color: #f59e0b;
+}
+
+.producto-row.baja {
+    background: linear-gradient(90deg, rgba(239, 68, 68, 0.05), transparent);
+    border-left-color: #ef4444;
+}
+
+.producto-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.producto-nombre {
+    font-weight: 600;
+    color: #1f2937;
+}
+
+.producto-confianza {
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 6px;
+    border-radius: 8px;
+    display: inline-block;
+    width: fit-content;
+}
+
+.producto-confianza.alta {
+    background: rgba(16, 185, 129, 0.1);
+    color: #059669;
+    border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.producto-confianza.media {
+    background: rgba(245, 158, 11, 0.1);
+    color: #d97706;
+    border: 1px solid rgba(245, 158, 11, 0.2);
+}
+
+.producto-confianza.baja {
+    background: rgba(239, 68, 68, 0.1);
+    color: #dc2626;
+    border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.btn-edit-producto {
+    background: #3b82f6;
+    color: white;
+    border: none;
+    padding: 4px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: all 0.2s ease;
+}
+
+.btn-edit-producto:hover {
+    background: #2563eb;
+    transform: scale(1.05);
+}
+
+.no-products {
+    color: #6b7280;
+    font-style: italic;
+    padding: 20px;
 }
 
 /* Responsive para productos compactos */
@@ -2197,6 +2318,15 @@
                             </svg>
                             Exportar
                         </button>
+                        <!-- Botón de prueba del agente (temporal) -->
+                        <button class="btn-table secondary" id="testAgenteBtn" style="margin-left: 10px;">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M9 12l2 2 4-4"/>
+                                <path d="M21 12c-1 0-2-1-2-2s1-2 2-2 2 1 2 2-1 2-2 2z"/>
+                                <path d="M3 12c1 0 2-1 2-2s-1-2-2-2-2 1-2 2 1 2 2 2z"/>
+                            </svg>
+                            Probar Agente IA
+                        </button>
                     </div>
                 </div>
 
@@ -2477,5 +2607,69 @@
     <script src="pdf-overlay-system.js"></script>
     <script src="hybrid-pdf-modal.js"></script>
     <script src="dashboard-facturas.js"></script>
+
+    <!-- ===== CHAT AGENTE IA ===== -->
+    <!-- Botón flotante del chat -->
+    <div class="chat-button" id="chatButton">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+        </svg>
+    </div>
+
+    <!-- Panel del chat -->
+    <div class="chat-panel" id="chatPanel">
+        <!-- Header del chat -->
+        <div class="chat-header">
+            <div class="chat-header-info">
+                <div class="chat-avatar">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M9 12l2 2 4-4"/>
+                        <path d="M21 12c-1 0-2-1-2-2s1-2 2-2 2 1 2 2-1 2-2 2z"/>
+                        <path d="M3 12c1 0 2-1 2-2s-1-2-2-2-2 1-2 2 1 2 2 2z"/>
+                    </svg>
+                </div>
+                <div class="chat-title">
+                    <h4>Agente IA</h4>
+                    <span class="chat-status">En línea</span>
+                </div>
+            </div>
+            <button class="chat-close" id="chatClose">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M18 6L6 18M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+
+        <!-- Mensajes del chat -->
+        <div class="chat-messages" id="chatMessages">
+            <!-- Mensaje de bienvenida -->
+            <div class="message agent-message">
+                <div class="message-content">
+                    <p>¡Hola! Soy tu agente IA. Puedo ayudarte a analizar tus facturas. ¿Qué te gustaría saber?</p>
+                </div>
+                <div class="message-time">Ahora</div>
+            </div>
+        </div>
+
+        <!-- Preguntas rápidas -->
+        <div class="quick-questions" id="quickQuestions">
+            <button class="quick-question" data-question="¿Cuántas facturas tengo?">📊 Total facturas</button>
+            <button class="quick-question" data-question="¿Cuál es mi proveedor más frecuente?">🏢 Proveedor top</button>
+            <button class="quick-question" data-question="¿Cuánto gasté este mes?">💰 Gastos del mes</button>
+            <button class="quick-question" data-question="¿Qué productos compro más?">🛒 Productos top</button>
+        </div>
+
+        <!-- Input del chat -->
+        <div class="chat-input-container">
+            <div class="chat-input-wrapper">
+                <input type="text" id="chatInput" placeholder="Escribe tu pregunta..." maxlength="500">
+                <button class="chat-send" id="chatSend">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
 </body>
 </html>

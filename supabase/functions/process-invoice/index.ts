@@ -2025,7 +2025,7 @@ function extractProductsFromFormParser(extractedResult: any) {
 }
 
 // 🔍 FUNCIÓN AUXILIAR PARA BUSCAR PROVEEDOR POR NOMBRE
-async function searchProveedorByName(nombreProveedor: string, restauranteId: string, supabaseClient: any): Promise<string | null> {
+async function searchProveedorByName(nombreProveedor: string, restauranteId: string, supabaseClient: any): Promise<{id: string, esNuevo: boolean} | null> {
   console.log('🔍 === BUSCANDO PROVEEDOR POR NOMBRE ===')
   console.log(`📝 Nombre a buscar: "${nombreProveedor}"`)
   
@@ -2063,7 +2063,7 @@ async function searchProveedorByName(nombreProveedor: string, restauranteId: str
         })
         .eq('id', mejorCoincidencia.id)
       
-      return mejorCoincidencia.id
+      return { id: mejorCoincidencia.id, esNuevo: false }
     }
     
     // 2. Si no existe, crear nuevo proveedor SIN CIF (evitar conflictos)
@@ -2096,7 +2096,7 @@ async function searchProveedorByName(nombreProveedor: string, restauranteId: str
       return null
     } else {
       console.log(`✅ Nuevo proveedor creado sin CIF: ${newProveedor.id}`)
-      return newProveedor.id
+      return { id: newProveedor.id, esNuevo: true }
     }
     
   } catch (error) {
@@ -2106,7 +2106,7 @@ async function searchProveedorByName(nombreProveedor: string, restauranteId: str
 }
 
 // 🏢 FUNCIÓN PARA PROCESAR PROVEEDOR Y HACER UPSERT
-async function processProveedorUpsert(nombreProveedor: string, cifProveedor: string, restauranteId: string, supabaseClient: any): Promise<string | null> {
+async function processProveedorUpsert(nombreProveedor: string, cifProveedor: string, restauranteId: string, supabaseClient: any): Promise<{id: string, esNuevo: boolean} | null> {
   console.log('🏢 === PROCESANDO UPSERT DE PROVEEDOR ===')
   
   try {
@@ -2165,7 +2165,7 @@ async function processProveedorUpsert(nombreProveedor: string, cifProveedor: str
       .eq('cif', cifProveedor)
       .single()
     
-    let proveedorId: string
+    let proveedorResult: {id: string, esNuevo: boolean} | null = null
     
     if (existingProveedor && !searchError) {
       // 2a. Actualizar proveedor existente
@@ -2186,7 +2186,7 @@ async function processProveedorUpsert(nombreProveedor: string, cifProveedor: str
         console.log(`✅ Proveedor actualizado: ${existingProveedor.id}`)
       }
       
-      proveedorId = existingProveedor.id
+      proveedorResult = { id: existingProveedor.id, esNuevo: false }
       
     } else {
       // 2b. Crear nuevo proveedor
@@ -2219,11 +2219,11 @@ async function processProveedorUpsert(nombreProveedor: string, cifProveedor: str
         return null
       } else {
         console.log(`✅ Nuevo proveedor creado: ${newProveedor.id}`)
-        proveedorId = newProveedor.id
+        proveedorResult = { id: newProveedor.id, esNuevo: true }
       }
     }
     
-    return proveedorId
+    return proveedorResult
     
   } catch (error) {
     console.error(`❌ Error procesando proveedor:`, error)
@@ -3748,19 +3748,43 @@ Extrae SOLO el proveedor (emisor) que NO sea "${restauranteCheck.nombre}":
     console.log(`🏢 CIF: "${extractedData.proveedor_cif}"`)
     console.log(`🆔 RestauranteId del documento: "${documentInfo.restaurante_id}"`)
     
-    const proveedorId = await processProveedorUpsert(
+    const proveedorResult = await processProveedorUpsert(
       extractedData.proveedor_nombre || 'Sin nombre',
       extractedData.proveedor_cif || 'Sin CIF',
       documentInfo.restaurante_id,
       supabaseClient
     )
     
+    // 🏢 PROCESAR EMBEDDINGS DEL PROVEEDOR
+    if (proveedorResult && extractedData.proveedor_nombre) {
+      try {
+        console.log('🧠 === PROCESANDO EMBEDDINGS DEL PROVEEDOR ===')
+        console.log('🏢 Generando embedding para proveedor:', extractedData.proveedor_nombre)
+        
+        const proveedorEmbedding = await generateProductEmbedding(extractedData.proveedor_nombre) // Re-using generateProductEmbedding
+        
+        if (proveedorEmbedding.length > 0) {
+          await saveProveedorEmbedding(
+            supabaseClient,
+            proveedorResult.id,
+            documentInfo.restaurante_id,
+            extractedData.proveedor_nombre,
+            proveedorEmbedding
+          )
+          console.log('✅ Embedding del proveedor guardado correctamente')
+        }
+      } catch (embeddingError) {
+        console.error('❌ Error procesando embedding del proveedor:', embeddingError)
+        console.warn('⚠️ El embedding del proveedor no se pudo generar, pero el proveedor sí se guardó correctamente')
+      }
+    }
+    
     // 9. Procesar productos (normalización y upsert en productos_maestro)
     console.log('🔄 === PROCESANDO PRODUCTOS MAESTROS ===')
     const productosConMaestroId = await processProductsUpsert(
       productosExtraidos,
       documentInfo.restaurante_id,
-      proveedorId,
+      proveedorResult?.id || null,
       documentId,
       supabaseClient
     )
@@ -3811,7 +3835,8 @@ Extrae SOLO el proveedor (emisor) que NO sea "${restauranteCheck.nombre}":
       confianza_importes: extractedData.confianza_importes,
       coordenadas_campos: extractedData.coordenadas_campos,
       campos_con_baja_confianza: extractedData.campos_con_baja_confianza,
-      fecha_extraccion: new Date().toISOString()
+      fecha_extraccion: new Date().toISOString(),
+      proveedor_nuevo: proveedorResult?.esNuevo || false
     }
     
     console.log('📋 Datos estructurados para inserción:', datosParaInsertar)
@@ -3866,6 +3891,10 @@ Extrae SOLO el proveedor (emisor) que NO sea "${restauranteCheck.nombre}":
           precio_por_litro: producto.precio_por_litro
         }))
         
+        console.log('🔍 === DEBUG: INTENTANDO INSERTAR PRODUCTOS ===')
+        console.log('🔍 Número de productos a insertar:', productosParaInsertar.length)
+        console.log('🔍 Primer producto a insertar:', productosParaInsertar[0]?.descripcion_original)
+        
         const { data: productosInsertResult, error: productosInsertError } = await supabaseClient
           .from('productos_extraidos')
           .insert(productosParaInsertar)
@@ -3878,6 +3907,22 @@ Extrae SOLO el proveedor (emisor) que NO sea "${restauranteCheck.nombre}":
           console.warn('⚠️ Los productos no se pudieron guardar, pero la factura sí se procesó correctamente')
         } else {
           console.log(`✅ ${productosInsertResult.length} productos guardados correctamente en productos_extraidos`)
+          
+          // 🧠 PROCESAR EMBEDDINGS PARA LOS PRODUCTOS GUARDADOS
+          try {
+            console.log('🧠 === DEBUG: INICIANDO PROCESAMIENTO DE EMBEDDINGS ===')
+            console.log('🧠 Número de productos a procesar:', productosInsertResult.length)
+            console.log('🧠 Primer producto:', productosInsertResult[0]?.descripcion_original)
+            console.log('🧠 Restaurante ID:', documentInfo.restaurante_id)
+            
+            await processProductEmbeddings(supabaseClient, productosInsertResult, documentInfo.restaurante_id)
+            
+            console.log('🧠 === DEBUG: PROCESAMIENTO DE EMBEDDINGS COMPLETADO ===')
+          } catch (embeddingError) {
+            console.error('❌ Error procesando embeddings:', embeddingError)
+            console.error('❌ Stack trace:', embeddingError.stack)
+            console.warn('⚠️ Los embeddings no se pudieron generar, pero los productos sí se guardaron correctamente')
+          }
         }
         
       } catch (error) {
@@ -3924,7 +3969,12 @@ Extrae SOLO el proveedor (emisor) que NO sea "${restauranteCheck.nombre}":
       productosExtraidos: productosExtraidos.length,
       productosConMaestro: productosConMaestroId.length,
       insertResult,
-      updateResult
+      updateResult,
+      proveedorInfo: proveedorResult ? {
+        id: proveedorResult.id,
+        esNuevo: proveedorResult.esNuevo,
+        nombre: extractedData.proveedor_nombre
+      } : null
     }), {
       headers: { 
         'Content-Type': 'application/json',
@@ -3949,3 +3999,260 @@ Extrae SOLO el proveedor (emisor) que NO sea "${restauranteCheck.nombre}":
     })
   }
 })
+
+// ===== FUNCIONES PARA EMBEDDINGS =====
+
+// Generar embedding para un texto usando OpenAI
+async function generateProductEmbedding(descripcion: string): Promise<number[]> {
+  console.log('🧠 Generando embedding para:', descripcion.substring(0, 50) + '...')
+  
+  const openaiApiKey = Deno.env.get('OPENAI_API_KEY')
+  if (!openaiApiKey) {
+    console.warn('⚠️ OPENAI_API_KEY no encontrada, saltando generación de embedding')
+    return []
+  }
+  
+  try {
+    const response = await fetch('https://api.openai.com/v1/embeddings', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${openaiApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'text-embedding-3-small',
+        input: descripcion
+      })
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error('❌ Error generando embedding:', errorText)
+      return []
+    }
+
+    const data = await response.json()
+    const embedding = data.data[0].embedding
+    
+    console.log('✅ Embedding generado correctamente, longitud:', embedding.length)
+    return embedding
+    
+  } catch (error) {
+    console.error('❌ Error en generateProductEmbedding:', error)
+    return []
+  }
+}
+
+// Detectar categoría del producto basándose en la descripción
+function detectProductCategory(descripcion: string): string {
+  const descripcionLower = descripcion.toLowerCase()
+  
+  // Categorías principales
+  const categorias = {
+    'lácteos': ['leche', 'queso', 'yogur', 'mantequilla', 'nata', 'crema'],
+    'cárnicos': ['carne', 'pollo', 'cerdo', 'ternera', 'cordero', 'jamón', 'embutido'],
+    'pescados': ['pescado', 'marisco', 'gambas', 'atún', 'salmón', 'merluza'],
+    'frutas_verduras': ['fruta', 'verdura', 'tomate', 'lechuga', 'manzana', 'naranja'],
+    'bebidas': ['vino', 'cerveza', 'agua', 'refresco', 'zumo', 'café'],
+    'limpieza': ['detergente', 'lejía', 'papel', 'jabón', 'limpiador'],
+    'aceites_grasas': ['aceite', 'grasa', 'mantequilla', 'margarina'],
+    'harinas_cereales': ['harina', 'pan', 'cereal', 'pasta', 'arroz'],
+    'especias_condimentos': ['sal', 'pimienta', 'especia', 'condimento', 'salsa'],
+    'congelados': ['congelado', 'helado', 'frozen'],
+    'conservas': ['conserva', 'lata', 'enlatado', 'bote'],
+    'otros': []
+  }
+  
+  for (const [categoria, palabras] of Object.entries(categorias)) {
+    if (palabras.some(palabra => descripcionLower.includes(palabra))) {
+      return categoria
+    }
+  }
+  
+  return 'otros'
+}
+
+// Guardar embedding de producto
+async function saveProductEmbedding(
+  supabaseClient: any,
+  productoId: string,
+  restauranteId: string,
+  descripcion: string,
+  embedding: number[]
+): Promise<void> {
+  if (embedding.length === 0) {
+    console.warn('⚠️ Embedding vacío, saltando guardado')
+    return
+  }
+  
+  try {
+    const categoria = detectProductCategory(descripcion)
+    
+    // Verificar si ya existe
+    const { data: existing, error: checkError } = await supabaseClient
+      .from('productos_embeddings')
+      .select('id')
+      .eq('restaurante_id', restauranteId)
+      .eq('descripcion_original', descripcion)
+      .single()
+    
+    if (checkError && checkError.code !== 'PGRST116') { // PGRST116 = no rows returned
+      console.error('❌ Error verificando embedding existente:', checkError)
+      throw checkError
+    }
+    
+    if (existing) {
+      // Actualizar existente
+      const { error: updateError } = await supabaseClient
+        .from('productos_embeddings')
+        .update({
+          embedding: embedding,
+          categoria: categoria,
+          frecuencia_uso: supabaseClient.sql`frecuencia_uso + 1`,
+          ultima_actualizacion: new Date().toISOString()
+        })
+        .eq('id', existing.id)
+      
+      if (updateError) {
+        console.error('❌ Error actualizando embedding:', updateError)
+        throw updateError
+      } else {
+        console.log('✅ Embedding actualizado correctamente para:', descripcion.substring(0, 30) + '...')
+      }
+    } else {
+      // Insertar nuevo
+      const { error: insertError } = await supabaseClient
+        .from('productos_embeddings')
+        .insert({
+          producto_id: null, // No usar producto_id por ahora
+          restaurante_id: restauranteId,
+          descripcion_original: descripcion,
+          embedding: embedding,
+          categoria: categoria,
+          sinonimos: [], // Se pueden añadir después
+          frecuencia_uso: 1,
+          ultima_actualizacion: new Date().toISOString()
+        })
+      
+      if (insertError) {
+        console.error('❌ Error insertando embedding:', insertError)
+        throw insertError
+      } else {
+        console.log('✅ Embedding insertado correctamente para:', descripcion.substring(0, 30) + '...')
+      }
+    }
+    
+  } catch (error) {
+    console.error('❌ Error en saveProductEmbedding:', error)
+  }
+}
+
+// Procesar embeddings para una lista de productos
+async function processProductEmbeddings(
+  supabaseClient: any,
+  productos: any[],
+  restauranteId: string
+): Promise<void> {
+  console.log('🧠 === PROCESANDO EMBEDDINGS PARA PRODUCTOS ===')
+  console.log(`🔄 Generando embeddings para ${productos.length} productos...`)
+  
+  let processedCount = 0
+  
+  for (const producto of productos) {
+    try {
+      // Generar embedding
+      const embedding = await generateProductEmbedding(producto.descripcion_original)
+      
+      if (embedding.length > 0) {
+        // Guardar embedding
+        await saveProductEmbedding(
+          supabaseClient,
+          producto.id,
+          restauranteId,
+          producto.descripcion_original,
+          embedding
+        )
+        processedCount++
+      }
+      
+      // Pequeña pausa para no sobrecargar la API
+      await new Promise(resolve => setTimeout(resolve, 100))
+      
+    } catch (error) {
+      console.error('❌ Error procesando embedding para producto:', producto.descripcion_original, error)
+    }
+  }
+  
+  console.log(`✅ ${processedCount} embeddings procesados de ${productos.length} productos`)
+}
+
+// 🏢 FUNCIÓN PARA GUARDAR EMBEDDINGS DE PROVEEDORES
+async function saveProveedorEmbedding(
+  supabaseClient: any,
+  proveedorId: string,
+  restauranteId: string,
+  nombreProveedor: string,
+  embedding: number[]
+): Promise<void> {
+  if (embedding.length === 0) {
+    console.warn('⚠️ Embedding vacío, saltando guardado de proveedor')
+    return
+  }
+  
+  try {
+    // Verificar si ya existe
+    const { data: existing, error: checkError } = await supabaseClient
+      .from('proveedores_embeddings')
+      .select('id')
+      .eq('restaurante_id', restauranteId)
+      .eq('nombre_original', nombreProveedor)
+      .single()
+    
+    if (checkError && checkError.code !== 'PGRST116') { // PGRST116 = no rows returned
+      console.error('❌ Error verificando embedding de proveedor existente:', checkError)
+      throw checkError
+    }
+    
+    if (existing) {
+      // Actualizar existente
+      const { error: updateError } = await supabaseClient
+        .from('proveedores_embeddings')
+        .update({
+          embedding: embedding,
+          frecuencia_uso: supabaseClient.sql`frecuencia_uso + 1`,
+          ultima_actualizacion: new Date().toISOString()
+        })
+        .eq('id', existing.id)
+      
+      if (updateError) {
+        console.error('❌ Error actualizando embedding de proveedor:', updateError)
+        throw updateError
+      } else {
+        console.log('🔄 Embedding de proveedor EXISTENTE actualizado para:', nombreProveedor.substring(0, 30) + '...')
+      }
+    } else {
+      // Insertar nuevo
+      const { error: insertError } = await supabaseClient
+        .from('proveedores_embeddings')
+        .insert({
+          proveedor_id: proveedorId,
+          restaurante_id: restauranteId,
+          nombre_original: nombreProveedor,
+          embedding: embedding,
+          sinonimos: [], // Se pueden añadir después
+          frecuencia_uso: 1,
+          ultima_actualizacion: new Date().toISOString()
+        })
+      
+      if (insertError) {
+        console.error('❌ Error insertando embedding de proveedor:', insertError)
+        throw insertError
+      } else {
+        console.log('🆕 Embedding de proveedor NUEVO insertado para:', nombreProveedor.substring(0, 30) + '...')
+      }
+    }
+    
+  } catch (error) {
+    console.error('❌ Error en saveProveedorEmbedding:', error)
+  }
+}
