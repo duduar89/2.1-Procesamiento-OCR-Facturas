@@ -598,3 +598,51 @@
         justify-content: center;
     }
 }
+
+/* 🎨 ESTILOS BRAIN STORMERS PARA CAMPOS DE CONFIANZA */
+.brain-stormers-confidence-field,
+.field-editable.brain-stormers-confidence-field,
+.financial-value.brain-stormers-confidence-field,
+input.brain-stormers-confidence-field,
+span.brain-stormers-confidence-field {
+    background: linear-gradient(135deg, rgba(34, 197, 94, 0.1), rgba(34, 197, 94, 0.05)) !important;
+    border: 2px solid rgba(34, 197, 94, 0.3) !important;
+    box-shadow: 0 0 10px rgba(34, 197, 94, 0.2) !important;
+    border-radius: 8px !important;
+    padding: 12px !important;
+    margin: 4px 0 !important;
+    transition: all 0.3s ease !important;
+}
+
+/* 🟡 Confianza media */
+.brain-stormers-confidence-field.media,
+.field-editable.brain-stormers-confidence-field.media,
+.financial-value.brain-stormers-confidence-field.media,
+input.brain-stormers-confidence-field.media,
+span.brain-stormers-confidence-field.media {
+    background: linear-gradient(135deg, rgba(251, 191, 36, 0.1), rgba(251, 191, 36, 0.05)) !important;
+    border: 2px solid rgba(251, 191, 36, 0.3) !important;
+    box-shadow: 0 0 10px rgba(251, 191, 36, 0.2) !important;
+}
+
+/* 🔴 Confianza baja */
+.brain-stormers-confidence-field.baja,
+.field-editable.brain-stormers-confidence-field.baja,
+.financial-value.brain-stormers-confidence-field.baja,
+input.brain-stormers-confidence-field.baja,
+span.brain-stormers-confidence-field.baja {
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(239, 68, 68, 0.05)) !important;
+    border: 2px solid rgba(239, 68, 68, 0.3) !important;
+    box-shadow: 0 0 10px rgba(239, 68, 68, 0.2) !important;
+    animation: pulsoSutil 2s infinite !important;
+}
+
+/* 🎨 Animación para campos de baja confianza */
+@keyframes pulsoSutil {
+    0%, 100% { 
+        box-shadow: 0 0 10px rgba(239, 68, 68, 0.2) !important;
+    }
+    50% { 
+        box-shadow: 0 0 15px rgba(239, 68, 68, 0.4) !important;
+    }
+}

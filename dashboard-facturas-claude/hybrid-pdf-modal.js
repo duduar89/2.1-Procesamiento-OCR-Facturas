@@ -185,7 +185,6 @@ class HybridPDFModal {
             this.setupCoordinateOverlay();
             this.updateCoordinateOverlay();
             this.updateConfidenceStats();
-            this.showDebugInfo();
             this.fillFormFields();
         } else {
             console.log('⚠️ Canvas no está listo, esperando...');
@@ -294,7 +293,7 @@ class HybridPDFModal {
             console.log('❌ Coordenadas inválidas:', fieldData);
             return null;
         }
-
+        
         // ✅ PERFORMANCE: Omitir tokens y overlays muy pequeños
         if (fieldData.tipo === 'token') {
             return null;
@@ -599,106 +598,106 @@ class HybridPDFModal {
 
     // ===== APLICAR COLORES DE CONFIANZA A LAS CASILLAS DEL FORM =====
     updateFormConfidenceStyles() {
+        // ✅ COLORES BRAIN STORMERS ACTUALIZADOS
         const getColorForConfidence = (confidence) => {
-            if (confidence >= 0.9) return { bg: '#10b9811A', border: '#10b981' };
-            if (confidence >= 0.7) return { bg: '#f59e0b1A', border: '#f59e0b' };
-            return { bg: '#ef44441A', border: '#ef4444' };
+            if (confidence >= 0.8) return { 
+                bg: 'linear-gradient(135deg, rgba(34, 197, 94, 0.1), rgba(34, 197, 94, 0.05))', 
+                border: 'rgba(34, 197, 94, 0.3)',
+                shadow: '0 0 10px rgba(34, 197, 94, 0.2)'
+            };
+            if (confidence >= 0.6) return { 
+                bg: 'linear-gradient(135deg, rgba(251, 191, 36, 0.1), rgba(251, 191, 36, 0.05))', 
+                border: 'rgba(251, 191, 36, 0.3)',
+                shadow: '0 0 10px rgba(251, 191, 36, 0.2)'
+            };
+            return { 
+                bg: 'linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(239, 68, 68, 0.05))', 
+                border: 'rgba(239, 68, 68, 0.3)',
+                shadow: '0 0 10px rgba(239, 68, 68, 0.2)'
+            };
         };
 
         const safeApply = (ids, confidence) => {
-            if (confidence == null) return;
+            if (confidence == null) {
+                console.log('⚠️ Confianza es null para:', ids);
+                return;
+            }
             const idList = Array.isArray(ids) ? ids : [ids];
-            const { bg, border } = getColorForConfidence(confidence);
+            const { bg, border, shadow } = getColorForConfidence(confidence);
+            
+            console.log(`🔍 Intentando aplicar estilo a elementos:`, idList, `con confianza: ${Math.round(confidence * 100)}%`);
+            
             idList.forEach((id) => {
                 const el = document.getElementById(id);
-                if (!el) return;
-                el.style.backgroundColor = bg;
-                el.style.borderColor = border;
-                el.style.boxShadow = `0 0 0 2px ${border}22`;
+                if (!el) {
+                    console.log(`❌ Elemento NO encontrado: ${id}`);
+                    return;
+                }
+                
+                console.log(`✅ Elemento ENCONTRADO: ${id}`, el);
+                
+                // ✅ APLICAR ESTILOS BRAIN STORMERS CON !IMPORTANT
+                el.style.setProperty('background', bg, 'important');
+                el.style.setProperty('border', `2px solid ${border}`, 'important');
+                el.style.setProperty('box-shadow', shadow, 'important');
+                el.style.setProperty('border-radius', '8px', 'important');
+                el.style.setProperty('padding', '12px', 'important');
+                el.style.setProperty('margin', '4px 0', 'important');
+                el.style.setProperty('transition', 'all 0.3s ease', 'important');
+                
+                // ✅ AGREGAR CLASE CSS PARA MAYOR ESPECIFICIDAD
+                el.classList.add('brain-stormers-confidence-field');
+                
+                // ✅ AGREGAR CLASE ESPECÍFICA SEGÚN CONFIANZA
+                if (confidence >= 0.8) {
+                    el.classList.add('alta');
+                    el.classList.remove('media', 'baja');
+                } else if (confidence >= 0.6) {
+                    el.classList.add('media');
+                    el.classList.remove('alta', 'baja');
+                } else {
+                    el.classList.add('baja');
+                    el.classList.remove('alta', 'media');
+                    el.style.setProperty('animation', 'pulsoSutil 2s infinite', 'important');
+                }
+                
+                console.log(`✅ Aplicado estilo Brain Stormers a ${id} (${Math.round(confidence * 100)}%)`);
             });
         };
 
-        // Heurísticas de confianza por campo usando las métricas ya disponibles
-        const hasValue = (v) => v !== undefined && v !== null && v !== '';
+        // ✅ USAR VALORES REALES DE CONFIANZA DEL BACKEND (PRIORIDAD)
+        console.log('🎨 === DEBUG: APLICANDO COLORES DE CONFIANZA ===');
+        console.log('📊 TODOS los datos extraídos:', this.extractedData);
+        console.log('📊 Datos de confianza recibidos:', {
+            confianza_proveedor: this.extractedData.confianza_proveedor,
+            confianza_datos_fiscales: this.extractedData.confianza_datos_fiscales,
+            confianza_importes: this.extractedData.confianza_importes
+        });
+        
+        // ✅ DEBUG: Verificar si la función se ejecuta
+        console.log('🔍 updateFormConfidenceStyles() EJECUTÁNDOSE...');
 
-        // Si vienen del backend, úsalo; si no, calcular heurística local
-        const confProveedor = (this.extractedData.confianza_proveedor != null)
-            ? this.extractedData.confianza_proveedor
-            : (hasValue(this.extractedData.proveedor_nombre) || hasValue(this.extractedData.proveedor_cif) ? 0.8 : 0.4);
+        // ✅ USAR CONFIANZAS REALES DEL BACKEND (sin heurísticas)
+        const confProveedor = this.extractedData.confianza_proveedor || 0.5;
+        const confDatosFiscales = this.extractedData.confianza_datos_fiscales || 0.5;
+        const confImportes = this.extractedData.confianza_importes || 0.5;
+        
+        // Para el número de factura, usar la confianza de datos fiscales
+        const confNumero = confDatosFiscales;
 
-        const base = Number(this.extractedData.base_imponible) || 0;
-        const iva = Number(this.extractedData.cuota_iva) || 0;
-        const total = Number(this.extractedData.total_factura) || 0;
-        const coherente = base > 0 && Math.abs((base + iva) - total) <= Math.max(0.5, total * 0.02);
-        const confImportes = (this.extractedData.confianza_importes != null)
-            ? this.extractedData.confianza_importes
-            : (total > 0 ? (coherente ? 0.9 : 0.7) : 0.4);
-
-        const confDatos = (this.extractedData.confianza_datos_fiscales != null)
-            ? this.extractedData.confianza_datos_fiscales
-            : (hasValue(this.extractedData.fecha_factura) ? 0.8 : 0.4);
-
-        const confNumero = (this.extractedData.numero_factura && this.extractedData.numero_factura !== 'SIN_NUMERO') ? 0.85 : 0.4;
-
+        // ✅ APLICAR COLORES SEGÚN CATEGORÍA DE CONFIANZA
         safeApply('proveedor', confProveedor);
         safeApply('cifProveedor', confProveedor);
-        safeApply('numeroFactura', confNumero);
-        safeApply('fechaFactura', confDatos);
+        safeApply('numeroFactura', confDatosFiscales);
+        safeApply('fechaFactura', confDatosFiscales);
         safeApply(['baseImponible', 'importeBase'], confImportes);
         safeApply(['ivaAmount', 'cuotaIva'], confImportes);
         safeApply(['totalConIva'], confImportes);
+        
+        console.log('🎨 Colores de confianza Brain Stormers aplicados correctamente al modal híbrido');
     }
     
-    // 🔥 DEBUG: Mostrar información visual del contenedor y canvas
-    showDebugInfo() {
-        const canvas = document.getElementById('pdfCanvas');
-        const container = document.querySelector('.pdf-container');
-        
-        if (!canvas || !container) return;
-        
-        const debugOverlay = document.createElement('div');
-        debugOverlay.className = 'debug-overlay';
-        debugOverlay.style.cssText = `
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            background: rgba(0,0,0,0.9);
-            color: white;
-            padding: 10px;
-            border-radius: 4px;
-            font-size: 12px;
-            font-family: monospace;
-            z-index: 1000;
-            max-width: 300px;
-        `;
-        
-        const canvasRect = canvas.getBoundingClientRect();
-        const containerRect = container.getBoundingClientRect();
-        
-        debugOverlay.innerHTML = `
-            <strong>🔍 DEBUG INFO</strong><br>
-            <strong>Canvas:</strong><br>
-            - Pos: (${Math.round(canvasRect.left)}, ${Math.round(canvasRect.top)})<br>
-            - Size: ${Math.round(canvasRect.width)} x ${Math.round(canvasRect.height)}<br>
-            <strong>Container:</strong><br>
-            - Pos: (${Math.round(containerRect.left)}, ${Math.round(containerRect.top)})<br>
-            - Size: ${Math.round(containerRect.width)} x ${Math.round(containerRect.height)}<br>
-            <strong>Offset:</strong><br>
-            - X: ${Math.round(canvasRect.left - containerRect.left)}<br>
-            - Y: ${Math.round(canvasRect.top - containerRect.top)}<br>
-            <strong>Coordenadas:</strong><br>
-            - Total: ${Object.keys(this.coordinates).length}<br>
-            - Campos: ${Object.keys(this.coordinates).join(', ')}
-        `;
-        
-        container.appendChild(debugOverlay);
-        
-        setTimeout(() => {
-            if (debugOverlay.parentNode) {
-                debugOverlay.parentNode.removeChild(debugOverlay);
-            }
-        }, 10000);
-    }
+
 
     // ===== FUNCIONES DE CARGA DE PDF =====
     async loadPDF(pdfUrl) {
@@ -751,7 +750,7 @@ class HybridPDFModal {
             placeholder.style.display = 'none';
             
             // Reposicionar overlays tras cambio de tamaño
-            this.updateCoordinateOverlay();
+                this.updateCoordinateOverlay();
 
         } catch (error) {
             console.error(`❌ Error renderizando página ${pageNumber}:`, error);
@@ -770,37 +769,106 @@ class HybridPDFModal {
     async open(pdfUrl, coordinates, extractedData) {
         try {
             console.log('🚀 Abriendo modal híbrido con PDF y coordenadas...');
+            console.log('📄 PDF URL:', pdfUrl);
+            console.log('📍 Coordenadas recibidas:', Object.keys(coordinates || {}).length);
+            console.log('📊 Datos extraídos recibidos:', Object.keys(extractedData || {}).length);
             
+            // Verificar que el DOM esté listo
+            const modal = document.getElementById('facturaModal');
+            const canvas = document.getElementById('pdfCanvas');
+            const overlay = document.getElementById('coordinatesOverlay');
+            
+            if (!modal) {
+                throw new Error('Modal de factura no encontrado en el DOM');
+            }
+            
+            if (!canvas) {
+                console.warn('⚠️ Canvas de PDF no encontrado, esperando...');
+                await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+            
+            // Cargar PDF
+            console.log('📥 Cargando PDF...');
             await this.loadPDF(pdfUrl);
+            
+            // Dar tiempo para que el canvas se renderice
+            await new Promise(resolve => setTimeout(resolve, 300));
+            
+            // Cargar coordenadas
+            console.log('📍 Cargando coordenadas y datos...');
             this.loadCoordinates(coordinates, extractedData);
             
             console.log('✅ Modal híbrido abierto correctamente');
             
         } catch (error) {
             console.error('❌ Error abriendo modal híbrido:', error);
+            console.error('🔍 Detalles del error:', {
+                message: error.message,
+                stack: error.stack,
+                pdfUrl: pdfUrl,
+                coordinatesCount: Object.keys(coordinates || {}).length,
+                extractedDataCount: Object.keys(extractedData || {}).length
+            });
             throw error;
         }
     }
 }
 
-// ===== INICIALIZACIÓN GLOBAL =====
+// ===== INICIALIZACIÓN GLOBAL ROBUSTA =====
 let hybridPDFModal = null;
 
-// ✅ INICIALIZACIÓN INMEDIATA
-if (typeof HybridPDFModal !== 'undefined') {
+// ✅ FUNCIÓN DE INICIALIZACIÓN SEGURA
+function initializeHybridModal() {
+    try {
+        if (!window.hybridPDFModal && typeof HybridPDFModal !== 'undefined') {
     hybridPDFModal = new HybridPDFModal();
     window.hybridPDFModal = hybridPDFModal;
-    console.log('✅ Modal Híbrido de PDF SIMPLE inicializado inmediatamente');
+            console.log('✅ Modal Híbrido de PDF inicializado correctamente');
+            return true;
+        } else if (window.hybridPDFModal) {
+            console.log('ℹ️ Modal Híbrido ya estaba inicializado');
+            return true;
+        } else {
+            console.warn('⚠️ Clase HybridPDFModal no disponible');
+            return false;
+        }
+    } catch (error) {
+        console.error('❌ Error inicializando Modal Híbrido:', error);
+        return false;
+    }
 }
+
+// ✅ INICIALIZACIÓN INMEDIATA
+initializeHybridModal();
 
 // ✅ INICIALIZACIÓN CON DOMContentLoaded (fallback)
 document.addEventListener('DOMContentLoaded', function() {
-    if (!window.hybridPDFModal && typeof HybridPDFModal !== 'undefined') {
-        hybridPDFModal = new HybridPDFModal();
-        window.hybridPDFModal = hybridPDFModal;
-        console.log('✅ Modal Híbrido de PDF SIMPLE inicializado con DOMContentLoaded');
+    console.log('🔍 DOMContentLoaded - Verificando Modal Híbrido...');
+    if (!initializeHybridModal()) {
+        console.warn('⚠️ Modal Híbrido no pudo inicializarse en DOMContentLoaded');
+        
+        // Reintentar después de un delay
+        setTimeout(() => {
+            console.log('🔄 Reintentando inicialización del Modal Híbrido...');
+            initializeHybridModal();
+        }, 1000);
     }
 });
 
+// ✅ FUNCIÓN GLOBAL DE VERIFICACIÓN
+window.checkHybridModal = function() {
+    console.log('🔍 Estado del Modal Híbrido:');
+    console.log('- window.HybridPDFModal:', typeof window.HybridPDFModal);
+    console.log('- window.hybridPDFModal:', typeof window.hybridPDFModal);
+    console.log('- hybridPDFModal (local):', typeof hybridPDFModal);
+    
+    if (!window.hybridPDFModal) {
+        console.log('🔄 Intentando reinicializar...');
+        return initializeHybridModal();
+    }
+    return true;
+};
+
 // ===== EXPORTAR PARA USO GLOBAL =====
 window.HybridPDFModal = HybridPDFModal;
+window.initializeHybridModal = initializeHybridModal;

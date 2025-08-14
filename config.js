@@ -507,25 +507,34 @@ window.validateSupabaseConfig = validateSupabaseConfig;
 if (window.location.hostname === 'localhost' || CONFIG.DEBUG.ENABLED) {
     console.log('Configuración Multi-Tenant cargada:', CONFIG);
     
-    // Validar configuración de Supabase
-    const configErrors = validateSupabaseConfig();
-    if (configErrors.length > 0) {
-        console.warn('❌ Errores de configuración de Supabase:', configErrors);
-        // Mostrar formulario de configuración si hay errores
-        setTimeout(() => {
-            showConfigForm();
-        }, 1000);
+    // 🚫 PREVENIR MÚLTIPLES EJECUCIONES
+    if (!window.CONFIG_VALIDATED) {
+        window.CONFIG_VALIDATED = true;
+        
+        // Validar configuración de Supabase
+        const configErrors = validateSupabaseConfig();
+        if (configErrors.length > 0) {
+            console.warn('❌ Errores de configuración de Supabase:', configErrors);
+            // Solo mostrar formulario si no existe ya
+            if (!document.getElementById('configOverlay')) {
+                setTimeout(() => {
+                    showConfigForm();
+                }, 1000);
+            }
+        } else {
+            console.log('✅ Configuración de Supabase válida');
+            console.log('🔗 URL:', CONFIG.SUPABASE.URL);
+            console.log('🔑 Anon Key:', CONFIG.SUPABASE.ANON_KEY.substring(0, 20) + '...');
+        }
+        
+        // Validar configuración general
+        const generalErrors = validateConfig();
+        if (generalErrors.length > 0) {
+            console.warn('⚠️ Errores de configuración general:', generalErrors);
+        } else {
+            console.log('✅ Configuración general válida');
+        }
     } else {
-        console.log('✅ Configuración de Supabase válida');
-        console.log('🔗 URL:', CONFIG.SUPABASE.URL);
-        console.log('🔑 Anon Key:', CONFIG.SUPABASE.ANON_KEY.substring(0, 20) + '...');
-    }
-    
-    // Validar configuración general
-    const generalErrors = validateConfig();
-    if (generalErrors.length > 0) {
-        console.warn('⚠️ Errores de configuración general:', generalErrors);
-    } else {
-        console.log('✅ Configuración general válida');
+        console.log('✅ Configuración ya validada previamente');
     }
 }

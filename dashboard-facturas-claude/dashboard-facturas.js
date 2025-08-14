@@ -10,6 +10,32 @@ let currentPage = 1;
 const itemsPerPage = 10;
 // hybridPDFModal se inicializa desde hybrid-pdf-modal.js
 
+// ===== SISTEMA DE TEMAS =====
+function initializeTheme() {
+    const savedTheme = localStorage.getItem('dashboard-theme') || 'light';
+    document.documentElement.setAttribute('data-theme', savedTheme);
+    updateThemeIcon(savedTheme);
+}
+
+function toggleTheme() {
+    const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
+    const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+    
+    document.documentElement.setAttribute('data-theme', newTheme);
+    localStorage.setItem('dashboard-theme', newTheme);
+    updateThemeIcon(newTheme);
+    
+    showNotification(`Tema ${newTheme === 'light' ? 'claro' : 'oscuro'} activado`, 'info');
+}
+
+function updateThemeIcon(theme) {
+    const themeIcon = document.querySelector('.theme-icon');
+    if (themeIcon) {
+        themeIcon.textContent = theme === 'light' ? '🌙' : '☀️';
+        themeIcon.parentElement.title = `Cambiar a tema ${theme === 'light' ? 'oscuro' : 'claro'}`;
+    }
+}
+
 // ===== INICIALIZACIÓN =====
 document.addEventListener('DOMContentLoaded', async function() {
     console.log('Iniciando Dashboard de Facturas...');
@@ -19,6 +45,9 @@ document.addEventListener('DOMContentLoaded', async function() {
 // ===== INICIALIZAR DASHBOARD =====
 async function initializeDashboard() {
     try {
+        // Inicializar tema
+        initializeTheme();
+        
         // Verificar que existe config.js
         if (!window.CONFIG) {
             throw new Error('Archivo config.js no encontrado');
@@ -41,21 +70,9 @@ async function initializeDashboard() {
         // Cargar datos iniciales
         await loadInitialData();
 
-        // Inicializar modal híbrido de PDF
-        console.log('🔍 Verificando disponibilidad de HybridPDFModal...');
-        console.log('🔍 window.HybridPDFModal:', window.HybridPDFModal);
-        console.log('🔍 typeof window.HybridPDFModal:', typeof window.HybridPDFModal);
-        
-        if (window.HybridPDFModal) {
-            try {
-                window.hybridPDFModal = new window.HybridPDFModal();
-                console.log('✅ Modal híbrido de PDF inicializado correctamente');
-            } catch (error) {
-                console.error('❌ Error creando instancia del modal híbrido:', error);
-            }
-        } else {
-            console.warn('⚠️ Clase HybridPDFModal no encontrada - Verificar que hybrid-pdf-modal.js esté cargado');
-        }
+        // ✅ INICIALIZAR MODAL HÍBRIDO DE PDF CON ROBUSTEZ
+        console.log('🔍 Inicializando Modal Híbrido de PDF...');
+        await initializeHybridPDFModal();
         
 
 
@@ -72,9 +89,81 @@ async function initializeDashboard() {
     }
 }
 
+// ===== FUNCIÓN PARA INICIALIZAR MODAL HÍBRIDO DE PDF =====
+async function initializeHybridPDFModal() {
+    return new Promise((resolve) => {
+        const maxAttempts = 5;
+        let attempts = 0;
+        
+        function attemptInitialization() {
+            attempts++;
+            console.log(`🔄 Intento ${attempts}/${maxAttempts} de inicialización del Modal Híbrido...`);
+            
+            // Verificar si el modal híbrido ya está disponible
+            if (window.hybridPDFModal && typeof window.hybridPDFModal.open === 'function') {
+                console.log('✅ Modal Híbrido ya inicializado correctamente');
+                resolve(true);
+                return;
+            }
+            
+            // Verificar si la función de inicialización está disponible
+            if (typeof window.initializeHybridModal === 'function') {
+                console.log('🔧 Usando función de inicialización del Modal Híbrido...');
+                const success = window.initializeHybridModal();
+                if (success) {
+                    console.log('✅ Modal Híbrido inicializado exitosamente');
+                    resolve(true);
+                    return;
+                } else {
+                    console.warn(`⚠️ Intento ${attempts} falló`);
+                }
+            } else if (window.HybridPDFModal && typeof window.HybridPDFModal === 'function') {
+                try {
+                    console.log('🔧 Creando instancia directa del Modal Híbrido...');
+                    window.hybridPDFModal = new window.HybridPDFModal();
+                    console.log('✅ Modal Híbrido inicializado directamente');
+                    resolve(true);
+                    return;
+                } catch (error) {
+                    console.error(`❌ Error creando instancia directa (intento ${attempts}):`, error);
+                }
+            } else {
+                console.warn(`⚠️ Clase HybridPDFModal no disponible (intento ${attempts})`);
+            }
+            
+            // Reintentar si no hemos alcanzado el máximo
+            if (attempts < maxAttempts) {
+                console.log(`🔄 Reintentando en 500ms... (intento ${attempts + 1}/${maxAttempts})`);
+                setTimeout(attemptInitialization, 500);
+            } else {
+                console.error('❌ Modal Híbrido no pudo inicializarse después de varios intentos');
+                console.log('🔍 Estado final:');
+                console.log('- window.HybridPDFModal:', typeof window.HybridPDFModal);
+                console.log('- window.hybridPDFModal:', typeof window.hybridPDFModal);
+                console.log('- window.initializeHybridModal:', typeof window.initializeHybridModal);
+                resolve(false);
+            }
+        }
+        
+        // Comenzar intentos
+        attemptInitialization();
+    });
+}
+
 // ===== VERIFICAR AUTENTICACIÓN =====
 async function checkAuthentication() {
     try {
+        // 🚫 MODO DESARROLLO: Saltarse autenticación en localhost para debugging
+        if (window.location.hostname === 'localhost' && CONFIG.TENANT?.MODO === 'desarrollo') {
+            console.log('🔧 MODO DESARROLLO: Saltando verificación de autenticación');
+            // Configurar usuario y restaurante de prueba
+            currentUser = { id: 'dev-user', nombre: 'Usuario Desarrollo', email: 'dev@test.com' };
+            CONFIG.TENANT.RESTAURANTE_ID = '2852b1af-38d8-43ec-8872-2b2921d5a231'; // ID hardcodeado para desarrollo
+            CONFIG.TENANT.RESTAURANTE_ACTUAL = { id: CONFIG.TENANT.RESTAURANTE_ID, nombre: 'Restaurante Desarrollo' };
+            updateUserInfo();
+            return;
+        }
+        
         // Verificar que tenemos la configuración necesaria
         if (!CONFIG.SUPABASE.URL || !CONFIG.SUPABASE.ANON_KEY) {
             throw new Error('Configuración de Supabase incompleta');
@@ -460,21 +549,29 @@ async function processDocument(file) {
 
         showUploadStatus('Procesando con IA...', 'processing');
 
-        // 3. Llamar a la Edge Function process-invoice
-        const { data: processData, error: processError } = await supabaseClient.functions
-            .invoke('process-invoice', {
+        // 3. Llamar a la Edge Function process-invoice con timeout
+        console.log('🚀 Invocando Edge Function process-invoice...')
+        
+        const { data: processData, error: processError } = await Promise.race([
+            supabaseClient.functions.invoke('process-invoice', {
                 body: {
                     record: {
                         name: documentId,
                         bucket_id: CONFIG.SUPABASE.STORAGE_BUCKET
                     }
                 }
-            });
+            }),
+            new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('Timeout: La función tardó más de 2 minutos')), 120000)
+            )
+        ]);
 
         if (processError) {
+            console.error('❌ Error de Supabase:', processError)
             throw new Error(`Error en procesamiento: ${processError.message}`);
         }
 
+        console.log('✅ Respuesta exitosa de Edge Function:', processData)
         showUploadStatus('¡Archivo procesado exitosamente!', 'success');
         
         // Recargar datos del dashboard
@@ -764,40 +861,15 @@ function clearFilters() {
 
 // ===== FUNCIONES DE TABLA =====
 function renderFacturasTable(data = window.facturasData || []) {
-    console.log('🎨 ===== INICIO RENDERIZADO TABLA =====');
-    console.log('🎨 Renderizando tabla con datos:', data.length, 'facturas');
-    console.log('📊 Datos recibidos:', data);
-    console.log('🔍 window.facturasData:', window.facturasData);
-    console.log('🔍 data.length:', data.length);
-    console.log('🔍 data[0]:', data[0]);
-    
-    // ✅ VERIFICAR QUE LA FUNCIÓN SE EJECUTE
-    console.log('🎨 Función renderFacturasTable ejecutándose...');
-    
-    // ✅ ALERTA VISIBLE PARA CONFIRMAR EJECUCIÓN
-    console.log('🔍 ALERTA: renderFacturasTable se está ejecutando con ' + data.length + ' facturas');
-    
-    // ✅ TEST SIMPLE: Crear un botón de prueba
-    const testButton = document.createElement('button');
-    testButton.textContent = '🧪 TEST BOTÓN';
-    testButton.style.cssText = 'position: fixed; top: 10px; right: 10px; z-index: 9999; background: red; color: white; padding: 10px;';
-    testButton.onclick = () => alert('✅ El JavaScript funciona correctamente');
-    document.body.appendChild(testButton);
+    console.log('Renderizando tabla con', data.length, 'facturas');
     
     const tbody = document.querySelector('.facturas-table tbody');
     const tableEmpty = document.getElementById('tableEmpty');
     
-    console.log('🔍 ===== VERIFICANDO ELEMENTOS DOM =====');
-    console.log('🔍 tbody encontrado:', tbody);
-    console.log('🔍 tbody.innerHTML antes:', tbody ? tbody.innerHTML.substring(0, 200) : 'NO EXISTE');
-    
     if (!tbody) {
-        console.log('❌ No se encontró tbody de la tabla');
-        alert('❌ ERROR: No se encontró tbody de la tabla');
+        console.error('❌ No se encontró tbody de la tabla');
         return;
     }
-    
-    console.log('✅ tbody encontrado correctamente');
     
     // Ocultar mensaje de tabla vacía
     if (tableEmpty) {
@@ -805,16 +877,13 @@ function renderFacturasTable(data = window.facturasData || []) {
     }
     
     if (data.length === 0) {
-        console.log('⚠️ No hay datos para renderizar');
-        alert('⚠️ No hay datos para renderizar');
+        console.log('No hay datos para mostrar');
         if (tableEmpty) {
             tableEmpty.style.display = 'block';
         }
         tbody.innerHTML = '';
         return;
     }
-    
-    console.log('✅ Datos válidos encontrados, continuando con renderizado...');
 
     // Calcular rango de paginación
     const startIndex = (currentPage - 1) * itemsPerPage;
@@ -845,8 +914,13 @@ function renderFacturasTable(data = window.facturasData || []) {
     console.log('🔍 facturasPage.length:', facturasPage.length);
     console.log('🔍 Primera factura para renderizar:', facturasPage[0]);
     
-    const htmlContent = facturasPage.map(factura => `
-        <tr>
+    const htmlContent = facturasPage.map((factura, index) => `
+        <tr data-factura-id="${factura.id}">
+            <td class="expand-column">
+                <button class="expand-btn" onclick="toggleProductsRow('${factura.documento_id || factura.id}', this)" title="Ver productos">
+                    ➤
+                </button>
+            </td>
             <td>
                 <span class="estado-badge ${getEstadoClass(factura.estado)}">
                     ${getEstadoLabel(factura.estado)}
@@ -857,7 +931,7 @@ function renderFacturasTable(data = window.facturasData || []) {
             <td>${formatDate(factura.fecha_factura)}</td>
             <td>${formatCurrency(factura.importe_neto || 0)}</td>
             <td>${formatCurrency(factura.iva || 0)}</td>
-            <td class="total-factura">${formatCurrency(factura.total_factura || 0)}</td>
+            <td class="total-factura">💰 ${formatCurrency(factura.total_factura || 0)}</td>
             <td>
                 <div class="confidence-display">
                     <span class="confidence-value">${Math.round((factura.confianza_global || 0) * 100)}%</span>
@@ -873,15 +947,24 @@ function renderFacturasTable(data = window.facturasData || []) {
             </td>
             <td>
                 <div class="action-buttons">
-                    <button class="btn-action btn-view" onclick="viewFactura('${factura.id}')">
-                        Ver
+                    <button class="btn btn-avanzado" onclick="openInvoiceAdvanced('${factura.id}')" title="Ver factura con coordenadas y análisis">
+                        🎓 Enseñale
                     </button>
-                    <button class="btn-action btn-edit" onclick="editFactura('${factura.id}')">
-                        Editar
-                    </button>
-                    <button class="btn-action btn-advanced" onclick="openInvoiceAdvanced('${factura.id}')" title="Ver con coordenadas y zoom" style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer;">
-                        📍 Avanzado
-                    </button>
+                </div>
+            </td>
+        </tr>
+        <tr class="products-row" id="products-row-${factura.documento_id || factura.id}" style="display: none;">
+            <td colspan="11">
+                <div class="products-container">
+                    <div class="products-header">
+                        <div class="products-title">
+                            📦 Productos de la factura
+                            <span class="products-count" id="products-count-${factura.documento_id || factura.id}">0</span>
+                        </div>
+                    </div>
+                    <div class="products-grid" id="products-grid-${factura.documento_id || factura.id}">
+                        <!-- Los productos se cargarán dinámicamente -->
+                    </div>
                 </div>
             </td>
         </tr>
@@ -934,9 +1017,9 @@ function renderFacturasTable(data = window.facturasData || []) {
 }
 
 function getConfidenceClass(confidence) {
-    if (confidence >= 0.9) return 'high';
-    if (confidence >= 0.7) return 'medium';
-    return 'low';
+    if (confidence >= 0.8) return 'alta';
+    if (confidence >= 0.6) return 'media';
+    return 'baja';
 }
 
 function getConfidenceLabel(confidence) {
@@ -948,12 +1031,12 @@ function getConfidenceLabel(confidence) {
 // ===== FUNCIONES DE ESTADO =====
 function getEstadoClass(estado) {
     switch (estado) {
-        case 'processed': return 'estado-procesado';
-        case 'approved': return 'estado-aprobado';
-        case 'pending': return 'estado-pendiente';
-        case 'error': return 'estado-error';
-        case 'uploaded': return 'estado-subido';
-        default: return 'estado-default';
+        case 'processed': return 'procesado';
+        case 'approved': return 'procesado';
+        case 'pending': return 'pendiente';
+        case 'error': return 'error';
+        case 'uploaded': return 'pendiente';
+        default: return 'pendiente';
     }
 }
 
@@ -969,39 +1052,216 @@ function getEstadoLabel(estado) {
 }
 
 // ===== FUNCIONES DE ACCIÓN =====
-function viewFactura(id) {
-    console.log('Viendo factura:', id);
-    openFacturaModal(id, 'view');
+// Funciones viewFactura y editFactura removidas - solo usamos Enseñale ahora
+
+// ===== FUNCIÓN PARA ACTUALIZAR CABECERA DEL MODAL =====
+function updateModalHeader(factura, mode = 'view') {
+    console.log('🎨 Actualizando cabecera del modal con información específica...');
+    console.log('📊 Datos de factura recibidos:', {
+        proveedor: factura.proveedor_nombre,
+        numero: factura.numero_factura,
+        id: factura.id
+    });
+    
+    // ✅ TÍTULO PRINCIPAL - FORMATO: [PROVEEDOR - NÚMERO FACTURA]
+    const modalTitle = document.getElementById('modalTitle');
+    console.log('🔍 Elemento modalTitle encontrado:', !!modalTitle);
+    
+    if (modalTitle) {
+        const proveedor = factura.proveedor_nombre || 'Proveedor desconocido';
+        const numeroFactura = factura.numero_factura || 'S/N';
+        const tituloNuevo = `${proveedor} - ${numeroFactura}`;
+        
+        console.log('✅ Actualizando título a:', tituloNuevo);
+        modalTitle.textContent = tituloNuevo;
+        
+        // Verificar que se aplicó correctamente
+        console.log('✅ Título actual en DOM:', modalTitle.textContent);
+    } else {
+        console.error('❌ No se encontró el elemento modalTitle en el DOM');
+    }
+    
+    // ✅ BUSCAR ELEMENTOS ALTERNATIVOS (por si existen)
+    const modalFacturaTitle = document.getElementById('modalFacturaTitle');
+    if (modalFacturaTitle) {
+        const proveedor = factura.proveedor_nombre || 'Proveedor desconocido';
+        const numeroFactura = factura.numero_factura || 'S/N';
+        modalFacturaTitle.textContent = `${proveedor} - ${numeroFactura}`;
+    }
+    
+    // ✅ SUBTÍTULO CON INFORMACIÓN ADICIONAL
+    const proveedorInfo = document.getElementById('modalProveedorInfo');
+    if (proveedorInfo) {
+        const fecha = factura.fecha_factura ? formatDate(factura.fecha_factura) : 'Fecha no disponible';
+        const total = factura.total_factura ? `${factura.total_factura.toFixed(2)}€` : 'Total no disponible';
+        proveedorInfo.textContent = `${fecha} • ${total}`;
+    }
+    
+    // ✅ BADGE DE CONFIANZA
+    const confidenceBadge = document.getElementById('modalConfidenceBadge');
+    const confidenceText = document.getElementById('modalConfidenceText');
+    if (confidenceBadge && confidenceText) {
+        const confianza = factura.confianza_global || 0.5;
+        const porcentaje = Math.round(confianza * 100);
+        confidenceText.textContent = `${porcentaje}%`;
+        
+        // Actualizar color del badge según confianza
+        confidenceBadge.className = 'confidence-badge';
+        if (confianza >= 0.8) {
+            confidenceBadge.style.background = 'linear-gradient(135deg, #10B981, #34D399)';
+        } else if (confianza >= 0.6) {
+            confidenceBadge.style.background = 'linear-gradient(135deg, #F59E0B, #FBBF24)';
+        } else {
+            confidenceBadge.style.background = 'linear-gradient(135deg, #EF4444, #F87171)';
+        }
+    }
+    
+    // ✅ BADGE DE ESTADO
+    const statusBadge = document.getElementById('modalStatusBadge');
+    if (statusBadge) {
+        const estado = factura.estado || 'processed';
+        const estadoInfo = getEstadoInfo(estado);
+        
+        statusBadge.className = `status-badge ${estadoInfo.class}`;
+        statusBadge.innerHTML = `
+            <i class="${estadoInfo.icon}"></i>
+            ${estadoInfo.label}
+        `;
+    }
+    
+    console.log('✅ Cabecera del modal actualizada correctamente');
 }
 
-function editFactura(id) {
-    console.log('Editando factura:', id);
-    openFacturaModal(id, 'edit');
+function getEstadoInfo(estado) {
+    switch (estado) {
+        case 'processed':
+        case 'approved':
+            return { class: 'procesado', icon: 'fas fa-check-circle', label: 'Procesado' };
+        case 'pending':
+        case 'uploaded':
+            return { class: 'pendiente', icon: 'fas fa-clock', label: 'Pendiente' };
+        case 'error':
+            return { class: 'error', icon: 'fas fa-exclamation-triangle', label: 'Error' };
+        default:
+            return { class: 'procesado', icon: 'fas fa-check-circle', label: 'Procesado' };
+    }
+}
+
+// ===== FUNCIÓN PARA APLICAR COLORES DE CONFIANZA =====
+function aplicarColoresConfianza(factura) {
+    console.log('🎨 Aplicando colores de confianza por campo...');
+    console.log('📊 Datos de confianza:', {
+        confianza_proveedor: factura.confianza_proveedor,
+        confianza_datos_fiscales: factura.confianza_datos_fiscales,
+        confianza_importes: factura.confianza_importes
+    });
+
+    // ✅ FUNCIÓN AUXILIAR PARA DETERMINAR CLASE DE CONFIANZA
+    function getConfianzaClass(confianza) {
+        if (confianza >= 0.8) return 'campo-confianza-alta';
+        if (confianza >= 0.6) return 'campo-confianza-media';
+        return 'campo-confianza-baja';
+    }
+
+    // ✅ FUNCIÓN AUXILIAR PARA APLICAR ESTILO A UN CONTENEDOR
+    function aplicarEstiloConfianza(elementId, confianza, label = '') {
+        const element = document.getElementById(elementId);
+        if (element) {
+            const container = element.closest('.form-group') || element.parentElement;
+            if (container) {
+                // Remover clases previas
+                container.classList.remove('campo-confianza-alta', 'campo-confianza-media', 'campo-confianza-baja');
+                // Aplicar nueva clase
+                const claseConfianza = getConfianzaClass(confianza);
+                container.classList.add(claseConfianza);
+                
+                // Agregar etiqueta de confianza si no existe
+                const existingLabel = container.querySelector('.campo-confianza-label');
+                if (!existingLabel && label) {
+                    const confidenceLabel = document.createElement('span');
+                    confidenceLabel.className = `campo-confianza-label ${claseConfianza.replace('campo-confianza-', '')}`;
+                    confidenceLabel.textContent = `${Math.round(confianza * 100)}%`;
+                    confidenceLabel.title = `Confianza de ${label}: ${Math.round(confianza * 100)}%`;
+                    container.appendChild(confidenceLabel);
+                }
+                
+                console.log(`✅ Aplicado ${claseConfianza} a ${elementId} (${Math.round(confianza * 100)}%)`);
+            }
+        }
+    }
+
+    // 🏢 APLICAR A CAMPOS DE PROVEEDOR
+    const confianzaProveedor = factura.confianza_proveedor || 0.5;
+    aplicarEstiloConfianza('proveedor', confianzaProveedor, 'proveedor');
+    aplicarEstiloConfianza('cifProveedor', confianzaProveedor, 'CIF');
+
+    // 📄 APLICAR A CAMPOS DE DATOS FISCALES  
+    const confianzaDatosFiscales = factura.confianza_datos_fiscales || 0.5;
+    aplicarEstiloConfianza('numeroFactura', confianzaDatosFiscales, 'número');
+    aplicarEstiloConfianza('fechaFactura', confianzaDatosFiscales, 'fecha');
+
+    // 💰 APLICAR A CAMPOS DE IMPORTES
+    const confianzaImportes = factura.confianza_importes || 0.5;
+    aplicarEstiloConfianza('baseImponible', confianzaImportes, 'base imponible');
+    aplicarEstiloConfianza('ivaAmount', confianzaImportes, 'IVA');
+    aplicarEstiloConfianza('totalConIva', confianzaImportes, 'total');
+
+    console.log('🎨 Colores de confianza aplicados correctamente');
 }
 
 // ===== FUNCIONES DEL MODAL =====
 async function openFacturaModal(facturaId, mode = 'view') {
     try {
         console.log('🔍 Buscando factura con ID:', facturaId);
-        console.log('📊 Datos disponibles:', window.facturasData);
-        console.log('📋 Total de facturas:', (window.facturasData || []).length);
         
-        // Buscar la factura en los datos
-        const factura = (window.facturasData || []).find(f => f.id === facturaId);
-        console.log('✅ Factura encontrada:', factura);
+        // 🚀 SOLUCIÓN: Obtener datos COMPLETOS desde la base de datos
+        let factura = null;
+        
+        try {
+            // 1. Intentar obtener datos completos desde datos_extraidos_facturas
+            const { data: datosExtraidos, error: errorExtraidos } = await supabaseClient
+                .from('datos_extraidos_facturas')
+                .select('*')
+                .eq('documento_id', facturaId)
+                .single();
+            
+            if (datosExtraidos && !errorExtraidos) {
+                console.log('✅ Datos extraídos encontrados:', datosExtraidos);
+                factura = {
+                    ...datosExtraidos,
+                    id: facturaId, // Asegurar que tenga el ID correcto
+                    // Mapear campos si es necesario
+                    numero_factura: datosExtraidos.numero_factura,
+                    proveedor_nombre: datosExtraidos.proveedor_nombre,
+                    proveedor_cif: datosExtraidos.proveedor_cif,
+                    base_imponible: datosExtraidos.base_imponible,
+                    cuota_iva: datosExtraidos.cuota_iva, // ← ESTE ES EL CAMPO CLAVE
+                    total_factura: datosExtraidos.total_factura,
+                    estado: 'processed'
+                };
+            } else {
+                console.log('⚠️ No se encontraron datos extraídos, usando datos del dashboard');
+                // 2. Fallback a datos del dashboard
+                factura = (window.facturasData || []).find(f => f.id === facturaId);
+            }
+        } catch (dbError) {
+            console.log('⚠️ Error obteniendo datos extraídos, usando datos del dashboard:', dbError);
+            // 3. Fallback a datos del dashboard
+            factura = (window.facturasData || []).find(f => f.id === facturaId);
+        }
         
         if (!factura) {
             console.error('❌ Factura no encontrada con ID:', facturaId);
-            console.log('🔍 IDs disponibles:', (window.facturasData || []).map(f => f.id));
             showNotification('Factura no encontrada', 'error');
             return;
         }
+        
+        console.log('✅ Factura preparada para modal:', factura);
+        console.log('💰 IVA disponible:', factura.cuota_iva);
 
-        // Cambiar el título del modal según el modo
-        const modalTitle = document.querySelector('#facturaModal .modal-header h2');
-        if (modalTitle) {
-            modalTitle.textContent = mode === 'view' ? 'Ver Factura' : 'Editar Factura';
-        }
+        // ✅ ACTUALIZAR CABECERA BRAIN STORMERS CON INFORMACIÓN ESPECÍFICA
+        console.log('🔄 Llamando updateModalHeader con factura:', factura.proveedor_nombre, factura.numero_factura);
+        updateModalHeader(factura, mode);
 
         // Cargar datos en el modal
         loadFacturaDataInModal(factura, mode);
@@ -1011,11 +1271,21 @@ async function openFacturaModal(facturaId, mode = 'view') {
         if (modal) {
             modal.classList.add('active');
             document.body.style.overflow = 'hidden'; // Prevenir scroll
+            
+            // ✅ DAR UN MOMENTO AL DOM PARA RENDERIZAR Y LUEGO ACTUALIZAR TÍTULO
+            setTimeout(() => {
+                console.log('🔄 Actualizando título después de mostrar modal...');
+                updateModalHeader(factura, mode);
+            }, 100);
         }
 
         // Cargar el PDF de la factura
         console.log('🔄 Iniciando carga del PDF...');
         await loadPdfFromFacturaId(facturaId);
+
+        // Cargar productos en el modal
+        console.log('🛒 Cargando productos para el modal...');
+        await loadProductsInModal(facturaId);
 
         console.log('Modal abierto para factura:', facturaId, 'Modo:', mode);
 
@@ -1027,7 +1297,7 @@ async function openFacturaModal(facturaId, mode = 'view') {
 
 function loadFacturaDataInModal(factura, mode) {
     try {
-        // Cargar datos básicos
+        // Cargar datos básicos con colores de confianza
         document.getElementById('numeroFactura').value = factura.numero_factura || '';
         document.getElementById('proveedor').value = factura.proveedor_nombre || '';
         document.getElementById('cifProveedor').value = factura.proveedor_cif || '';
@@ -1035,6 +1305,9 @@ function loadFacturaDataInModal(factura, mode) {
         document.getElementById('fechaFactura').value = factura.fecha_factura || '';
         document.getElementById('fechaVencimiento').value = factura.fecha_vencimiento || '';
         document.getElementById('concepto').value = factura.concepto || '';
+        
+        // ✅ APLICAR COLORES DE CONFIANZA A CAMPOS ESPECÍFICOS
+        aplicarColoresConfianza(factura);
         
         // Actualizar estado de la factura
         const statusElement = document.getElementById('facturaStatus');
@@ -1624,6 +1897,13 @@ async function loadRealDataFromSupabase() {
         // Mostrar loading al inicio
         showTableLoading();
         
+        // Verificar que hay RESTAURANTE_ID
+        if (!CONFIG.TENANT.RESTAURANTE_ID) {
+            console.error('❌ No hay RESTAURANTE_ID configurado');
+            hideTableLoading();
+            throw new Error('No hay restaurante configurado');
+        }
+        
         // Cargar facturas de la tabla datos_extraidos_facturas
         const { data: facturasFromSupabase, error: facturasError } = await supabaseClient
             .from('datos_extraidos_facturas')
@@ -1713,6 +1993,9 @@ async function loadRealDataFromSupabase() {
         
         // Calcular métricas reales
         updateRealMetrics(transformedFacturas);
+        
+        // Actualizar métricas avanzadas y gráficos
+        await updateAdvancedMetrics(transformedFacturas);
         
         // Renderizar tabla
         console.log('🎯 ANTES de renderFacturasTable()');
@@ -2154,136 +2437,1022 @@ function debugFacturasData() {
     }
 }
 
+// ===== FUNCIONES PARA PRODUCTOS EN MODAL =====
+
+// Función para cargar productos en el modal
+async function loadProductsInModal(facturaId) {
+    const loadingElement = document.getElementById('modalProductsLoading');
+    const containerElement = document.getElementById('modalProductsContainer');
+    const noProductsElement = document.getElementById('modalNoProducts');
+    const countElement = document.getElementById('modalProductsCount');
+    
+    try {
+        // Mostrar loading
+        if (loadingElement) loadingElement.style.display = 'flex';
+        if (containerElement) containerElement.style.display = 'none';
+        if (noProductsElement) noProductsElement.style.display = 'none';
+        
+        console.log('🛒 Cargando productos para modal de factura:', facturaId);
+        
+        const { data: productos, error } = await supabaseClient
+            .from('productos_extraidos')
+            .select(`
+                *,
+                productos_maestro!fk_productos_extraidos_maestro (
+                    nombre_normalizado,
+                    categoria_principal,
+                    unidad_base,
+                    precio_ultimo
+                )
+            `)
+            .eq('documento_id', facturaId)
+            .order('id', { ascending: true });
+            
+        // Obtener precio anterior para cada producto
+        if (productos) {
+            for (let producto of productos) {
+                if (producto.producto_maestro_id) {
+                    console.log(`🔍 [MODAL] Obteniendo precio anterior para: ${producto.descripcion_original} (maestro_id: ${producto.producto_maestro_id})`);
+                    producto.precio_anterior = await getPrecioAnterior(producto.producto_maestro_id, producto.fecha_extraccion);
+                    console.log(`💰 [MODAL] Precio anterior: ${producto.precio_anterior}`);
+                }
+            }
+        }
+            
+        if (error) {
+            console.error('❌ Error cargando productos para modal:', error);
+            throw error;
+        }
+        
+        console.log(`✅ ${productos?.length || 0} productos cargados para modal`);
+        
+        // Ocultar loading
+        if (loadingElement) loadingElement.style.display = 'none';
+        
+        // Actualizar contador
+        if (countElement) {
+            countElement.textContent = `${productos?.length || 0} productos`;
+        }
+        
+        if (!productos || productos.length === 0) {
+            // Mostrar mensaje de no productos
+            if (noProductsElement) noProductsElement.style.display = 'block';
+            if (containerElement) containerElement.style.display = 'none';
+        } else {
+            // Renderizar productos
+            if (containerElement) {
+                containerElement.style.display = 'grid';
+                renderProductsInModal(productos);
+            }
+            if (noProductsElement) noProductsElement.style.display = 'none';
+        }
+        
+    } catch (error) {
+        console.error('❌ Error en loadProductsInModal:', error);
+        
+        // Ocultar loading y mostrar error
+        if (loadingElement) loadingElement.style.display = 'none';
+        if (containerElement) containerElement.style.display = 'none';
+        if (noProductsElement) {
+            noProductsElement.style.display = 'block';
+            noProductsElement.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-icon">⚠️</div>
+                    <h4>Error cargando productos</h4>
+                    <p>No se pudieron cargar los productos de esta factura</p>
+                </div>
+            `;
+        }
+        if (countElement) {
+            countElement.textContent = 'Error cargando';
+        }
+    }
+}
+
+// Función para renderizar productos en el modal
+function renderProductsInModal(productos) {
+    const container = document.getElementById('modalProductsContainer');
+    if (!container) return;
+    
+    container.innerHTML = productos.map(producto => {
+        const confidence = producto.confianza_linea || 0.5;
+        const confidenceClass = getConfidenceClass(confidence);
+        
+        return `
+            <div class="product-card ${confidenceClass}">
+                <div class="product-name">${producto.descripcion_original || 'Producto sin descripción'}</div>
+                <div class="product-details">
+                    <span>Cantidad: ${producto.cantidad || 0} ${producto.unidad_medida || 'ud'}</span>
+                    <span class="${getPriceChangeClass(producto.precio_unitario_sin_iva, producto.precio_anterior)}">
+                        Precio: ${formatCurrency(producto.precio_unitario_sin_iva || 0)}
+                        ${producto.precio_anterior ? `<span class="precio-anterior">(Anterior: ${formatCurrency(producto.precio_anterior)})</span>` : '<span class="precio-anterior">(Primera compra)</span>'}
+                    </span>
+                    <span>Total: ${formatCurrency(producto.precio_total_linea_sin_iva || 0)}</span>
+                    <span>IVA: ${producto.tipo_iva || 21}%</span>
+                    ${(() => {
+                        // Intentar obtener formato de formato_comercial o extraer de la descripción
+                        let formato = producto.formato_comercial;
+                        
+                        if (!formato && producto.descripcion_original) {
+                            // Buscar patrones de formato en la descripción
+                            const formatoMatch = producto.descripcion_original.match(/(\d+(?:[.,]\d+)?\s*(?:KG|kg|Kg|L|l|LITRO|litro|ML|ml|GR|gr|GRAMOS|gramos|UNIDADES|ud|UD))/i);
+                            if (formatoMatch) {
+                                formato = formatoMatch[1].toUpperCase();
+                            }
+                        }
+                        
+                        return formato ? `<span>📦 Formato: ${formato}</span>` : '';
+                    })()}
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+// ===== FUNCIONES PARA TABLA EXPANDIBLE DE PRODUCTOS =====
+
+// Función para alternar la fila de productos
+async function toggleProductsRow(facturaId, buttonElement) {
+    const productsRow = document.getElementById(`products-row-${facturaId}`);
+    const isExpanded = buttonElement.classList.contains('expanded');
+    
+    if (!isExpanded) {
+        // Expandir
+        buttonElement.classList.add('expanded');
+        productsRow.style.display = 'table-row';
+        productsRow.classList.add('expanding');
+        
+        // Cargar productos si no están cargados
+        await loadProductsForFactura(facturaId);
+    } else {
+        // Contraer
+        buttonElement.classList.remove('expanded');
+        productsRow.style.display = 'none';
+        productsRow.classList.remove('expanding');
+    }
+}
+
+// Función para cargar productos de una factura
+async function loadProductsForFactura(facturaId) {
+    try {
+        console.log('🛒 Cargando productos para factura:', facturaId);
+        
+        const { data: productos, error } = await supabaseClient
+            .from('productos_extraidos')
+            .select(`
+                *,
+                productos_maestro!fk_productos_extraidos_maestro (
+                    nombre_normalizado,
+                    categoria_principal,
+                    unidad_base,
+                    precio_ultimo
+                )
+            `)
+            .eq('documento_id', facturaId)
+            .order('id', { ascending: true });
+            
+        // Obtener precio anterior para cada producto
+        if (productos) {
+            for (let producto of productos) {
+                if (producto.producto_maestro_id) {
+                    console.log(`🔍 [MODAL] Obteniendo precio anterior para: ${producto.descripcion_original} (maestro_id: ${producto.producto_maestro_id})`);
+                    producto.precio_anterior = await getPrecioAnterior(producto.producto_maestro_id, producto.fecha_extraccion);
+                    console.log(`💰 [MODAL] Precio anterior: ${producto.precio_anterior}`);
+                }
+            }
+        }
+            
+        if (error) {
+            console.error('❌ Error cargando productos:', error);
+            showNotification('Error cargando productos', 'error');
+            return;
+        }
+        
+        console.log(`✅ ${productos?.length || 0} productos cargados para factura ${facturaId}`);
+        
+        renderProductsInRow(facturaId, productos || []);
+        
+    } catch (error) {
+        console.error('❌ Error en loadProductsForFactura:', error);
+        showNotification('Error cargando productos', 'error');
+    }
+}
+
+// Función para renderizar productos en la fila expandida
+function renderProductsInRow(facturaId, productos) {
+    const productsGrid = document.getElementById(`products-grid-${facturaId}`);
+    const productsCount = document.getElementById(`products-count-${facturaId}`);
+    
+    if (!productsGrid || !productsCount) {
+        console.error('❌ No se encontraron elementos para renderizar productos');
+        return;
+    }
+    
+    // Actualizar contador
+    productsCount.textContent = productos.length;
+    
+    if (productos.length === 0) {
+        productsGrid.innerHTML = `
+            <div class="no-products">
+                <p style="color: #6b7280; text-align: center; grid-column: 1/-1; padding: 20px;">
+                    📦 No se encontraron productos extraídos en esta factura
+                </p>
+            </div>
+        `;
+        return;
+    }
+    
+    // Renderizar productos
+    // Renderizar productos con formato horizontal compacto como en la imagen
+    productsGrid.innerHTML = `
+        <div class="products-compact-horizontal">
+            ${productos.map(producto => {
+        const confidence = producto.confianza_linea || 0.5;
+        const confidenceClass = getConfidenceClass(confidence);
+        const maestro = producto.productos_maestro;
+        
+        return `
+                    <div class="product-card-compact">
+                        <!-- Título del producto -->
+                        <div class="product-title-compact">
+                    ${producto.descripcion_original || 'Producto sin descripción'}
+                </div>
+                
+                        <!-- Grid horizontal de datos -->
+                        <div class="product-data-horizontal">
+                            <!-- Cantidad -->
+                            <div class="data-block">
+                                <div class="data-label-compact">Cantidad:</div>
+                                <div class="data-value-compact quantity">${producto.cantidad || 0} ${producto.unidad_medida || 'ud'}</div>
+                    </div>
+                    
+                            <!-- Precio Unit -->
+                            <div class="data-block">
+                                <div class="data-label-compact">Precio unit.:</div>
+                                <div class="data-value-compact price ${getPriceChangeClass(producto.precio_unitario_sin_iva, producto.precio_anterior)}">
+                                    ${producto.precio_unitario_sin_iva ? formatCurrency(producto.precio_unitario_sin_iva) : '-'}
+                                    ${producto.precio_anterior ? `<span class="precio-anterior">(Ant: ${formatCurrency(producto.precio_anterior)})</span>` : '<span class="precio-anterior">(Primera compra)</span>'}
+                                </div>
+                    </div>
+                    
+                            <!-- Total línea -->
+                            <div class="data-block">
+                                <div class="data-label-compact">Total línea:</div>
+                                <div class="data-value-compact total">${formatCurrency(producto.precio_total_linea_sin_iva || 0)}</div>
+                    </div>
+                    
+                            <!-- Formato -->
+                            ${(() => {
+                                // Intentar obtener formato de formato_comercial o extraer de la descripción
+                                let formato = producto.formato_comercial;
+                                
+                                if (!formato && producto.descripcion_original) {
+                                    // Buscar patrones de formato en la descripción
+                                    const formatoMatch = producto.descripcion_original.match(/(\d+(?:[.,]\d+)?\s*(?:KG|kg|Kg|L|l|LITRO|litro|ML|ml|GR|gr|GRAMOS|gramos|UNIDADES|ud|UD))/i);
+                                    if (formatoMatch) {
+                                        formato = formatoMatch[1].toUpperCase();
+                                    }
+                                }
+                                
+                                return formato ? `
+                                    <div class="data-block">
+                                        <div class="data-label-compact">📦 Formato:</div>
+                                        <div class="data-value-compact format">${formato}</div>
+                    </div>
+                                ` : '';
+                            })()}
+                            
+                            <!-- €/kg - €/L -->
+                            ${producto.precio_por_kg || producto.precio_por_litro ? `
+                                <div class="data-block unit-price-block">
+                                    <div class="data-label-compact">💰 €/Unidad:</div>
+                                    <div class="data-value-compact unit-prices">
+                                        ${producto.precio_por_kg ? `${formatCurrency(producto.precio_por_kg)}/kg` : ''}
+                                        ${producto.precio_por_litro ? `${formatCurrency(producto.precio_por_litro)}/L` : ''}
+                        </div>
+                                </div>
+                            ` : ''}
+                            
+                            <!-- IVA -->
+                            <div class="data-block">
+                                <div class="data-label-compact">IVA:</div>
+                                <div class="data-value-compact iva">${producto.tipo_iva || 21}%</div>
+                            </div>
+                            
+                            <!-- Categoría -->
+                            <div class="data-block">
+                                <div class="data-label-compact">Categoría:</div>
+                                <div class="data-value-compact category">${maestro?.categoria_principal || 'general'}</div>
+                            </div>
+                            
+                            <!-- Normalizado -->
+                            ${maestro?.nombre_normalizado ? `
+                                <div class="data-block">
+                                    <div class="data-label-compact">Normalizado:</div>
+                                    <div class="data-value-compact normalized">${maestro.nombre_normalizado}</div>
+                        </div>
+                    ` : ''}
+                </div>
+                
+                        <!-- Confianza -->
+                        <div class="product-confidence-compact ${confidenceClass}">
+                    Confianza: ${Math.round(confidence * 100)}%
+                </div>
+            </div>
+        `;
+            }).join('')}
+        </div>
+    `;
+}
+
+// ===== FUNCIONES PARA MÉTRICAS AVANZADAS =====
+
+// Función para actualizar todas las métricas avanzadas
+async function updateAdvancedMetrics(facturas) {
+    try {
+        console.log('📊 Actualizando métricas avanzadas...');
+        
+        // Métricas básicas
+        updateBasicMetrics(facturas);
+        
+        // Métricas de pagos
+        await updatePaymentMetrics();
+        
+        // Métricas de proveedores y productos
+        await updateSuppliersAndProductsMetrics();
+        
+        // Inicializar gráficos
+        // await initializeCharts(facturas); // ✅ TEMPORALMENTE DESHABILITADO
+        
+        console.log('✅ Métricas avanzadas actualizadas');
+        
+    } catch (error) {
+        console.error('❌ Error actualizando métricas avanzadas:', error);
+    }
+}
+
+// Función para métricas básicas
+function updateBasicMetrics(facturas) {
+    const totalFacturas = facturas.length;
+    const pendientesRevision = facturas.filter(f => f.requiere_revision || f.confianza_global < 0.7).length;
+    const aprobadas = facturas.filter(f => f.estado === 'approved').length;
+    const totalImportes = facturas.reduce((sum, f) => sum + (f.total_factura || 0), 0);
+    
+    // Actualizar elementos
+    updateMetricValue('total', totalFacturas);
+    updateMetricValue('pendientes', pendientesRevision);
+    updateMetricValue('aprobadas', aprobadas);
+    updateMetricValue('importes', formatCurrency(totalImportes));
+}
+
+// Función para métricas de pagos usando datos reales
+async function updatePaymentMetrics() {
+    try {
+        const now = new Date();
+        
+        // Obtener facturas con información de proveedores para calcular fechas de vencimiento
+        const { data: facturasConProveedores, error } = await supabaseClient
+            .from('datos_extraidos_facturas')
+            .select(`
+                *,
+                proveedores!inner (
+                    dias_pago,
+                    nombre
+                )
+            `)
+            .eq('restaurante_id', CONFIG.TENANT.RESTAURANTE_ID)
+            .not('proveedores.dias_pago', 'is', null);
+            
+        if (error) {
+            console.error('❌ Error obteniendo facturas con proveedores:', error);
+            return;
+        }
+        
+        let pagos7Dias = 0;
+        let pagos15Dias = 0;
+        let pagos30Dias = 0;
+        let facturas7Dias = 0;
+        let facturas15Dias = 0;
+        let facturas30Dias = 0;
+        let facturasVencidas = 0;
+        
+        facturasConProveedores.forEach(factura => {
+            const fechaFactura = new Date(factura.fecha_factura);
+            const diasPago = factura.proveedores.dias_pago || 30;
+            const fechaVencimiento = new Date(fechaFactura.getTime() + diasPago * 24 * 60 * 60 * 1000);
+            const diasHastaVencimiento = Math.ceil((fechaVencimiento.getTime() - now.getTime()) / (24 * 60 * 60 * 1000));
+            
+            const importe = factura.total_factura || 0;
+            
+            if (diasHastaVencimiento < 0) {
+                // Ya vencida
+                facturasVencidas++;
+            } else if (diasHastaVencimiento <= 7) {
+                pagos7Dias += importe;
+                facturas7Dias++;
+            } else if (diasHastaVencimiento <= 15) {
+                pagos15Dias += importe;
+                facturas15Dias++;
+            } else if (diasHastaVencimiento <= 30) {
+                pagos30Dias += importe;
+                facturas30Dias++;
+            }
+        });
+        
+        // Actualizar métricas
+        updateMetricValue('pagos_7_dias', formatCurrency(pagos7Dias));
+        updateMetricTrend('pagos_7_dias', `${facturas7Dias} facturas pendientes`);
+        
+        updateMetricValue('pagos_15_dias', formatCurrency(pagos15Dias));
+        updateMetricTrend('pagos_15_dias', `${facturas15Dias} facturas pendientes`);
+        
+        updateMetricValue('pagos_30_dias', formatCurrency(pagos30Dias));
+        updateMetricTrend('pagos_30_dias', `${facturas30Dias} facturas pendientes`);
+        
+        updateMetricValue('facturas_vencidas', facturasVencidas);
+        
+    } catch (error) {
+        console.error('❌ Error actualizando métricas de pagos:', error);
+    }
+}
+
+// Función para métricas de proveedores y productos
+async function updateSuppliersAndProductsMetrics() {
+    try {
+        const oneWeekAgo = new Date();
+        oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+        
+        // Contar proveedores totales (de la tabla proveedores)
+        const { data: proveedores, error: proveedoresError } = await supabaseClient
+            .from('proveedores')
+            .select('id')
+            .eq('restaurante_id', CONFIG.TENANT.RESTAURANTE_ID)
+            .eq('es_activo', true);
+            
+        if (!proveedoresError) {
+            updateMetricValue('total_proveedores', proveedores.length);
+        }
+        
+        // Contar nuevos proveedores esta semana
+        const { data: nuevosProveedores, error: nuevosProveedoresError } = await supabaseClient
+            .from('proveedores')
+            .select('id')
+            .eq('restaurante_id', CONFIG.TENANT.RESTAURANTE_ID)
+            .eq('es_activo', true)
+            .gte('fecha_creacion', oneWeekAgo.toISOString());
+            
+        if (!nuevosProveedoresError) {
+            updateMetricValue('nuevos_proveedores', nuevosProveedores.length);
+            updateMetricTrend('total_proveedores', `${nuevosProveedores.length} nuevos esta semana`);
+        }
+        
+        // Contar productos maestros
+        const { data: productos, error: productosError } = await supabaseClient
+            .from('productos_maestro')
+            .select('id')
+            .eq('restaurante_id', CONFIG.TENANT.RESTAURANTE_ID);
+            
+        if (!productosError) {
+            updateMetricValue('total_productos', productos.length);
+        }
+        
+        // Contar nuevos productos esta semana
+        const { data: nuevosProductos, error: nuevosProductosError } = await supabaseClient
+            .from('productos_maestro')
+            .select('id')
+            .eq('restaurante_id', CONFIG.TENANT.RESTAURANTE_ID)
+            .gte('fecha_creacion', oneWeekAgo.toISOString());
+            
+        if (!nuevosProductosError) {
+            updateMetricValue('nuevos_productos', nuevosProductos.length);
+            updateMetricTrend('total_productos', `${nuevosProductos.length} nuevos esta semana`);
+        }
+        
+    } catch (error) {
+        console.error('❌ Error actualizando métricas de proveedores y productos:', error);
+    }
+}
+
+// ===== FUNCIÓN CORREGIDA PARA OBTENER PRECIO ANTERIOR =====
+async function getPrecioAnterior(productoMaestroId, fechaActual) {
+    try {
+        console.log(`🔍 === DEBUG getPrecioAnterior ===`);
+        console.log(`📝 Producto maestro ID: ${productoMaestroId}`);
+        console.log(`📅 Fecha actual: ${fechaActual}`);
+        
+        if (!productoMaestroId) {
+            console.log(`❌ No hay producto_maestro_id, retornando null`);
+            return null;
+        }
+        
+        const fechaComparacion = fechaActual ? fechaActual.split('T')[0] : new Date().toISOString().split('T')[0];
+        console.log(`📅 Buscando precios anteriores a: ${fechaComparacion}`);
+        
+        // 🎯 BUSCAR EN HISTORIAL DE PRECIOS (CORREGIDO - POR FECHA DE FACTURA)
+        console.log(`🔍 Buscando en historial_precios_productos...`);
+        const { data: historial, error } = await supabaseClient
+            .from('historial_precios_productos')
+            .select('id, precio_unitario_sin_iva, fecha_compra, numero_documento, documento_id, fecha_registro')
+            .eq('producto_maestro_id', productoMaestroId)
+            .order('fecha_compra', { ascending: false }) // Ordenar por fecha_compra (fecha de factura) para obtener los más recientes
+            .limit(10); // Obtener más registros para debug
+            
+        if (error) {
+            console.error('❌ Error obteniendo historial:', error);
+            return null;
+        }
+        
+        console.log(`📊 Historial encontrado (${historial?.length || 0} registros):`);
+        if (historial && historial.length > 0) {
+            historial.forEach((h, i) => {
+                console.log(`   ${i + 1}. Fecha: ${h.fecha_compra}, Precio: ${h.precio_unitario_sin_iva}€, Doc: ${h.numero_documento || 'N/A'}, Registro: ${h.fecha_registro}`);
+            });
+        } else {
+            console.log(`   ℹ️ No hay registros en historial_precios_productos`);
+            return null;
+        }
+        
+        // 🎯 LÓGICA MEJORADA: Buscar precios diferentes al actual
+        if (historial && historial.length >= 2) {
+            const precioActual = historial[0].precio_unitario_sin_iva;
+            console.log(`💰 Precio actual: ${precioActual}€`);
+            
+            // Buscar el primer precio diferente al actual
+            for (let i = 1; i < historial.length; i++) {
+                const precioComparar = historial[i].precio_unitario_sin_iva;
+                if (Math.abs(precioActual - precioComparar) > 0.01) { // Si el precio es diferente
+                    console.log(`✅ Precio anterior encontrado: ${precioComparar}€ (fecha: ${historial[i].fecha_compra}, doc: ${historial[i].numero_documento || 'N/A'})`);
+                    console.log(`📊 Precio actual vs anterior: ${precioActual}€ vs ${precioComparar}€`);
+                    return precioComparar;
+                }
+            }
+            
+            // Si todos los precios son iguales
+            console.log(`ℹ️ Todos los precios son iguales (${precioActual}€), no hay variación`);
+            return null;
+        } else if (historial && historial.length === 1) {
+            console.log(`ℹ️ Primera compra de este producto (solo 1 registro en historial)`);
+            return null;
+        } else {
+            console.log(`ℹ️ No hay historial de precios para este producto`);
+            return null;
+        }
+    } catch (error) {
+        console.error('❌ Error en getPrecioAnterior:', error);
+        return null;
+    }
+}
+
+// ===== FUNCIÓN PARA OBTENER CLASE DE COLOR SEGÚN CAMBIO DE PRECIO =====
+function getPriceChangeClass(precioActual, precioAnterior) {
+    if (!precioAnterior) return 'price-first'; // Primera compra
+    
+    if (Math.abs(precioActual - precioAnterior) < 0.01) {
+        return 'price-same'; // Verde - precio igual
+    } else {
+        return 'price-changed'; // Rojo - precio cambió
+    }
+}
+
+// Función auxiliar para actualizar valor de métrica
+function updateMetricValue(metricKey, value) {
+    const element = document.querySelector(`[data-metric="${metricKey}"] .metric-value`);
+    if (element) {
+        element.textContent = value;
+    }
+}
+
+// Función auxiliar para actualizar tendencia de métrica
+function updateMetricTrend(metricKey, trend) {
+    const element = document.querySelector(`[data-metric="${metricKey}"] .metric-trend`);
+    if (element) {
+        element.textContent = trend;
+    }
+}
+
+// ===== INICIALIZACIÓN DE GRÁFICOS ===== 
+
+// Variables globales para los gráficos
+let proveedorChart = null;
+let categoriaChart = null;
+let evolutionChart = null;
+
+// Función para inicializar todos los gráficos
+async function initializeCharts(facturas) {
+    try {
+        console.log('📈 Inicializando gráficos...');
+        
+        // ✅ Verificar que Chart.js esté disponible
+        if (typeof Chart === 'undefined') {
+            console.log('⏳ Chart.js no está disponible aún, esperando...');
+            // Esperar hasta que Chart esté disponible
+            await new Promise((resolve) => {
+                const checkChart = () => {
+                    if (typeof Chart !== 'undefined') {
+                        resolve();
+                    } else {
+                        setTimeout(checkChart, 100);
+                    }
+                };
+                checkChart();
+            });
+        }
+        
+        console.log('✅ Chart.js disponible, iniciando gráficos...');
+        
+        await initProveedorChart(facturas);
+        await initCategoriaChart();
+        await initEvolutionChart(facturas);
+        
+        console.log('✅ Gráficos inicializados correctamente');
+        
+    } catch (error) {
+        console.error('❌ Error inicializando gráficos:', error);
+    }
+}
+
+// Gráfico de distribución por proveedor
+async function initProveedorChart(facturas) {
+    const ctx = document.getElementById('proveedorChart');
+    if (!ctx) return;
+    
+    // Calcular datos
+    const proveedorData = {};
+    facturas.forEach(f => {
+        const proveedor = f.proveedor_nombre || 'Sin proveedor';
+        proveedorData[proveedor] = (proveedorData[proveedor] || 0) + (f.total_factura || 0);
+    });
+    
+    // Tomar top 10 proveedores
+    const sortedProveedores = Object.entries(proveedorData)
+        .sort(([,a], [,b]) => b - a)
+        .slice(0, 10);
+    
+    const labels = sortedProveedores.map(([proveedor]) => 
+        proveedor.length > 20 ? proveedor.substring(0, 20) + '...' : proveedor
+    );
+    const data = sortedProveedores.map(([,total]) => total);
+    
+    // Crear gráfico
+    if (proveedorChart) {
+        proveedorChart.destroy();
+    }
+    
+    proveedorChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: labels,
+            datasets: [{
+                data: data,
+                backgroundColor: [
+                    '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6',
+                    '#06b6d4', '#84cc16', '#f97316', '#ec4899', '#6366f1'
+                ],
+                borderWidth: 2,
+                borderColor: '#ffffff'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        padding: 20,
+                        usePointStyle: true
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const label = context.label || '';
+                            const value = formatCurrency(context.parsed);
+                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            const percentage = ((context.parsed / total) * 100).toFixed(1);
+                            return `${label}: ${value} (${percentage}%)`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+// Gráfico de categorías (simulado - necesita datos de productos)
+async function initCategoriaChart() {
+    const ctx = document.getElementById('categoriaChart');
+    if (!ctx) return;
+    
+    try {
+        // Obtener datos de categorías de productos
+        const { data: productos, error } = await supabaseClient
+            .from('productos_maestro')
+            .select('categoria_principal')
+            .eq('restaurante_id', CONFIG.TENANT.RESTAURANTE_ID);
+            
+        let categoriaData = {};
+        
+        if (!error && productos) {
+            productos.forEach(p => {
+                const categoria = p.categoria_principal || 'General';
+                categoriaData[categoria] = (categoriaData[categoria] || 0) + 1;
+            });
+        } else {
+            // Datos de ejemplo si no hay productos
+            categoriaData = {
+                'General': 10,
+                'Condimentos': 8,
+                'Carnes': 6,
+                'Verduras': 5,
+                'Bebidas': 4
+            };
+        }
+        
+        const labels = Object.keys(categoriaData);
+        const data = Object.values(categoriaData);
+        
+        if (categoriaChart) {
+            categoriaChart.destroy();
+        }
+        
+        categoriaChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Productos por categoría',
+                    data: data,
+                    backgroundColor: 'rgba(59, 130, 246, 0.8)',
+                    borderColor: 'rgba(59, 130, 246, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1
+                        }
+                    }
+                }
+            }
+        });
+        
+    } catch (error) {
+        console.error('❌ Error creando gráfico de categorías:', error);
+    }
+}
+
+// Gráfico de evolución de facturas
+async function initEvolutionChart(facturas) {
+    const ctx = document.getElementById('evolutionChart');
+    if (!ctx) return;
+    
+    // Generar últimos 30 días
+    const last30Days = [];
+    for (let i = 29; i >= 0; i--) {
+        const date = new Date();
+        date.setDate(date.getDate() - i);
+        last30Days.push(date.toISOString().split('T')[0]);
+    }
+    
+    // Agrupar facturas por día
+    const facturasPorDia = {};
+    const importesPorDia = {};
+    
+    last30Days.forEach(day => {
+        facturasPorDia[day] = 0;
+        importesPorDia[day] = 0;
+    });
+    
+    facturas.forEach(f => {
+        const day = f.fecha_factura ? f.fecha_factura.split('T')[0] : null;
+        if (day && facturasPorDia.hasOwnProperty(day)) {
+            facturasPorDia[day]++;
+            importesPorDia[day] += f.total_factura || 0;
+        }
+    });
+    
+    const labels = last30Days.map(day => {
+        const date = new Date(day);
+        return date.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' });
+    });
+    
+    if (evolutionChart) {
+        evolutionChart.destroy();
+    }
+    
+    evolutionChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Número de facturas',
+                data: Object.values(facturasPorDia),
+                borderColor: 'rgba(59, 130, 246, 1)',
+                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                tension: 0.4,
+                yAxisID: 'y'
+            }, {
+                label: 'Importe total (€)',
+                data: Object.values(importesPorDia),
+                borderColor: 'rgba(16, 185, 129, 1)',
+                backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                tension: 0.4,
+                yAxisID: 'y1'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+                mode: 'index',
+                intersect: false,
+            },
+            scales: {
+                x: {
+                    display: true,
+                    title: {
+                        display: true,
+                        text: 'Fecha'
+                    }
+                },
+                y: {
+                    type: 'linear',
+                    display: true,
+                    position: 'left',
+                    title: {
+                        display: true,
+                        text: 'Número de facturas'
+                    },
+                    beginAtZero: true
+                },
+                y1: {
+                    type: 'linear',
+                    display: true,
+                    position: 'right',
+                    title: {
+                        display: true,
+                        text: 'Importe (€)'
+                    },
+                    beginAtZero: true,
+                    grid: {
+                        drawOnChartArea: false,
+                    },
+                }
+            },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        afterBody: function(context) {
+                            const index = context[0].dataIndex;
+                            const fecha = last30Days[index];
+                            return `Fecha: ${fecha}`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
 // ===== MODAL HÍBRIDO DE PDF =====
 async function openInvoiceAdvanced(facturaId) {
     try {
         console.log('🚀 ===== INICIO OPENINVOICEADVANCED =====');
         console.log('🚀 Abriendo modal híbrido para factura:', facturaId);
-        console.log('🚀 Función openInvoiceAdvanced ejecutándose...');
         
-
+        // ✅ VERIFICAR INICIALIZACIÓN
         if (!window.hybridPDFModal) {
-            throw new Error('Modal híbrido no inicializado');
+            console.error('❌ Modal híbrido no inicializado');
+            showNotification('Modal híbrido no disponible. Recargando página...', 'warning');
+            setTimeout(() => window.location.reload(), 1500);
+            return;
         }
         
-        // Buscar la factura en los datos
+        // ✅ BUSCAR LA FACTURA
         const factura = (window.facturasData || []).find(f => f.id === facturaId);
         if (!factura) {
-            throw new Error('Factura no encontrada');
+            throw new Error('Factura no encontrada en los datos cargados');
         }
         
-        console.log('✅ Factura encontrada para modal híbrido:', factura);
+        console.log('✅ Factura encontrada:', factura);
         
-        // Verificar que tenemos coordenadas
-        if (!factura.coordenadas_campos || Object.keys(factura.coordenadas_campos).length === 0) {
-            throw new Error('No se encontraron coordenadas para esta factura');
+        // ✅ VERIFICAR COORDENADAS
+        const hasCoordinates = factura.coordenadas_campos && 
+            Object.keys(factura.coordenadas_campos).length > 0;
+            
+        if (!hasCoordinates) {
+            showNotification('Esta factura no tiene coordenadas de campos disponibles', 'warning');
+            // Abrir modal normal en su lugar
+            openFacturaModal(facturaId);
+            return;
         }
         
-        // Preparar coordenadas para el modal
+        // ✅ PROCESAR COORDENADAS
         const coordinates = {};
-        const addValidCoordinates = (fieldName, coordData) => {
+        Object.entries(factura.coordenadas_campos).forEach(([fieldName, coordData]) => {
             if (coordData && typeof coordData === 'object' && 
                 coordData.x !== undefined && coordData.y !== undefined && 
                 coordData.width !== undefined && coordData.height !== undefined) {
                 coordinates[fieldName] = coordData;
+                console.log(`✅ Coordenada válida: ${fieldName}`, coordData);
             }
-        };
-        
-        // ✅ USAR DIRECTAMENTE coordenadas_campos (formato del backend)
-        if (factura.coordenadas_campos && Object.keys(factura.coordenadas_campos).length > 0) {
-            console.log('🔍 Procesando coordenadas_campos del backend:', factura.coordenadas_campos);
-            
-            Object.entries(factura.coordenadas_campos).forEach(([fieldName, coordData]) => {
-                addValidCoordinates(fieldName, coordData);
-            });
-            
-            console.log(`✅ Total de coordenadas válidas encontradas: ${Object.keys(coordinates).length}`);
-        } else {
-            console.log('⚠️ No se encontraron coordenadas_campos en la factura');
-        }
-        
-        console.log('📍 Coordenadas preparadas:', coordinates);
-        console.log('🔍 DEBUG - Detalle de coordenadas:');
-        Object.entries(coordinates).forEach(([fieldName, coordData]) => {
-            console.log(`  - ${fieldName}:`, coordData);
         });
         
-        // Verificar que tenemos al menos algunas coordenadas válidas
+        console.log(`📍 Total coordenadas válidas: ${Object.keys(coordinates).length}`);
+        
         if (Object.keys(coordinates).length === 0) {
-            throw new Error('No se encontraron coordenadas válidas para esta factura');
+            showNotification('No se encontraron coordenadas válidas', 'warning');
+            openFacturaModal(facturaId);
+            return;
         }
         
-        // 🔥 COPIAR LA LÓGICA DEL BOTÓN "VER" QUE FUNCIONA
-        // Obtener el documento_id para buscar en la tabla documentos
+        // ✅ OBTENER URL DEL PDF
         const documentoId = factura.documento_id;
         if (!documentoId) {
             throw new Error('No se encontró documento_id en la factura');
         }
         
-        console.log('📄 Documento ID:', documentoId);
-        
-        // Buscar la URL completa en la tabla documentos (COMO HACE EL BOTÓN "VER")
         const { data: documentoInfo, error: docError } = await supabaseClient
             .from('documentos')
             .select('url_storage')
             .eq('id', documentoId)
             .single();
             
-        if (docError || !documentoInfo) {
-            throw new Error(`Error obteniendo información del documento: ${docError?.message || 'Documento no encontrado'}`);
+        if (docError || !documentoInfo || !documentoInfo.url_storage) {
+            throw new Error(`Error obteniendo PDF: ${docError?.message || 'URL no encontrada'}`);
         }
         
         const pdfUrl = documentoInfo.url_storage;
-        console.log('🔗 URL del PDF obtenida de la tabla documentos:', pdfUrl);
+        console.log('🔗 URL del PDF:', pdfUrl);
         
-        if (!pdfUrl) {
-            throw new Error('No se encontró URL del PDF en la base de datos');
-        }
-        
-        // Verificar si la URL es válida
-        if (!pdfUrl.startsWith('http')) {
-            throw new Error('URL del PDF no es válida');
-        }
-        
-        // Preparar datos extraídos para el modal (usando las claves que espera HybridPDFModal)
+        // ✅ PREPARAR DATOS EXTRAÍDOS
         const toNumber = (v) => (v == null ? 0 : Number(v));
         const extractedData = {
             numero_factura: factura.numero_factura ?? 'N/A',
             proveedor_nombre: factura.proveedor_nombre ?? 'N/A',
             proveedor_cif: factura.proveedor_cif ?? 'N/A',
             fecha_factura: factura.fecha_factura ?? 'N/A',
-            // Claves esperadas por el modal
             base_imponible: toNumber(factura.base_imponible ?? factura.importe_neto),
             cuota_iva: toNumber(factura.cuota_iva ?? factura.iva),
             total_factura: toNumber(factura.total_factura),
             retencion: toNumber(factura.retencion),
-            // Confianzas
             confianza_global: factura.confianza_global ?? 0,
             confianza_proveedor: factura.confianza_proveedor ?? 0,
             confianza_datos_fiscales: factura.confianza_datos_fiscales ?? 0,
             confianza_importes: factura.confianza_importes ?? 0,
         };
         
-        console.log('📊 Datos extraídos preparados:', extractedData);
+        console.log('📊 Datos extraídos:', extractedData);
         
-        // 🔥 PRIMERO: Abrir el modal existente del dashboard (como hace el botón "VER")
+        // ✅ ABRIR MODAL NORMAL PRIMERO
+        console.log('🔄 Abriendo modal base...');
         const modal = document.getElementById('facturaModal');
-        if (modal) {
-            modal.classList.add('active');
-            document.body.style.overflow = 'hidden'; // Prevenir scroll
+        if (!modal) {
+            throw new Error('Modal de factura no encontrado en el DOM');
         }
         
-        // 🔥 SEGUNDO: Cargar el PDF en el modal existente
-        console.log('🔄 Iniciando carga del PDF en modal existente...');
+        // Asegurar que el modal se ve correctamente
+        modal.classList.add('active');
+        document.body.style.overflow = 'hidden';
+        
+        // ✅ ACTUALIZAR TÍTULO DEL MODAL HÍBRIDO
+        console.log('🎨 Actualizando título del modal híbrido...');
+        updateModalHeader(factura, 'hybrid');
+        
+        // ✅ RELLENAR FORMULARIO
+        console.log('📝 Rellenando formulario del modal...');
         await loadPdfFromFacturaId(facturaId);
         
-        // 🔥 TERCERO: Activar funcionalidades avanzadas del modal híbrido
+        // ✅ DAR TIEMPO AL DOM PARA ESTABILIZARSE
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // ✅ ACTIVAR FUNCIONALIDADES HÍBRIDAS
+        console.log('🎯 Activando funcionalidades híbridas...');
         await window.hybridPDFModal.open(pdfUrl, coordinates, extractedData);
         
         console.log('✅ Modal híbrido abierto correctamente');
+        showNotification('Modal híbrido con coordenadas activado', 'success');
         
     } catch (error) {
-        console.error('❌ Error abriendo modal híbrido:', error);
-        showNotification('Error abriendo modal híbrido: ' + error.message, 'error');
+        console.error('❌ Error en openInvoiceAdvanced:', error);
+        showNotification(`Error abriendo modal avanzado: ${error.message}`, 'error');
+        
+        // Fallback: abrir modal normal
+        try {
+            openFacturaModal(facturaId);
+        } catch (fallbackError) {
+            console.error('❌ Error en fallback:', fallbackError);
+        }
     }
 }

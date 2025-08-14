@@ -1,3 +1,10 @@
+
+###
+
+
+
+
+
 ## 🔥 **Código para Subida de Carpetas por Lotes**
 
 ### **1. HTML - Input para carpetas:**
@@ -233,3 +240,10 @@ Con este código puedes:
 - Recargar datos automáticamente
 
 ¡Pruébalo arrastrando una carpeta con PDFs! 📁✨
+
+
+
+
+
+
+INTENTAR QUE HAGA ZOOM EL OVERLAY DEL MODAL DE LAS FACTUAS Y QUE SEA MENOS AGRESIVSO

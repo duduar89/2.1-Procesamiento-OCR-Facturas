@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔧 Test Protegido - Dashboard</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .debug-panel {
+            background: #000;
+            color: #0f0;
+            padding: 15px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        .controls {
+            margin: 20px 0;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover { background: #0056b3; }
+        .error { color: #dc3545; }
+        .success { color: #28a745; }
+        .warning { color: #ffc107; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Test Protegido - Dashboard Debug</h1>
+        <p>Este test carga componentes paso a paso para identificar qué causa el cierre.</p>
+        
+        <div class="controls">
+            <button onclick="testConfig()">1. Test Config.js</button>
+            <button onclick="testSupabase()">2. Test Supabase</button>
+            <button onclick="testAuth()">3. Test Auth (Dev Mode)</button>
+            <button onclick="testDatabase()">4. Test Database</button>
+            <button onclick="testDashboard()">5. Test Dashboard Completo</button>
+            <button onclick="clearLogs()" style="background: #6c757d;">Limpiar Logs</button>
+        </div>
+        
+        <div id="debug-panel" class="debug-panel"></div>
+        
+        <div id="content">
+            <h3>Estado: <span id="status">Listo para testing</span></h3>
+        </div>
+    </div>
+
+    <!-- Scripts cargados de forma controlada -->
+    <script>
+        // ===== SISTEMA DE LOGGING PROTEGIDO =====
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const panel = document.getElementById('debug-panel');
+            const color = type === 'error' ? '#ff4444' : type === 'warning' ? '#ffaa00' : type === 'success' ? '#44ff44' : '#00ff00';
+            panel.innerHTML += `<span style="color: ${color}">[${timestamp}] ${message}</span>\n`;
+            panel.scrollTop = panel.scrollHeight;
+            console.log(`[${timestamp}] ${message}`);
+        }
+
+        function updateStatus(message, type = 'info') {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = type;
+        }
+
+        function clearLogs() {
+            document.getElementById('debug-panel').innerHTML = '';
+            log('🧹 Logs limpiados');
+        }
+
+        // ===== CAPTURA DE ERRORES GLOBALES =====
+        window.addEventListener('error', (event) => {
+            log(`❌ ERROR GLOBAL: ${event.error?.message || event.message}`, 'error');
+            log(`📁 Archivo: ${event.filename}:${event.lineno}:${event.colno}`, 'error');
+            if (event.error?.stack) {
+                log(`📚 Stack: ${event.error.stack}`, 'error');
+            }
+            updateStatus('❌ Error JavaScript detectado', 'error');
+        });
+
+        window.addEventListener('unhandledrejection', (event) => {
+            log(`❌ PROMISE REJECTED: ${event.reason}`, 'error');
+            updateStatus('❌ Promise rechazada', 'error');
+        });
+
+        window.addEventListener('beforeunload', (event) => {
+            log('⚠️ LA VENTANA SE ESTÁ CERRANDO!', 'warning');
+        });
+
+        // ===== TESTS PASO A PASO =====
+        
+        async function testConfig() {
+            try {
+                log('🔍 TEST 1: Cargando config.js...');
+                updateStatus('Cargando config.js...', 'warning');
+                
+                // Cargar config.js dinámicamente
+                const script = document.createElement('script');
+                script.src = '../config.js';
+                script.onload = function() {
+                    try {
+                        if (typeof CONFIG === 'undefined') {
+                            throw new Error('CONFIG no está definido después de cargar el script');
+                        }
+                        log('✅ config.js cargado correctamente', 'success');
+                        log(`📊 URL Supabase: ${CONFIG.SUPABASE?.URL || 'NO DEFINIDA'}`, 'info');
+                        log(`🔑 Anon Key: ${CONFIG.SUPABASE?.ANON_KEY ? 'DEFINIDA' : 'NO DEFINIDA'}`, 'info');
+                        log(`🏢 Modo: ${CONFIG.TENANT?.MODO || 'NO DEFINIDO'}`, 'info');
+                        updateStatus('✅ Config.js cargado exitosamente', 'success');
+                    } catch (error) {
+                        log(`❌ Error validando config: ${error.message}`, 'error');
+                        updateStatus('❌ Error en config.js', 'error');
+                    }
+                };
+                script.onerror = function() {
+                    log('❌ Error cargando config.js', 'error');
+                    updateStatus('❌ No se pudo cargar config.js', 'error');
+                };
+                document.head.appendChild(script);
+                
+            } catch (error) {
+                log(`❌ Error en testConfig: ${error.message}`, 'error');
+                updateStatus('❌ Error cargando config', 'error');
+            }
+        }
+
+        async function testSupabase() {
+            try {
+                log('🔍 TEST 2: Cargando Supabase...', 'info');
+                updateStatus('Cargando Supabase...', 'warning');
+                
+                if (typeof CONFIG === 'undefined') {
+                    throw new Error('Debes ejecutar primero "Test Config.js"');
+                }
+                
+                // Cargar Supabase dinámicamente
+                const script = document.createElement('script');
+                script.src = 'https://unpkg.com/@supabase/supabase-js@2';
+                script.onload = function() {
+                    try {
+                        if (typeof supabase === 'undefined') {
+                            throw new Error('supabase no está disponible después de cargar el script');
+                        }
+                        const client = supabase.createClient(CONFIG.SUPABASE.URL, CONFIG.SUPABASE.ANON_KEY);
+                        log('✅ Supabase cargado y cliente creado correctamente', 'success');
+                        window.testSupabaseClient = client; // Guardar para próximos tests
+                        updateStatus('✅ Supabase inicializado', 'success');
+                    } catch (error) {
+                        log(`❌ Error inicializando Supabase: ${error.message}`, 'error');
+                        updateStatus('❌ Error en Supabase', 'error');
+                    }
+                };
+                script.onerror = function() {
+                    log('❌ Error cargando Supabase desde CDN', 'error');
+                    updateStatus('❌ No se pudo cargar Supabase', 'error');
+                };
+                document.head.appendChild(script);
+                
+            } catch (error) {
+                log(`❌ Error en testSupabase: ${error.message}`, 'error');
+                updateStatus('❌ Error cargando Supabase', 'error');
+            }
+        }
+
+        async function testAuth() {
+            try {
+                log('🔍 TEST 3: Probando autenticación...', 'info');
+                updateStatus('Probando autenticación...', 'warning');
+                
+                if (!window.testSupabaseClient) {
+                    throw new Error('Debes ejecutar primero "Test Supabase"');
+                }
+                
+                // Simular modo desarrollo
+                if (window.location.hostname === 'localhost') {
+                    log('🔧 Modo desarrollo detectado - configurando datos de prueba', 'info');
+                    window.testUser = { id: 'dev-user', nombre: 'Usuario Desarrollo', email: 'dev@test.com' };
+                    window.testRestauranteId = '2852b1af-38d8-43ec-8872-2b2921d5a231';
+                    log('✅ Usuario de desarrollo configurado', 'success');
+                    log(`👤 Usuario: ${window.testUser.nombre}`, 'info');
+                    log(`🏢 Restaurante ID: ${window.testRestauranteId}`, 'info');
+                    updateStatus('✅ Modo desarrollo configurado', 'success');
+                } else {
+                    // Probar sesión real
+                    const { data: { session }, error } = await window.testSupabaseClient.auth.getSession();
+                    if (error) {
+                        log(`⚠️ Error obteniendo sesión: ${error.message}`, 'warning');
+                        updateStatus('⚠️ Sin sesión activa', 'warning');
+                    } else if (session) {
+                        log('✅ Sesión válida encontrada', 'success');
+                        log(`📧 Email: ${session.user.email}`, 'info');
+                        updateStatus('✅ Sesión válida', 'success');
+                    } else {
+                        log('⚠️ No hay sesión activa', 'warning');
+                        updateStatus('⚠️ Sin sesión', 'warning');
+                    }
+                }
+                
+            } catch (error) {
+                log(`❌ Error en testAuth: ${error.message}`, 'error');
+                updateStatus('❌ Error en autenticación', 'error');
+            }
+        }
+
+        async function testDatabase() {
+            try {
+                log('🔍 TEST 4: Probando conexión a base de datos...', 'info');
+                updateStatus('Probando base de datos...', 'warning');
+                
+                if (!window.testSupabaseClient) {
+                    throw new Error('Debes ejecutar primero "Test Supabase"');
+                }
+                
+                // Test básico de consulta
+                const { data, error } = await window.testSupabaseClient
+                    .from('restaurantes')
+                    .select('id, nombre')
+                    .limit(3);
+                
+                if (error) {
+                    log(`⚠️ Error en consulta BD: ${error.message}`, 'warning');
+                    log(`💡 Esto es normal si no tienes permisos`, 'info');
+                    updateStatus('⚠️ Error BD (esperado)', 'warning');
+                } else {
+                    log(`✅ Conexión BD exitosa - ${data.length} restaurantes encontrados`, 'success');
+                    data.forEach((r, i) => log(`  ${i+1}. ${r.nombre} (${r.id})`, 'info'));
+                    updateStatus('✅ Base de datos conectada', 'success');
+                }
+                
+            } catch (error) {
+                log(`❌ Error en testDatabase: ${error.message}`, 'error');
+                updateStatus('❌ Error BD', 'error');
+            }
+        }
+
+        async function testDashboard() {
+            try {
+                log('🔍 TEST 5: Cargando dashboard completo...', 'info');
+                updateStatus('Cargando dashboard...', 'warning');
+                
+                // Cargar dependencias del dashboard
+                const scripts = [
+                    'pdf-overlay-system.js',
+                    'hybrid-pdf-modal.js',
+                    'dashboard-facturas.js'
+                ];
+                
+                let loadedCount = 0;
+                
+                function loadScript(src) {
+                    return new Promise((resolve, reject) => {
+                        const script = document.createElement('script');
+                        script.src = src;
+                        script.onload = () => {
+                            loadedCount++;
+                            log(`✅ Cargado: ${src} (${loadedCount}/${scripts.length})`, 'success');
+                            resolve();
+                        };
+                        script.onerror = () => {
+                            log(`❌ Error cargando: ${src}`, 'error');
+                            reject(new Error(`No se pudo cargar ${src}`));
+                        };
+                        document.head.appendChild(script);
+                    });
+                }
+                
+                // Cargar scripts uno por uno
+                for (const script of scripts) {
+                    try {
+                        await loadScript(script);
+                    } catch (error) {
+                        log(`❌ Fallo cargando ${script}: ${error.message}`, 'error');
+                        updateStatus(`❌ Error en ${script}`, 'error');
+                        return;
+                    }
+                }
+                
+                log('✅ Todos los scripts del dashboard cargados', 'success');
+                updateStatus('✅ Dashboard cargado completamente', 'success');
+                
+            } catch (error) {
+                log(`❌ Error en testDashboard: ${error.message}`, 'error');
+                updateStatus('❌ Error cargando dashboard', 'error');
+            }
+        }
+
+        // ===== INICIALIZACIÓN =====
+        log('🚀 Test protegido iniciado - ejecuta los tests paso a paso');
+        updateStatus('Listo para testing', 'info');
+        
+    </script>
+</body>
+</html>

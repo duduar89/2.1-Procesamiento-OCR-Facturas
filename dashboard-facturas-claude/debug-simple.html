@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔧 Debug Simple</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .log { background: #000; color: #0f0; padding: 10px; font-family: monospace; margin: 10px 0; }
+        .error { color: #ff4444; }
+        .success { color: #44ff44; }
+        .warning { color: #ffaa00; }
+    </style>
+</head>
+<body>
+    <h1>🔧 Debug Simple - ¿Por qué se cierra?</h1>
+    <div id="logs" class="log">Iniciando debug...\n</div>
+
+    <script>
+        function log(msg, type = 'info') {
+            const time = new Date().toLocaleTimeString();
+            const color = type === 'error' ? 'ff4444' : type === 'success' ? '44ff44' : type === 'warning' ? 'ffaa00' : '00ff00';
+            document.getElementById('logs').innerHTML += `<span style="color: #${color}">[${time}] ${msg}</span>\n`;
+            console.log(`[${time}] ${msg}`);
+        }
+
+        // Capturar errores
+        window.onerror = function(msg, file, line, col, error) {
+            log(`❌ ERROR: ${msg} (${file}:${line}:${col})`, 'error');
+            return true;
+        };
+
+        window.addEventListener('unhandledrejection', function(event) {
+            log(`❌ PROMISE REJECTED: ${event.reason}`, 'error');
+        });
+
+        window.addEventListener('beforeunload', function() {
+            log('⚠️ WINDOW CLOSING!', 'warning');
+        });
+
+        // Test básico
+        setTimeout(() => {
+            log('✅ Página estable después de 1 segundo', 'success');
+        }, 1000);
+
+        setTimeout(() => {
+            log('✅ Página estable después de 3 segundos', 'success');
+        }, 3000);
+
+        setTimeout(() => {
+            log('✅ Página estable después de 5 segundos', 'success');
+        }, 5000);
+
+        // Monitor cada 2 segundos
+        setInterval(() => {
+            log('💓 Página funcionando correctamente');
+        }, 2000);
+
+        log('🚀 Script iniciado');
+    </script>
+</body>
+</html>
