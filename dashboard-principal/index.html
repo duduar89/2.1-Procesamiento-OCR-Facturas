@@ -1,0 +1,151 @@
+
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Brain Stormers | Dashboard de Innovación</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- Custom Styles -->
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body class="antialiased">
+
+    <div class="flex h-screen">
+        <!-- Vertical Banner (Left Sidebar) -->
+        <aside class="w-64 vertical-banner p-6 flex-shrink-0 flex flex-col justify-between">
+            <div>
+                <a href="#" class="text-3xl font-bold text-center mb-16 block" style="color: var(--text-primary);">
+                    Brain<span style="color: var(--accent);">Stormers</span>
+                </a>
+                
+                <nav id="main-nav" class="flex flex-col space-y-3">
+                    <a href="#" class="nav-button active flex items-center p-3 rounded-lg relative overflow-hidden transition-colors">
+                        <i class="fas fa-tachometer-alt w-5 mr-4 text-center"></i>
+                        <span data-translate-key="nav_dashboard">Dashboard</span>
+                    </a>
+                    <a href="#" class="nav-button flex items-center p-3 rounded-lg relative overflow-hidden transition-colors">
+                        <i class="fas fa-file-invoice-dollar w-5 mr-4 text-center"></i>
+                        <span data-translate-key="nav_invoices">Facturas IA</span>
+                    </a>
+                    <a href="#" class="nav-button flex items-center p-3 rounded-lg relative overflow-hidden transition-colors">
+                        <i class="fas fa-project-diagram w-5 mr-4 text-center"></i>
+                        <span data-translate-key="nav_projects">Proyectos</span>
+                    </a>
+                </nav>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <div class="flex-1 flex flex-col overflow-y-auto main-content-area">
+            <!-- Horizontal Banner (Top Header) -->
+            <header class="header py-4 px-8 flex-shrink-0 sticky top-0 z-20">
+                <div class="flex justify-between items-center">
+                    <!-- Search Bar -->
+                    <div class="relative">
+                        <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2" style="color: var(--text-secondary);"></i>
+                        <input type="text" data-translate-key="search_placeholder" placeholder="Buscar proyectos, facturas..." class="search-bar w-96 pl-12 pr-4 py-2 rounded-full focus:outline-none transition-all duration-300" style="color: var(--text-primary);">
+                    </div>
+                    <!-- Right side icons and button -->
+                    <div class="flex items-center space-x-6">
+                        <button id="theme-toggle" class="transition-colors text-xl" style="color: var(--text-secondary);">
+                            <i class="fas fa-sun"></i>
+                        </button>
+                        
+                        <div class="relative" id="lang-dropdown-container">
+                            <button id="lang-toggle" class="flex items-center transition-colors" style="color: var(--text-secondary);">
+                                <i class="fas fa-globe mr-2"></i>
+                                <span id="current-lang" class="font-semibold">ES</span>
+                                <i class="fas fa-chevron-down ml-2 text-xs"></i>
+                            </button>
+                            <div id="lang-menu" class="absolute right-0 mt-3 w-36 rounded-lg shadow-lg hidden" style="background-color: var(--bg-secondary); border: 1px solid var(--border-color);">
+                                <a href="#" class="lang-option block px-4 py-2 text-sm" data-lang="es">Español</a>
+                                <a href="#" class="lang-option block px-4 py-2 text-sm" data-lang="en">English</a>
+                                <a href="#" class="lang-option block px-4 py-2 text-sm" data-lang="fr">Français</a>
+                                <a href="#" class="lang-option block px-4 py-2 text-sm" data-lang="de">Deutsch</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Page Content Scrollable -->
+            <div class="flex-1 overflow-y-auto content-wrapper">
+                 <div class="container mx-auto px-8 py-10">
+                    <!-- Hero Section -->
+                    <main class="py-12 text-center">
+                        <h1 data-translate-key="hero_title" class="text-5xl md:text-7xl font-extrabold leading-tight mb-4 animate-fade-in-up" style="animation-delay: 100ms; color: var(--text-primary);">
+                            Innovación y <span class="text-glow" style="color: var(--accent);">Estrategia</span> Digital
+                        </h1>
+                        <p data-translate-key="hero_subtitle" class="text-lg md:text-xl max-w-3xl mx-auto mb-8 animate-fade-in-up" style="animation-delay: 200ms; color: var(--text-secondary);">
+                            Transformamos ideas en soluciones digitales de alto impacto. Combinamos diseño, tecnología y estrategia para llevar tu negocio al siguiente nivel.
+                        </p>
+                        <div class="animate-fade-in-up" style="animation-delay: 300ms;">
+                            <a href="#" class="bs-btn-primary text-lg inline-block text-white font-semibold rounded-lg">
+                                <span data-translate-key="hero_button">Descubre Cómo</span> <i class="fas fa-arrow-right ml-2"></i>
+                            </a>
+                        </div>
+                    </main>
+
+                    <!-- Services Section -->
+                    <section id="services" class="py-16">
+                        <div class="text-center mb-16 animate-fade-in-up" style="animation-delay: 400ms;">
+                            <h2 data-translate-key="services_title" class="text-4xl font-bold" style="color: var(--text-primary);">Nuestros Servicios</h2>
+                            <p data-translate-key="services_subtitle" class="mt-2" style="color: var(--text-secondary);">Soluciones a la medida para un mundo digital.</p>
+                        </div>
+                        
+                        <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                            <div class="bs-card animate-fade-in-up" style="animation-delay: 500ms;">
+                                <div class="text-4xl mb-4" style="color: var(--accent);"><i class="fas fa-code"></i></div>
+                                <h3 data-translate-key="service1_title" class="text-2xl font-bold mb-2" style="color: var(--text-primary);">Desarrollo Web Moderno</h3>
+                                <p data-translate-key="service1_desc" style="color: var(--text-secondary);">Creamos sitios y aplicaciones web rápidas, seguras y responsivas.</p>
+                            </div>
+                            <div class="bs-card animate-fade-in-up" style="animation-delay: 600ms;">
+                                <div class="text-4xl mb-4" style="color: var(--accent);"><i class="fas fa-brain"></i></div>
+                                <h3 data-translate-key="service2_title" class="text-2xl font-bold mb-2" style="color: var(--text-primary);">Consultoría en IA</h3>
+                                <p data-translate-key="service2_desc" style="color: var(--text-secondary);">Integramos IA en tus procesos para optimizar operaciones y experiencias.</p>
+                            </div>
+                            <div class="bs-card animate-fade-in-up" style="animation-delay: 700ms;">
+                                <div class="text-4xl mb-4" style="color: var(--accent);"><i class="fas fa-drafting-compass"></i></div>
+                                <h3 data-translate-key="service3_title" class="text-2xl font-bold mb-2" style="color: var(--text-primary);">Diseño UX/UI</h3>
+                                <p data-translate-key="service3_desc" style="color: var(--text-secondary);">Diseñamos interfaces intuitivas que garantizan una experiencia memorable.</p>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Featured Clients Section -->
+                    <section id="clients" class="py-16">
+                        <div class="text-center mb-12 animate-fade-in-up" style="animation-delay: 800ms;">
+                            <h2 data-translate-key="clients_title" class="text-3xl font-bold" style="color: var(--text-primary);">Confían en Nosotros</h2>
+                        </div>
+                        <div class="flex justify-center items-center space-x-12 md:space-x-16 animate-fade-in-up" style="animation-delay: 900ms;">
+                            <i class="fab fa-microsoft text-5xl client-icon transition-colors"></i>
+                            <i class="fab fa-spotify text-5xl client-icon transition-colors"></i>
+                            <i class="fab fa-google text-5xl client-icon transition-colors"></i>
+                            <i class="fab fa-amazon text-5xl client-icon transition-colors"></i>
+                            <i class="fab fa-airbnb text-5xl client-icon transition-colors"></i>
+                        </div>
+                    </section>
+
+                    <!-- Footer -->
+                    <footer class="text-center py-10 border-t mt-16" style="border-color: var(--border-color);">
+                        <p data-translate-key="footer_text" style="color: var(--text-secondary);">&copy; 2024 Brain Stormers. Todos los derechos reservados.</p>
+                    </footer>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

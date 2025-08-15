@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Brainstormers - La Revolución IA para Restaurantes</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome para iconos -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" xintegrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+    <style>
+        :root {
+            /* PALETA DE COLORES CORPORATIVA */
+            --brand-turquoise: #00D4AA;
+            --brand-turquoise-light: #1DE9B6;
+            --brand-navy: #0F2027;
+            --brand-dark: #1A2B3D;
+            --brand-gray: #2C3E50;
+            --brand-cyan: #26D0CE;
+
+            /* Colores Neon para botones */
+            --neon-green: #34d399;
+            --neon-yellow: #f59e0b;
+            --neon-red: #ef4444;
+            --neon-purple: #8b5cf6;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--brand-navy);
+            color: #e0f2fe;
+            overflow-x: hidden;
+        }
+
+        /* --- EFECTOS DE FONDO Y CURSOR --- */
+        .spotlight {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: -1; pointer-events: none;
+            background-image: radial-gradient(circle at var(--x, 50%) var(--y, 50%), rgba(0, 212, 170, 0.1) 0%, transparent 25%);
+        }
+        #circuit-canvas {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: -2; opacity: 0.3;
+        }
+
+        /* --- ESTILOS DE TEXTO Y BOTONES --- */
+        .pro-login-button {
+            position: relative; background: linear-gradient(90deg, var(--brand-turquoise), var(--brand-turquoise-light));
+            transition: all 0.3s ease; box-shadow: 0 0 15px rgba(0, 212, 170, 0.3);
+        }
+        .pro-login-button:hover {
+            transform: translateY(-3px); box-shadow: 0 0 25px rgba(0, 212, 170, 0.5);
+        }
+        
+        /* --- CAROUSEL DE BOTONES (SIN CÍRCULO) --- */
+        .button-carousel-container {
+            position: relative;
+            width: 100%;
+            height: 280px; 
+            perspective: 1500px;
+        }
+        .button-carousel {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            transform-style: preserve-3d;
+            transition: transform 0.8s cubic-bezier(0.77, 0, 0.175, 1);
+        }
+        .neon-button {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            margin-left: -100px;
+            margin-top: -100px;
+            font-weight: 600;
+            width: 200px; height: 200px;
+            transition: all 0.8s cubic-bezier(0.77, 0, 0.175, 1);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            text-align: center;
+            cursor: pointer;
+        }
+        .neon-button i { font-size: 4rem; margin-bottom: 0.75rem; transition: all 0.3s ease; }
+        .neon-button span { font-size: 1.1rem; line-height: 1.2; }
+        
+        /* Posiciones del Carousel */
+        .carousel-item-0 { transform: translateX(0) translateZ(180px) scale(1.6); opacity: 1; z-index: 10; }
+        .carousel-item-1 { transform: translateX(220px) translateZ(0) scale(0.7); opacity: 0.5; z-index: 5; }
+        .carousel-item-2 { transform: translateX(0) translateZ(-180px) scale(0.4); opacity: 0.2; z-index: 1; }
+        .carousel-item-3 { transform: translateX(-220px) translateZ(0) scale(0.7); opacity: 0.5; z-index: 5; }
+
+        /* Colores específicos y efecto hover */
+        .neon-green { color: var(--neon-green); text-shadow: 0 0 8px var(--neon-green); }
+        .neon-yellow { color: var(--neon-yellow); text-shadow: 0 0 8px var(--neon-yellow); }
+        .neon-red { color: var(--neon-red); text-shadow: 0 0 8px var(--neon-red); }
+        .neon-purple { color: var(--neon-purple); text-shadow: 0 0 8px var(--neon-purple); }
+        
+        .neon-green:hover {
+            text-shadow: 0 0 15px var(--neon-green), 0 0 25px var(--neon-green);
+        }
+        .neon-yellow:hover {
+            text-shadow: 0 0 15px var(--neon-yellow), 0 0 25px var(--neon-yellow);
+        }
+        .neon-red:hover {
+            text-shadow: 0 0 15px var(--neon-red), 0 0 25px var(--neon-red);
+        }
+        .neon-purple:hover {
+            text-shadow: 0 0 15px var(--neon-purple), 0 0 25px var(--neon-purple);
+        }
+
+        /* Estilos específicos para los botones en la cuadrícula móvil */
+        .mobile-grid-button {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 1 / 1;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            cursor: pointer;
+            padding: 0.5rem;
+        }
+        .mobile-grid-button i {
+            font-size: 2.5rem; /* Iconos más pequeños para móvil */
+            margin-bottom: 0.5rem;
+        }
+        .mobile-grid-button span {
+            font-size: 0.875rem; /* Texto más pequeño para móvil */
+            line-height: 1.2;
+        }
+
+
+        .neon-divider {
+            height: 2px; width: 100%; background: var(--brand-turquoise);
+            box-shadow: 0 0 10px var(--brand-turquoise), 0 0 20px var(--brand-turquoise);
+            opacity: 0.7;
+        }
+        .neon-outline {
+            text-shadow: 0 0 4px var(--brand-turquoise-light), 0 0 10px var(--brand-turquoise-light), 0 0 20px var(--brand-turquoise);
+        }
+
+        /* --- ANIMACIONES --- */
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .fade-in-start { opacity: 0; animation: fadeIn 0.8s ease-out forwards; }
+        .ai-letters {
+            color: var(--brand-turquoise-light);
+            animation: ai-glow 2s ease-in-out infinite;
+        }
+        @keyframes ai-glow {
+            0%, 100% { text-shadow: 0 0 5px var(--brand-turquoise-light), 0 0 15px var(--brand-turquoise-light), 0 0 30px var(--brand-turquoise); }
+            50% { text-shadow: 0 0 10px var(--brand-turquoise-light), 0 0 30px var(--brand-turquoise), 0 0 50px var(--brand-turquoise); }
+        }
+        @keyframes zoom-in-out {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.03); }
+            100% { transform: scale(1); }
+        }
+        .animate-zoom { animation: zoom-in-out 8s ease-in-out infinite; }
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); box-shadow: 0 0 15px rgba(0, 212, 170, 0.3); }
+            50% { transform: scale(1.05); box-shadow: 0 0 35px rgba(0, 212, 170, 0.5); }
+        }
+        .pulsing-button { animation: pulse 2.5s ease-in-out infinite; }
+        
+        .title-disintegrate { animation: disintegrate 3s ease-out forwards; }
+        @keyframes disintegrate {
+            0% { opacity: 1; transform: scale(1); filter: blur(0); }
+            50% { opacity: 0; transform: scale(0.8); filter: blur(10px); }
+            100% { opacity: 1; transform: scale(1); filter: blur(0); }
+        }
+        .wand-animate { animation: wand-spin 3s ease-out forwards; }
+        @keyframes wand-spin {
+            0% { transform: rotate(0deg) scale(1); }
+            25% { transform: rotate(20deg) scale(1.2); }
+            50% { transform: rotate(-360deg) scale(0.5); }
+            75% { transform: rotate(-340deg) scale(1.2); }
+            100% { transform: rotate(-360deg) scale(1); }
+        }
+
+        /* --- ESTILOS DE MODALES --- */
+        .modal { transition: opacity 0.3s ease; }
+        .modal.hidden { opacity: 0; pointer-events: none; }
+        .glassmorphism {
+            background: rgba(44, 62, 80, 0.6); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(0, 212, 170, 0.2);
+        }
+        
+        /* Estilos para las pestañas del modal "Análisis de Reseñas" */
+        .model-tab {
+            color: #9ab; transition: all 0.3s ease; border-bottom: 2px solid transparent;
+        }
+        .model-tab.active {
+            color: var(--brand-turquoise-light);
+            border-bottom-color: var(--brand-turquoise-light);
+        }
+        .model-content { display: none; }
+        .model-content.active { display: block; animation: fadeIn 0.5s; }
+
+        /* --- ESTILOS LOGIN --- */
+        #login-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; opacity: 0.7; }
+        #login-content-wrapper { position: relative; z-index: 10; }
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+        .floating-brain { animation: float 4s ease-in-out infinite; }
+		
+		/* --- AJUSTES RESPONSIVOS MÓVIL (sin alterar escritorio) --- */
+		@media (max-width: 640px) {
+			/* Hacer el header pegajoso en móvil para que no tape el contenido */
+			header { position: sticky !important; top: 0; z-index: 20; }
+			footer { position: static !important; }
+			main { margin-top: 0 !important; }
+			/* Reducir padding inferior extra cuando el footer no es absoluto */
+			.pb-24 { padding-bottom: 1.5rem !important; }
+			/* Respetar áreas seguras (notch) y mantener paddings coherentes */
+			header, footer {
+				padding-top: calc(env(safe-area-inset-top, 0px) + 1rem);
+				padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 1rem);
+			}
+			/* Título: evitar cortes/solapamientos y mejorar legibilidad */
+			#main-title { word-break: normal; overflow-wrap: anywhere; line-height: 1.1; }
+			/* Permitir que la barra superior se parta en 2 líneas sin solapar */
+			nav { flex-wrap: wrap; row-gap: 0.5rem; }
+			/* Evitar cualquier desplazamiento horizontal en móviles */
+			html, body { overflow-x: hidden; }
+			/* Asegurar algo más de espacio entre el banner y el título */
+			#pilot-banner { margin-bottom: 1rem !important; }
+			/* Evitar zoom que puede provocar micro-solapes en títulos en pantallas pequeñas */
+			.animate-zoom { animation: none !important; }
+		}
+		@media (max-width: 400px) { #title-wand { display: block; margin: 0.25rem auto; } }
+    </style>
+</head>
+<body class="antialiased">
+    
+    <div class="spotlight"></div>
+    <canvas id="circuit-canvas"></canvas>
+
+    <!-- CAMBIO: Añadido padding inferior responsivo para evitar solapamiento en móvil -->
+    <div class="relative min-h-screen w-full flex flex-col items-center justify-center p-4 sm:p-6 pb-24 sm:pb-6 overflow-hidden">
+        
+        <header class="absolute top-0 left-0 w-full p-4 sm:p-6 z-20">
+            <nav class="flex justify-between items-center max-w-7xl mx-auto">
+                <a href="#" class="flex items-center space-x-3" aria-label="Página de inicio de Brainstormers">
+                    <i class="fa-solid fa-brain text-3xl ai-letters neon-outline"></i>
+                    <div>
+                        <span class="text-lg sm:text-xl font-bold text-white">BRAINSTORMERS</span>
+                        <p class="text-xs text-gray-400 tracking-wider">Ingeniería de Restaurantes</p>
+                    </div>
+                </a>
+                <button data-modal-target="login-modal" class="text-sm sm:text-base text-white font-bold py-2 px-4 sm:px-6 rounded-full pro-login-button pulsing-button">
+                    LOG IN
+                </button>
+            </nav>
+        </header>
+
+        <main class="text-center z-10 w-full px-4 mt-20 sm:mt-0">
+            <div id="pilot-banner" class="fade-in-start inline-block bg-gray-800/50 border border-gray-700/50 rounded-full px-4 py-2 mb-6 text-sm text-gray-300 cursor-pointer" style="animation-delay: 100ms;">
+                <i id="pilot-wand" class="fa-solid fa-wand-magic-sparkles text-yellow-300 mr-2 transition-transform duration-300"></i>
+                <span id="pilot-text" class="transition-opacity duration-300">Piloto Real Con Inteligencia Artificial</span>
+            </div>
+
+            <div class="animate-zoom">
+                <h1 id="main-title" class="text-5xl sm:text-6xl md:text-8xl font-black tracking-tighter uppercase fade-in-start cursor-pointer" style="animation-delay: 200ms;">
+                    <span class="title-text text-white">BR<span class="ai-letters neon-outline">AI</span>N</span>
+                    <i id="title-wand" class="fa-solid fa-wand-magic-sparkles text-yellow-300 mx-2 text-4xl md:text-7xl inline-block"></i>
+                    <span class="title-text text-white">STORMERS</span>
+                </h1>
+                
+                <h2 class="text-xl sm:text-2xl md:text-4xl font-bold text-white mt-4 mb-8 tracking-tight fade-in-start" style="animation-delay: 300ms;">
+                    Ingeniería de Restaurantes
+                </h2>
+
+                <p class="max-w-2xl mx-auto text-base md:text-xl text-gray-300 mb-12 fade-in-start" style="animation-delay: 400ms;">
+                    Transformamos datos en decisiones. Descubre el futuro de la gestión gastronómica.
+                </p>
+
+                <div class="w-full max-w-5xl mx-auto fade-in-start" style="animation-delay: 500ms;">
+                    <div class="neon-divider"></div>
+                    <!-- Carrusel para escritorio -->
+                    <div class="button-carousel-container my-6 hidden md:flex">
+                        <div class="button-carousel">
+                            <button data-modal-target="servicios-modal" data-index="0" class="neon-button neon-green"><i class="fa-solid fa-utensils"></i><span>Menú Inteligente</span></button>
+                            <button data-modal-target="gestion-modal" data-index="1" class="neon-button neon-yellow"><i class="fa-solid fa-wine-glass"></i><span>Gestiona tu Stock</span></button>
+                            <button data-modal-target="modelos-modal" data-index="2" class="neon-button neon-red"><i class="fa-solid fa-spoon"></i><span>Análisis de Reseñas</span></button>
+                            <button data-modal-target="quienes-somos-modal" data-index="3" class="neon-button neon-purple"><i class="fa-solid fa-users"></i><span>Quiénes Somos</span></button>
+                        </div>
+                    </div>
+                    <!-- Grid para móvil -->
+                    <div class="my-6 grid grid-cols-2 gap-4 md:hidden">
+                         <button data-modal-target="servicios-modal" class="mobile-grid-button neon-green"><i class="fa-solid fa-utensils"></i><span>Menú Inteligente</span></button>
+                         <button data-modal-target="gestion-modal" class="mobile-grid-button neon-yellow"><i class="fa-solid fa-wine-glass"></i><span>Gestiona tu Stock</span></button>
+                         <button data-modal-target="modelos-modal" class="mobile-grid-button neon-red"><i class="fa-solid fa-spoon"></i><span>Análisis de Reseñas</span></button>
+                         <button data-modal-target="quienes-somos-modal" class="mobile-grid-button neon-purple"><i class="fa-solid fa-users"></i><span>Quiénes Somos</span></button>
+                    </div>
+                    <div class="neon-divider"></div>
+                </div>
+            </div>
+        </main>
+        
+        <section class="z-10 mt-16 w-full max-w-4xl mx-auto text-center fade-in-start" style="animation-delay: 600ms;">
+             <h3 class="text-2xl font-bold mb-4" style="color: var(--brand-turquoise);">¿Listo para revolucionar tu negocio?</h3>
+             <p class="text-gray-400 mb-6">Haz click aquí para navegar por tu negocio.</p>
+             <button data-modal-target="login-modal" class="pro-login-button pulsing-button inline-flex items-center justify-center text-white font-bold py-3 px-8 rounded-full text-lg">
+                 <i class="fa-solid fa-hat-chef mr-3"></i>
+                 <span>Accede a tu restaurante</span>
+             </button>
+        </section>
+        
+        <footer class="absolute bottom-0 left-0 w-full p-6 text-center text-gray-400 z-20">
+             <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4 text-xs">
+                <p>© 2025 Brain Stormers. Todos los derechos reservados.</p>
+                <div class="flex flex-wrap justify-center items-center gap-x-4 gap-y-2">
+                    <a href="https://www.instagram.com/brain__stormers/?hl=es" target="_blank" class="text-lg hover:text-[var(--brand-turquoise)] transition-colors"><i class="fa-brands fa-instagram"></i></a>
+                    <a href="https://api.whatsapp.com/message/IYSVLFSNH4WLD1?autoload=1&app_absent=0" target="_blank" class="text-lg hover:text-[var(--brand-turquoise)] transition-colors"><i class="fa-brands fa-whatsapp"></i></a>
+                    <a href="#" target="_blank" class="text-lg hover:text-[var(--brand-turquoise)] transition-colors"><i class="fa-brands fa-linkedin-in"></i></a>
+                    <span class="hidden md:inline">|</span>
+                    <a href="mailto:operaciones@brainstormersagency.com" class="flex items-center gap-2 hover:text-[var(--brand-turquoise)] transition-colors">
+                        <i class="fa-solid fa-envelope"></i>
+                        <span class="hidden sm:inline">operaciones@brainstormersagency.com</span>
+                    </a>
+                     <span class="hidden md:inline">|</span>
+                    <a href="tel:+34684738761" class="flex items-center gap-2 hover:text-[var(--brand-turquoise)] transition-colors">
+                        <i class="fa-solid fa-phone"></i>
+                        <span class="hidden sm:inline">684 73 87 61</span>
+                    </a>
+                </div>
+             </div>
+        </footer>
+    </div>
+
+    <!-- ========= MODALS "EXPERIENCIA" ========= -->
+    <div id="login-modal" class="modal fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 z-50 hidden">
+        <div class="glassmorphism rounded-2xl w-full max-w-md relative overflow-hidden h-96">
+            <button data-modal-close="login-modal" class="absolute top-4 right-4 text-gray-400 hover:text-white text-2xl z-20" aria-label="Cerrar modal">&times;</button>
+            <canvas id="login-canvas"></canvas>
+            <div id="login-content-wrapper" class="p-8 md:p-12 h-full flex flex-col justify-center items-center">
+                <!-- Step 1: Email -->
+                <div id="login-step-1" class="w-full text-center transition-opacity duration-500">
+                    <i class="fa-solid fa-brain text-5xl floating-brain" style="color: var(--brand-turquoise);"></i>
+                    <h2 class="text-3xl font-bold text-center mt-4 mb-2 text-white">Acceso Restaurante</h2>
+                    <p class="text-center text-gray-400 mb-6">Introduce tu credencial para sincronizar.</p>
+                    <form id="login-form-step1" class="w-full">
+                        <label for="username" class="text-sm mb-2 block text-left" style="color: var(--brand-turquoise-light);">Introduzca su correo electrónico</label>
+                        <input type="email" id="username" name="username" class="w-full text-center bg-gray-900/50 border border-gray-700 text-white rounded-lg p-3 focus:ring-2 focus:ring-[var(--brand-turquoise)] focus:border-[var(--brand-turquoise)] transition" placeholder="tu@email.com" required>
+                        <button type="submit" class="w-full flex items-center justify-center text-white font-bold py-3 px-6 rounded-full pro-login-button mt-6 text-lg">
+                            <span>Autenticar</span>
+                        </button>
+                    </form>
+                </div>
+                <!-- Step 2: Password -->
+                <div id="login-step-2" class="w-full text-center transition-opacity duration-500 opacity-0 hidden">
+                    <i class="fa-solid fa-lock text-5xl floating-brain" style="color: var(--brand-turquoise);"></i>
+                    <h2 class="text-3xl font-bold text-center mt-4 mb-2 text-white">Verificación Segura</h2>
+                    <p id="welcome-user" class="text-center text-gray-400 mb-6"></p>
+                    <form id="login-form-step2" class="w-full">
+                        <label for="password" class="text-sm mb-2 block text-left" style="color: var(--brand-turquoise-light);">Introduzca su contraseña</label>
+                        <input type="password" id="password" name="password" class="w-full text-center bg-gray-900/50 border border-gray-700 text-white rounded-lg p-3 focus:ring-2 focus:ring-[var(--brand-turquoise)] focus:border-[var(--brand-turquoise)] transition" placeholder="••••••••" required>
+                        <button type="submit" class="w-full flex items-center justify-center text-white font-bold py-3 px-6 rounded-full pro-login-button mt-6 text-lg">
+                            <span>Acceder al Sistema</span>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="quienes-somos-modal" class="modal fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 z-50 hidden">
+        <div class="glassmorphism rounded-2xl w-full max-w-4xl relative max-h-[90vh] overflow-y-auto">
+            <button data-modal-close="quienes-somos-modal" class="absolute top-4 right-4 text-gray-400 hover:text-white text-2xl z-10" aria-label="Cerrar modal">&times;</button>
+            <div class="p-6 md:p-12">
+                <h2 class="text-3xl md:text-4xl font-bold mb-2 text-center" style="color: var(--brand-turquoise);"><i class="fa-solid fa-users mr-3"></i>El Futuro es Colaborativo</h2>
+                <p class="text-center text-gray-400 mb-8 md:mb-10">Somos el equipo que traduce el potencial de la IA en resultados para tu negocio.</p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-10 items-center mb-8 md:mb-10">
+                    <div>
+                        <h3 class="text-xl font-bold text-white mb-4">Nuestra Misión</h3>
+                        <p class="text-gray-300">Crear soluciones tecnológicas que no solo son avanzadas, sino también intuitivas, éticas y con un impacto real. Somos tus socios estratégicos en la era digital.</p>
+                    </div>
+                    <div class="text-center">
+                        <h3 class="text-xl font-bold text-white mb-4">El Núcleo</h3>
+                        <div class="flex justify-center gap-4">
+                            <div class="team-avatar text-center"><img src="https://placehold.co/80x80/0F2027/00D4AA?text=DS" class="rounded-full border-2" style="border-color: var(--brand-turquoise);" alt="Avatar Data Scientist"><p class="text-xs mt-2">Data Scientist</p></div>
+                            <div class="team-avatar text-center"><img src="https://placehold.co/80x80/0F2027/00D4AA?text=IE" class="rounded-full border-2" style="border-color: var(--brand-turquoise);" alt="Avatar IA Engineer"><p class="text-xs mt-2">IA Engineer</p></div>
+                            <div class="team-avatar text-center"><img src="https://placehold.co/80x80/0F2027/00D4AA?text=GS" class="rounded-full border-2" style="border-color: var(--brand-turquoise);" alt="Avatar Growth Strategist"><p class="text-xs mt-2">Growth Strategist</p></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 text-center pt-8 border-t" style="border-color: var(--brand-gray);">
+                    <div><p class="text-3xl md:text-4xl font-bold" style="color: var(--brand-turquoise);"><span class="counter" data-target="42">0</span>+</p><p class="text-gray-400">Proyectos</p></div>
+                    <div><p class="text-3xl md:text-4xl font-bold" style="color: var(--brand-turquoise);"><span class="counter" data-target="150">0</span>M</p><p class="text-gray-400">Datos Analizados</p></div>
+                    <div><p class="text-3xl md:text-4xl font-bold" style="color: var(--brand-turquoise);"><span class="counter" data-target="98">0</span>%</p><p class="text-gray-400">Satisfacción</p></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="servicios-modal" class="modal fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 z-50 hidden">
+        <div class="glassmorphism rounded-2xl w-full max-w-4xl relative max-h-[90vh] overflow-y-auto">
+            <button data-modal-close="servicios-modal" class="absolute top-4 right-4 text-gray-400 hover:text-white text-2xl z-10" aria-label="Cerrar modal">&times;</button>
+            <div class="p-6 md:p-12">
+                <h2 class="text-3xl md:text-4xl font-bold mb-2 text-center" style="color: var(--brand-turquoise);"><i class="fa-solid fa-microchip mr-3"></i>Nuestros Servicios de IA</h2>
+                <p class="text-center text-gray-400 mb-8 md:mb-10">Soluciones diseñadas para cada faceta de tu negocio.</p>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
+                    <div class="team-avatar p-6 rounded-lg" style="background: var(--brand-dark);"><div class="relative w-20 h-20 mx-auto mb-4 flex items-center justify-center"><i class="fa-solid fa-chart-line text-4xl" style="color: var(--brand-turquoise-light);"></i></div><h3 class="text-xl font-bold text-white mb-2">Análisis Predictivo</h3><p class="text-gray-400 text-sm">Anticipa la demanda, optimiza el inventario y personaliza ofertas.</p></div>
+                    <div class="team-avatar p-6 rounded-lg" style="background: var(--brand-dark);"><div class="relative w-20 h-20 mx-auto mb-4 flex items-center justify-center"><i class="fa-solid fa-robot text-4xl" style="color: var(--brand-turquoise-light);"></i></div><h3 class="text-xl font-bold text-white mb-2">Automatización</h3><p class="text-gray-400 text-sm">Libera a tu equipo para que se centre en la excelencia.</p></div>
+                    <div class="team-avatar p-6 rounded-lg" style="background: var(--brand-dark);"><div class="relative w-20 h-20 mx-auto mb-4 flex items-center justify-center"><i class="fa-solid fa-comments text-4xl" style="color: var(--brand-turquoise-light);"></i></div><h3 class="text-xl font-bold text-white mb-2">Experiencia Cliente</h3><p class="text-gray-400 text-sm">Analiza reseñas y feedback para fidelizar a tus clientes.</p></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="modelos-modal" class="modal fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 z-50 hidden">
+        <div class="glassmorphism rounded-2xl w-full max-w-3xl relative max-h-[90vh] overflow-y-auto">
+            <button data-modal-close="modelos-modal" class="absolute top-4 right-4 text-gray-400 hover:text-white text-2xl z-10" aria-label="Cerrar modal">&times;</button>
+            <div class="p-6 md:p-12">
+                <h2 class="text-3xl md:text-4xl font-bold mb-8 text-center" style="color: var(--brand-turquoise);"><i class="fa-solid fa-cubes mr-3"></i>Modelos de IA a Medida</h2>
+                <div class="flex justify-center mb-6 border-b" style="border-color: var(--brand-gray);">
+                    <button class="model-tab active py-2 px-4 sm:px-6 text-sm sm:text-base" data-tab="predictivos">Predictivos</button>
+                    <button class="model-tab py-2 px-4 sm:px-6 text-sm sm:text-base" data-tab="nlp">NLP</button>
+                    <button class="model-tab py-2 px-4 sm:px-6 text-sm sm:text-base" data-tab="vision">Visión</button>
+                </div>
+                <div id="predictivos" class="model-content active"><p class="text-lg text-center text-gray-300">Nuestros modelos de <strong class="text-white">forecasting</strong> analizan datos para predecir con precisión ventas, afluencia y demanda.</p></div>
+                <div id="nlp" class="model-content"><p class="text-lg text-center text-gray-300">Utilizamos <strong class="text-white">NLP</strong> para entender miles de reseñas, identificar mejoras y potenciar tus fortalezas.</p></div>
+                <div id="vision" class="model-content"><p class="text-lg text-center text-gray-300">Con <strong class="text-white">Visión por Computadora</strong>, analizamos el flujo de clientes y optimizamos la distribución de mesas.</p></div>
+            </div>
+        </div>
+    </div>
+    <div id="gestion-modal" class="modal fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 z-50 hidden">
+        <div class="glassmorphism rounded-2xl w-full max-w-2xl modal-enter relative">
+            <button data-modal-close="gestion-modal" class="absolute top-4 right-4 text-gray-400 hover:text-white text-2xl" aria-label="Cerrar modal">&times;</button>
+            <div class="p-8 md:p-12">
+                <h2 class="text-3xl font-bold mb-4 text-center" style="color: var(--brand-turquoise);"><i class="fa-solid fa-sitemap mr-3"></i>Gestión Integral</h2>
+                <p class="text-gray-300 leading-relaxed text-center">Nuestra plataforma centraliza toda tu operativa en un dashboard inteligente. Conecta la IA con tus operaciones diarias y obtén una visión 360° de tu negocio en tiempo real.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- Lógica de Modales ---
+            const openModal = (modal) => { 
+                if (modal) {
+                    modal.classList.remove('hidden');
+                    if (modal.id === 'quienes-somos-modal') startCounters();
+                    if (modal.id === 'login-modal') {
+                        resetLoginModal();
+                        startLoginAnimation();
+                    } else {
+                        stopLoginAnimation();
+                    }
+                }
+            };
+            const closeModal = (modal) => { 
+                if (modal) {
+                    modal.classList.add('hidden');
+                    if(modal.id === 'login-modal') stopLoginAnimation();
+                }
+            };
+
+            document.querySelectorAll('[data-modal-target]').forEach(button => {
+                button.addEventListener('click', () => {
+                    const modalId = button.getAttribute('data-modal-target');
+                    if (button.closest('.button-carousel')) {
+                        if(button.classList.contains('carousel-item-0')) {
+                             const modal = document.getElementById(modalId);
+                             openModal(modal);
+                        }
+                    } else {
+                        const modal = document.getElementById(modalId);
+                        openModal(modal);
+                    }
+                });
+            });
+            document.querySelectorAll('[data-modal-close]').forEach(button => {
+                button.addEventListener('click', () => closeModal(button.closest('.modal')));
+            });
+            document.querySelectorAll('.modal').forEach(modalOverlay => {
+                modalOverlay.addEventListener('click', (e) => {
+                    if (e.target === modalOverlay) closeModal(modalOverlay);
+                });
+            });
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    document.querySelectorAll('.modal:not(.hidden)').forEach(closeModal);
+                }
+            });
+
+            // --- Lógica del carrusel de botones ---
+            const carouselButtons = document.querySelectorAll('.button-carousel .neon-button');
+            let activeIndex = 0;
+
+            function updateCarousel(clickedIndex) {
+                activeIndex = clickedIndex;
+                const totalItems = carouselButtons.length;
+
+                carouselButtons.forEach((button, i) => {
+                    button.classList.remove('carousel-item-0', 'carousel-item-1', 'carousel-item-2', 'carousel-item-3');
+                    
+                    let newPos = i - activeIndex;
+                    if (newPos < 0) newPos += totalItems;
+
+                    button.classList.add(`carousel-item-${newPos}`);
+                });
+            }
+
+            carouselButtons.forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const clickedIndex = parseInt(e.currentTarget.dataset.index);
+                    updateCarousel(clickedIndex);
+                });
+            });
+            updateCarousel(0);
+
+            // --- Lógica de Pestañas del Modal "Análisis de Reseñas" ---
+            const modelTabs = document.querySelectorAll('.model-tab');
+            const modelContents = document.querySelectorAll('.model-content');
+
+            modelTabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    const target = tab.dataset.tab;
+
+                    modelTabs.forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+
+                    modelContents.forEach(content => {
+                        content.classList.remove('active');
+                        if (content.id === target) {
+                            content.classList.add('active');
+                        }
+                    });
+                });
+            });
+
+
+            // --- Efectos Generales ---
+            const spotlight = document.querySelector('.spotlight');
+            window.addEventListener('mousemove', e => {
+                spotlight.style.setProperty('--x', e.clientX + 'px');
+                spotlight.style.setProperty('--y', e.clientY + 'px');
+            });
+            
+            // --- Lógica Login ---
+            const loginStep1 = document.getElementById('login-step-1');
+            const loginStep2 = document.getElementById('login-step-2');
+            const loginFormStep1 = document.getElementById('login-form-step1');
+            const welcomeUser = document.getElementById('welcome-user');
+            const usernameInput = document.getElementById('username');
+
+            loginFormStep1.addEventListener('submit', (e) => {
+                e.preventDefault();
+                welcomeUser.textContent = `Sincronizado con ${usernameInput.value || 'Invitado'}`;
+                loginStep1.classList.add('opacity-0');
+                
+                setTimeout(() => {
+                    loginStep1.classList.add('hidden');
+                    loginStep2.classList.remove('hidden');
+                    setTimeout(() => loginStep2.classList.remove('opacity-0'), 50);
+                }, 500);
+            });
+
+            function resetLoginModal() {
+                loginStep2.classList.add('hidden', 'opacity-0');
+                loginStep1.classList.remove('hidden', 'opacity-0');
+                usernameInput.value = '';
+            }
+
+            // --- Lógica Banner Piloto ---
+            const pilotBanner = document.getElementById('pilot-banner');
+            const pilotWand = document.getElementById('pilot-wand');
+            const pilotText = document.getElementById('pilot-text');
+            pilotBanner.addEventListener('click', () => {
+                pilotWand.style.transform = 'rotate(15deg)';
+                pilotText.classList.add('opacity-0');
+                setTimeout(() => {
+                    pilotWand.style.transform = 'rotate(0deg)';
+                    pilotText.classList.remove('opacity-0');
+                }, 400);
+            });
+
+            // --- Lógica Animación Título ---
+            const mainTitle = document.getElementById('main-title');
+            const titleTexts = mainTitle.querySelectorAll('.title-text');
+            const titleWand = document.getElementById('title-wand');
+            let isTitleAnimating = false;
+            mainTitle.addEventListener('click', () => {
+                if(isTitleAnimating) return;
+                isTitleAnimating = true;
+                
+                titleTexts.forEach(text => text.classList.add('title-disintegrate'));
+                titleWand.classList.add('wand-animate');
+
+                setTimeout(() => {
+                    titleTexts.forEach(text => text.classList.remove('title-disintegrate'));
+                    titleWand.classList.remove('wand-animate');
+                    isTitleAnimating = false;
+                }, 3000);
+            });
+            
+            // --- Lógica Contadores ---
+            function startCounters() {
+                document.querySelectorAll('.counter').forEach(counter => {
+                    const target = +counter.dataset.target;
+                    counter.innerText = '0';
+                    const updateCounter = () => {
+                        const current = +counter.innerText;
+                        const increment = Math.max(1, Math.ceil(target / 100));
+                        if (current < target) {
+                            counter.innerText = `${Math.min(target, current + increment)}`;
+                            requestAnimationFrame(updateCounter);
+                        } else {
+                            counter.innerText = target;
+                        }
+                    };
+                    updateCounter();
+                });
+            }
+        });
+    </script>
+    
+    <!-- JS Animación Canvas Principal -->
+    <script>
+        const mainCanvas = document.getElementById('circuit-canvas');
+        const mainCtx = mainCanvas.getContext('2d');
+        let mainPackets = [];
+        let mainAnimationId;
+
+        function mainSetup() {
+            mainCanvas.width = window.innerWidth;
+            mainCanvas.height = window.innerHeight;
+            const mainPacketCount = window.innerWidth < 768 ? 20 : 30;
+            mainPackets = [];
+            const gridSize = Math.max(25, Math.floor(mainCanvas.width / 50));
+            for(let i = 0; i < mainPacketCount; i++) {
+                mainPackets.push(new MainPacket(gridSize));
+            }
+        }
+
+        class MainPacket {
+             constructor(gridSize) { this.gridSize = gridSize; this.reset(); }
+            reset() {
+                this.x = (mainCanvas.width / 2) + Math.floor(Math.random() * (mainCanvas.width / 2 / this.gridSize)) * this.gridSize;
+                this.y = Math.floor(Math.random() * (mainCanvas.height / this.gridSize)) * this.gridSize;
+                this.speed = Math.random() * 0.5 + 0.25;
+                this.direction = Math.floor(Math.random() * 4);
+                this.life = Math.random() * 200 + 100;
+                this.history = [];
+            }
+            update() {
+                if (--this.life <= 0) this.reset();
+                this.history.push({x: this.x, y: this.y});
+                if (this.history.length > 8) this.history.shift();
+                if (this.x % this.gridSize < 1 && this.y % this.gridSize < 1 && Math.random() < 0.15) {
+                    this.direction = (this.direction + (Math.random() < 0.5 ? 1 : -1) + 4) % 4;
+                }
+                const directions = [{x:1, y:0}, {x:0, y:1}, {x:-1, y:0}, {x:0, y:-1}];
+                this.x += directions[this.direction].x * this.speed;
+                this.y += directions[this.direction].y * this.speed;
+                if (this.x < mainCanvas.width / 2 || this.x > mainCanvas.width || this.y < 0 || this.y > mainCanvas.height) this.reset();
+            }
+            draw(ctx) {
+                this.history.forEach((p, i) => {
+                    ctx.fillStyle = `rgba(0, 212, 170, ${(i / this.history.length) * 0.4})`;
+                    ctx.fillRect(p.x, p.y, 2, 2);
+                });
+                ctx.fillStyle = `#1DE9B6`; ctx.shadowColor = `#1DE9B6`; ctx.shadowBlur = 10;
+                ctx.fillRect(this.x, this.y, 2, 2);
+                ctx.shadowBlur = 0;
+            }
+        }
+        
+        function drawGrid() {
+            const gridSize = Math.max(25, Math.floor(mainCanvas.width / 50));
+            const cols = Math.floor(mainCanvas.width / gridSize);
+            const rows = Math.floor(mainCanvas.height / gridSize);
+            
+            mainCtx.lineWidth = 0.5;
+            for (let i = Math.floor(cols / 2); i < cols + 1; i++) {
+                for (let j = 0; j < rows + 1; j++) {
+                    const x = i * gridSize;
+                    const y = j * gridSize;
+                    
+                    const distFromCenterY = Math.abs(y - mainCanvas.height / 2);
+                    const normalizedDistY = distFromCenterY / (mainCanvas.height / 2);
+                    
+                    const alpha = 0.15 + 0.4 * Math.pow(normalizedDistY, 2);
+                    
+                    mainCtx.strokeStyle = `rgba(0, 212, 170, ${alpha})`;
+
+                    mainCtx.beginPath();
+                    mainCtx.moveTo(x, y);
+                    mainCtx.lineTo(x + gridSize, y);
+                    mainCtx.stroke();
+                    
+                    mainCtx.beginPath();
+                    mainCtx.moveTo(x, y);
+                    mainCtx.lineTo(x, y + gridSize);
+                    mainCtx.stroke();
+                }
+            }
+        }
+
+        function mainAnimate() {
+            mainCtx.clearRect(0, 0, mainCanvas.width, mainCanvas.height);
+            drawGrid();
+            mainPackets.forEach(p => { p.update(); p.draw(mainCtx); });
+            mainAnimationId = requestAnimationFrame(mainAnimate);
+        }
+        
+        window.addEventListener('resize', mainSetup);
+        document.addEventListener("visibilitychange", () => document.hidden ? cancelAnimationFrame(mainAnimationId) : mainAnimate());
+        mainSetup();
+        mainAnimate();
+    </script>
+
+    <!-- JS Animación Canvas Login (Red Neuronal) -->
+    <script>
+        let loginAnimationId;
+        function startLoginAnimation() {
+            const canvas = document.getElementById('login-canvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            let particles = [];
+            const particleColor = 'rgba(0, 212, 170, 0.8)';
+            const lineColor = 'rgba(0, 212, 170, 0.2)';
+
+            function setup() {
+                const container = canvas.parentElement;
+                canvas.width = container.offsetWidth;
+                canvas.height = container.offsetHeight;
+                particles = [];
+                const particleCount = window.innerWidth < 768 ? 40 : 60;
+                for (let i = 0; i < particleCount; i++) {
+                    particles.push(new Particle());
+                }
+            }
+
+            class Particle {
+                constructor() {
+                    this.x = Math.random() * canvas.width;
+                    this.y = Math.random() * canvas.height;
+                    this.vx = (Math.random() - 0.5) * 0.5;
+                    this.vy = (Math.random() - 0.5) * 0.5;
+                    this.radius = Math.random() * 1.5 + 1;
+                }
+                update() {
+                    this.x += this.vx;
+                    this.y += this.vy;
+
+                    if (this.x < 0 || this.x > canvas.width) this.vx *= -1;
+                    if (this.y < 0 || this.y > canvas.height) this.vy *= -1;
+                }
+                draw() {
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                    ctx.fillStyle = particleColor;
+                    ctx.fill();
+                }
+            }
+            
+            function connectParticles() {
+                const maxDist = 100;
+                for (let i = 0; i < particles.length; i++) {
+                    for (let j = i; j < particles.length; j++) {
+                        const dx = particles[i].x - particles[j].x;
+                        const dy = particles[i].y - particles[j].y;
+                        const distance = Math.sqrt(dx * dx + dy * dy);
+
+                        if (distance < maxDist) {
+                            ctx.beginPath();
+                            ctx.strokeStyle = lineColor;
+                            ctx.lineWidth = 1 - (distance / maxDist);
+                            ctx.moveTo(particles[i].x, particles[i].y);
+                            ctx.lineTo(particles[j].x, particles[j].y);
+                            ctx.stroke();
+                        }
+                    }
+                }
+            }
+
+            function animate() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                particles.forEach(p => {
+                    p.update();
+                    p.draw();
+                });
+                
+                connectParticles();
+
+                loginAnimationId = requestAnimationFrame(animate);
+            }
+
+            if (!loginAnimationId) {
+                setup();
+                animate();
+                window.addEventListener('resize', setup);
+            }
+        }
+
+        function stopLoginAnimation() {
+            if(loginAnimationId) {
+                cancelAnimationFrame(loginAnimationId);
+                loginAnimationId = null;
+                const canvas = document.getElementById('login-canvas');
+                 if (canvas) {
+                    const ctx = canvas.getContext('2d');
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                 }
+            }
+        }
+    </script>
+</body>
+</html>

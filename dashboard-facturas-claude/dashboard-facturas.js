@@ -3331,25 +3331,47 @@ async function initProveedorChart(facturas) {
             datasets: [{
                 data: data,
                 backgroundColor: [
-                    '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6',
-                    '#06b6d4', '#84cc16', '#f97316', '#ec4899', '#6366f1'
+                    '#00D4AA', '#1DE9B6', '#14B8A6', '#10B981', '#26D0CE',
+                    '#0F2027', '#2C3E50', '#64748b', '#94a3b8', '#cbd5e1'
                 ],
                 borderWidth: 2,
-                borderColor: '#ffffff'
+                borderColor: '#ffffff',
+                hoverBorderWidth: 3,
+                hoverBorderColor: '#00D4AA'
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            cutout: '60%',
             plugins: {
                 legend: {
                     position: 'bottom',
                     labels: {
-                        padding: 20,
-                        usePointStyle: true
+                        padding: 15,
+                        usePointStyle: true,
+                        font: {
+                            family: 'Inter',
+                            size: 10,
+                            weight: '500'
+                        },
+                        color: '#64748b'
                     }
                 },
                 tooltip: {
+                    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                    titleColor: '#0F2027',
+                    bodyColor: '#64748b',
+                    borderColor: '#00D4AA',
+                    borderWidth: 1,
+                    cornerRadius: 8,
+                    displayColors: true,
+                    titleFont: {
+                        size: 12
+                    },
+                    bodyFont: {
+                        size: 11
+                    },
                     callbacks: {
                         label: function(context) {
                             const label = context.label || '';
@@ -3360,6 +3382,12 @@ async function initProveedorChart(facturas) {
                         }
                     }
                 }
+            },
+            animation: {
+                animateRotate: true,
+                animateScale: true,
+                duration: 800,
+                easing: 'easeOutQuart'
             }
         }
     });
@@ -3409,9 +3437,18 @@ async function initCategoriaChart() {
                 datasets: [{
                     label: 'Productos por categoría',
                     data: data,
-                    backgroundColor: 'rgba(59, 130, 246, 0.8)',
-                    borderColor: 'rgba(59, 130, 246, 1)',
-                    borderWidth: 1
+                    backgroundColor: [
+                        '#00D4AA', '#1DE9B6', '#14B8A6', '#10B981', '#26D0CE',
+                        '#0F2027', '#2C3E50', '#64748b', '#94a3b8', '#cbd5e1'
+                    ],
+                    borderColor: '#ffffff',
+                    borderWidth: 1,
+                    borderRadius: 4,
+                    borderSkipped: false,
+                    hoverBackgroundColor: [
+                        '#00BFA5', '#00D4AA', '#0F766E', '#059669', '#0891b2',
+                        '#1e293b', '#334155', '#475569', '#64748b', '#94a3b8'
+                    ]
                 }]
             },
             options: {
@@ -3420,15 +3457,55 @@ async function initCategoriaChart() {
                 plugins: {
                     legend: {
                         display: false
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                        titleColor: '#0F2027',
+                        bodyColor: '#64748b',
+                        borderColor: '#00D4AA',
+                        borderWidth: 1,
+                        cornerRadius: 8,
+                        displayColors: true,
+                        titleFont: {
+                            size: 12
+                        },
+                        bodyFont: {
+                            size: 11
+                        }
                     }
                 },
                 scales: {
+                    x: {
+                        grid: {
+                            display: false
+                        },
+                        ticks: {
+                            color: '#64748b',
+                            font: {
+                                family: 'Inter',
+                                size: 10
+                            }
+                        }
+                    },
                     y: {
                         beginAtZero: true,
+                        grid: {
+                            color: 'rgba(100, 116, 139, 0.1)',
+                            drawBorder: false
+                        },
                         ticks: {
-                            stepSize: 1
+                            stepSize: 1,
+                            color: '#64748b',
+                            font: {
+                                family: 'Inter',
+                                size: 10
+                            }
                         }
                     }
+                },
+                animation: {
+                    duration: 800,
+                    easing: 'easeOutQuart'
                 }
             }
         });
@@ -3481,21 +3558,35 @@ async function initEvolutionChart(facturas) {
         type: 'line',
         data: {
             labels: labels,
-            datasets: [{
-                label: 'Número de facturas',
-                data: Object.values(facturasPorDia),
-                borderColor: 'rgba(59, 130, 246, 1)',
-                backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                tension: 0.4,
-                yAxisID: 'y'
-            }, {
-                label: 'Importe total (€)',
-                data: Object.values(importesPorDia),
-                borderColor: 'rgba(16, 185, 129, 1)',
-                backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                tension: 0.4,
-                yAxisID: 'y1'
-            }]
+                            datasets: [{
+                    label: 'Número de facturas',
+                    data: Object.values(facturasPorDia),
+                    borderColor: '#00D4AA',
+                    backgroundColor: 'rgba(0, 212, 170, 0.1)',
+                    borderWidth: 2,
+                    tension: 0.4,
+                    yAxisID: 'y',
+                    pointBackgroundColor: '#00D4AA',
+                    pointBorderColor: '#ffffff',
+                    pointBorderWidth: 1,
+                    pointRadius: 4,
+                    pointHoverRadius: 6,
+                    fill: true
+                }, {
+                    label: 'Importe total (€)',
+                    data: Object.values(importesPorDia),
+                    borderColor: '#14B8A6',
+                    backgroundColor: 'rgba(20, 184, 166, 0.1)',
+                    borderWidth: 2,
+                    tension: 0.4,
+                    yAxisID: 'y1',
+                    pointBackgroundColor: '#14B8A6',
+                    pointBorderColor: '#ffffff',
+                    pointBorderWidth: 1,
+                    pointRadius: 4,
+                    pointHoverRadius: 6,
+                    fill: true
+                }]
         },
         options: {
             responsive: true,
@@ -3507,18 +3598,52 @@ async function initEvolutionChart(facturas) {
             scales: {
                 x: {
                     display: true,
+                    grid: {
+                        color: 'rgba(100, 116, 139, 0.1)',
+                        drawBorder: false
+                    },
+                    ticks: {
+                        color: '#64748b',
+                        font: {
+                            family: 'Inter',
+                            size: 10
+                        }
+                    },
                     title: {
                         display: true,
-                        text: 'Fecha'
+                        text: 'Fecha',
+                        color: '#64748b',
+                        font: {
+                            family: 'Inter',
+                            size: 12,
+                            weight: '600'
+                        }
                     }
                 },
                 y: {
                     type: 'linear',
                     display: true,
                     position: 'left',
+                    grid: {
+                        color: 'rgba(100, 116, 139, 0.1)',
+                        drawBorder: false
+                    },
+                    ticks: {
+                        color: '#64748b',
+                        font: {
+                            family: 'Inter',
+                            size: 10
+                        }
+                    },
                     title: {
                         display: true,
-                        text: 'Número de facturas'
+                        text: 'Número de facturas',
+                        color: '#64748b',
+                        font: {
+                            family: 'Inter',
+                            size: 12,
+                            weight: '600'
+                        }
                     },
                     beginAtZero: true
                 },
@@ -3526,18 +3651,56 @@ async function initEvolutionChart(facturas) {
                     type: 'linear',
                     display: true,
                     position: 'right',
-                    title: {
-                        display: true,
-                        text: 'Importe (€)'
-                    },
-                    beginAtZero: true,
                     grid: {
                         drawOnChartArea: false,
                     },
+                    ticks: {
+                        color: '#64748b',
+                        font: {
+                            family: 'Inter',
+                            size: 10
+                        }
+                    },
+                    title: {
+                        display: true,
+                        text: 'Importe (€)',
+                        color: '#64748b',
+                        font: {
+                            family: 'Inter',
+                            size: 12,
+                            weight: '600'
+                        }
+                    },
+                    beginAtZero: true
                 }
             },
             plugins: {
+                legend: {
+                    labels: {
+                        usePointStyle: true,
+                        padding: 15,
+                        font: {
+                            family: 'Inter',
+                            size: 10,
+                            weight: '500'
+                        },
+                        color: '#64748b'
+                    }
+                },
                 tooltip: {
+                    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                    titleColor: '#0F2027',
+                    bodyColor: '#64748b',
+                    borderColor: '#00D4AA',
+                    borderWidth: 1,
+                    cornerRadius: 8,
+                    displayColors: true,
+                    titleFont: {
+                        size: 12
+                    },
+                    bodyFont: {
+                        size: 11
+                    },
                     callbacks: {
                         afterBody: function(context) {
                             const index = context[0].dataIndex;
@@ -3546,6 +3709,10 @@ async function initEvolutionChart(facturas) {
                         }
                     }
                 }
+            },
+            animation: {
+                duration: 800,
+                easing: 'easeOutQuart'
             }
         }
     });

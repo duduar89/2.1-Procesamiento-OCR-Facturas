@@ -2015,12 +2015,12 @@
 </head>
 <body>
     <div class="dashboard-container">
-        <!-- Header con navegación -->
+        <!-- 🚀 HEADER MODERNO BRAIN STORMERS -->
         <header class="dashboard-header">
             <div class="header-content">
                 <div class="header-left">
-                    <h1>Gestión de Facturas Empresarial</h1>
-                    <p id="restauranteInfo">Sistema de procesamiento y validación de documentos</p>
+                    <h1>📊 Dashboard de Facturas</h1>
+                    <p id="restauranteInfo">Sistema inteligente de procesamiento y análisis empresarial</p>
                 </div>
                 <div class="header-actions">
                     <button class="theme-toggle" onclick="toggleTheme()" title="Cambiar tema">
@@ -2029,26 +2029,22 @@
                     <button class="btn primary" id="uploadBtn">
                         📁 Subir Factura
                     </button>
+                    <a href="../index.html" class="btn secondary">
+                        🏠 Sistema Principal
+                    </a>
                     <button class="btn secondary" id="logoutBtn" onclick="handleLogout()">
-                        Cerrar Sesión
+                        🚪 Cerrar Sesión
                     </button>
                 </div>
             </div>
         </header>
 
-        <!-- ENLACE AL SISTEMA PRINCIPAL -->
-        <div class="dashboard-link">
-            <a href="../index.html" class="btn">
-                Volver al Sistema Principal
-            </a>
-        </div>
-
-        <!-- Métricas principales -->
+        <!-- 🎯 MÉTRICAS PRINCIPALES - DISEÑO MODERNO BRAIN STORMERS -->
         <section class="metrics-section">
-            <!-- Fila 1: Métricas de facturas -->
+            <!-- Fila 1: KPIs Principales -->
             <div class="metrics-grid">
                 <div class="metric-card" data-metric="total">
-                    <div class="metric-icon">📄</div>
+                    <div class="metric-icon">📈</div>
                     <div class="metric-value">0</div>
                     <div class="metric-label">Total Facturas</div>
                     <div class="metric-trend">+12% vs mes anterior</div>
@@ -2062,52 +2058,52 @@
                 </div>
                 
                 <div class="metric-card" data-metric="aprobadas">
-                    <div class="metric-icon">✅</div>
+                    <div class="metric-icon">✓</div>
                     <div class="metric-value">0</div>
                     <div class="metric-label">Aprobadas</div>
                     <div class="metric-trend">+8% vs mes anterior</div>
                 </div>
                 
                 <div class="metric-card" data-metric="importes">
-                    <div class="metric-icon">💰</div>
+                    <div class="metric-icon">€</div>
                     <div class="metric-value">0 €</div>
                     <div class="metric-label">Total Importes</div>
                     <div class="metric-trend">+15% vs mes anterior</div>
                 </div>
             </div>
 
-            <!-- Fila 2: Métricas de pagos -->
+            <!-- Fila 2: Gestión de Pagos -->
             <div class="metrics-grid">
                 <div class="metric-card payment-card urgente" data-metric="pagos_7_dias">
-                    <div class="metric-icon">🔴</div>
+                    <div class="metric-icon">!</div>
                     <div class="metric-value">0 €</div>
                     <div class="metric-label">Pagos 7 días</div>
                     <div class="metric-trend">X facturas pendientes</div>
                 </div>
                 
                 <div class="metric-card payment-card warning" data-metric="pagos_15_dias">
-                    <div class="metric-icon">🟡</div>
+                    <div class="metric-icon">!</div>
                     <div class="metric-value">0 €</div>
                     <div class="metric-label">Pagos 15 días</div>
                     <div class="metric-trend">X facturas pendientes</div>
                 </div>
                 
                 <div class="metric-card payment-card normal" data-metric="pagos_30_dias">
-                    <div class="metric-icon">🟢</div>
+                    <div class="metric-icon">✓</div>
                     <div class="metric-value">0 €</div>
                     <div class="metric-label">Pagos 30 días</div>
                     <div class="metric-trend">X facturas pendientes</div>
                 </div>
                 
                 <div class="metric-card" data-metric="facturas_vencidas">
-                    <div class="metric-icon">⚠️</div>
+                    <div class="metric-icon">⏰</div>
                     <div class="metric-value">0</div>
                     <div class="metric-label">Facturas Vencidas</div>
                     <div class="metric-trend">Revisar urgente</div>
                 </div>
             </div>
 
-            <!-- Fila 3: Métricas de proveedores y productos -->
+            <!-- Fila 3: Análisis de Proveedores y Productos -->
             <div class="metrics-grid">
                 <div class="metric-card" data-metric="total_proveedores">
                     <div class="metric-icon">🏢</div>
@@ -2117,7 +2113,7 @@
                 </div>
                 
                 <div class="metric-card" data-metric="nuevos_proveedores">
-                    <div class="metric-icon">🆕</div>
+                    <div class="metric-icon">+</div>
                     <div class="metric-value">0</div>
                     <div class="metric-label">Nuevos Proveedores</div>
                     <div class="metric-trend">Esta semana</div>
@@ -2131,7 +2127,7 @@
                 </div>
                 
                 <div class="metric-card" data-metric="nuevos_productos">
-                    <div class="metric-icon">🎁</div>
+                    <div class="metric-icon">+</div>
                     <div class="metric-value">0</div>
                     <div class="metric-label">Nuevos Productos</div>
                     <div class="metric-trend">Esta semana</div>
@@ -2139,13 +2135,13 @@
             </div>
         </section>
 
-        <!-- Sección de gráficos -->
+        <!-- 📊 ANÁLISIS VISUAL - GRÁFICOS MODERNOS BRAIN STORMERS -->
         <section class="charts-section">
             <div class="charts-grid">
-                <!-- Gráfico de distribución de gastos por proveedor -->
+                <!-- Análisis de Distribución por Proveedor -->
                 <div class="chart-card">
                     <div class="chart-header">
-                        <h3>Distribución de Gastos por Proveedor</h3>
+                        <h3>📈 Distribución de Gastos por Proveedor</h3>
                         <select class="chart-filter" id="proveedorChartFilter">
                             <option value="mes">Este mes</option>
                             <option value="trimestre">Este trimestre</option>
@@ -2157,10 +2153,10 @@
                     </div>
                 </div>
 
-                <!-- Gráfico de gastos por categoría -->
+                <!-- Análisis de Categorías -->
                 <div class="chart-card">
                     <div class="chart-header">
-                        <h3>Gastos por Categoría</h3>
+                        <h3>🎯 Gastos por Categoría</h3>
                         <select class="chart-filter" id="categoriaChartFilter">
                             <option value="mes">Este mes</option>
                             <option value="trimestre">Este trimestre</option>
@@ -2171,10 +2167,10 @@
                     </div>
                 </div>
 
-                <!-- Evolución de facturas últimos 30 días -->
+                <!-- Evolución Temporal -->
                 <div class="chart-card full-width">
                     <div class="chart-header">
-                        <h3>Evolución de Facturas - Últimos 30 días</h3>
+                        <h3>📊 Evolución de Facturas - Últimos 30 días</h3>
                         <div class="chart-legend">
                             <span class="legend-item"><span class="legend-color blue"></span>Número de facturas</span>
                             <span class="legend-item"><span class="legend-color green"></span>Importe total</span>
@@ -2238,67 +2234,7 @@
             </div>
         </section>
 
-        <!-- Filtros y búsqueda -->
-        <section class="filters-section">
-            <div class="filters-container">
-                <div class="filter-group">
-                    <label for="searchInput">Búsqueda</label>
-                    <input type="text" id="searchInput" placeholder="Proveedor, número de factura..." class="search-input">
-                </div>
-                
-                <div class="filter-group">
-                    <label for="estadoFilter">Estado</label>
-                    <select id="estadoFilter" class="filter-select">
-                        <option value="">Todos los estados</option>
-                        <option value="processed">Procesadas</option>
-                        <option value="pending">Pendientes</option>
-                        <option value="approved">Aprobadas</option>
-                        <option value="error">Con errores</option>
-                    </select>
-                </div>
 
-                <div class="filter-group">
-                    <label for="confianzaFilter">Confianza</label>
-                    <select id="confianzaFilter" class="filter-select">
-                        <option value="">Todas las confianzas</option>
-                        <option value="alta">Alta (>90%)</option>
-                        <option value="media">Media (70-90%)</option>
-                        <option value="baja">Baja (<70%)</option>
-                    </select>
-                </div>
-
-                <div class="filter-group">
-                    <label for="fechaDesde">Fecha desde</label>
-                    <input type="date" id="fechaDesde" class="filter-date">
-                </div>
-
-                <div class="filter-group">
-                    <label for="fechaHasta">Fecha hasta</label>
-                    <input type="date" id="fechaHasta" class="filter-date">
-                </div>
-
-                <div class="filter-buttons">
-                    <button class="btn-filter primary" id="aplicarFiltros">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <polygon points="22,3 2,3 10,12.46 10,19 14,21 14,12.46 22,3"/>
-                        </svg>
-                        Filtrar
-                    </button>
-                    <button class="btn-filter secondary" id="limpiarFiltros">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                        </svg>
-                        Limpiar
-                    </button>
-                    <button class="btn-filter test" id="testStorageBtn" title="Probar conexión con Supabase Storage">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                        </svg>
-                        Probar Storage
-                    </button>
-                </div>
-            </div>
-        </section>
 
         <!-- Tabla de facturas -->
         <section class="table-section">
