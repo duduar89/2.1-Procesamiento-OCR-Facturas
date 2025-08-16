@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analizador de Platos v8 (con Alérgenos)</title>
+    
+    <!-- Tailwind CSS para el diseño -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts y Font Awesome para iconos y tipografía -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f4f8;
+        }
+        /* Ajustes de legibilidad y overlays */
+        .overlay-badge { width: 18px; height: 18px; font-size: 11px; }
+        @media (max-width: 640px) {
+            .overlay-badge { width: 22px; height: 22px; font-size: 12px; }
+            table th, table td { font-size: 0.9rem; }
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .fade-in {
+            animation: fadeIn 0.5s ease-out forwards;
+        }
+        .dragover {
+            border-color: #2dd4bf; 
+            background-color: #f0fdfa;
+        }
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #2dd4bf;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .skeleton-loader {
+            background-color: #e2e8f0;
+            border-radius: 0.5rem;
+            animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        @keyframes pulse {
+            50% {
+                opacity: .5;
+            }
+        }
+    </style>
+</head>
+<body class="antialiased text-gray-800">
+
+    <div class="min-h-screen flex flex-col items-center justify-center p-4">
+        
+        <div class="w-full max-w-4xl mx-auto">
+            
+            <div class="text-center mb-8">
+                <i class="fas fa-brain text-5xl text-teal-500 mb-3"></i>
+                <h1 class="text-4xl font-extrabold text-gray-900">Analizador de Platos con IA</h1>
+                <p class="text-lg text-gray-600 mt-2">Sube la foto de un plato y la IA estimará sus ingredientes y pesos.</p>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-2xl p-6 md:p-8 border border-gray-200">
+
+                <div id="upload-area">
+                    <div id="upload-box" class="relative block w-full border-2 border-dashed border-gray-300 rounded-xl p-8 text-center cursor-pointer hover:border-teal-400 transition-all duration-300">
+                        <input type="file" id="file-input" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" accept="image/*">
+                        
+                        <div class="flex flex-col items-center justify-center">
+                            <i class="fas fa-cloud-upload-alt text-5xl text-teal-400 mb-4"></i>
+                            <span class="block text-xl font-semibold text-gray-700">Arrastra o selecciona una foto</span>
+                            <span class="block text-sm text-gray-500 mt-1">JPG, PNG, WebP de hasta 10MB</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="preview-area" class="hidden">
+                    <div class="mb-4">
+                        <img id="image-preview" src="#" alt="Previsualización del plato" class="w-full h-auto max-h-80 object-contain rounded-xl shadow-md">
+                    </div>
+                    <div class="flex flex-col sm:flex-row gap-3">
+                        <button id="analyze-button" class="w-full bg-teal-500 hover:bg-teal-600 text-white font-bold py-3 px-4 rounded-lg text-lg transition-all duration-300 transform hover:scale-105 shadow-lg">
+                            <i class="fas fa-magic-wand-sparkles mr-2"></i> Analizar Ingredientes
+                        </button>
+                        <button id="change-image-button" class="w-full sm:w-auto bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-3 px-4 rounded-lg transition-all">
+                            <i class="fas fa-exchange-alt"></i> Cambiar Foto
+                        </button>
+                    </div>
+                </div>
+
+                <div id="loading-area" class="hidden text-center py-8">
+                    <div class="loader mx-auto"></div>
+                    <p id="loading-text" class="mt-4 text-lg font-semibold text-teal-600">Analizando con IA Avanzada...</p>
+                    <p class="text-gray-500">Esto puede tardar unos segundos...</p>
+                </div>
+
+                <div id="results-area" class="hidden mt-6">
+                    <div class="text-center mb-8">
+                        <h2 id="dish-name-header" class="text-4xl font-extrabold text-gray-800 mb-3"></h2>
+                        <div id="ai-summary-card" class="max-w-2xl mx-auto bg-teal-50 border border-teal-200 rounded-xl p-4 text-teal-800">
+                            <p class="font-semibold"><i class="fas fa-comment-dots mr-2"></i>Resumen de la IA:</p>
+                            <p id="ai-summary" class="text-sm mt-1"></p>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
+                        <div class="lg:col-span-3">
+                             <h3 class="text-xl font-bold text-gray-700 mb-3">Desglose de Ingredientes</h3>
+                             <div class="overflow-hidden border border-gray-200 rounded-xl">
+                                <table class="min-w-full bg-white">
+                                    <thead class="bg-gray-50">
+                                        <tr>
+                                            <th class="text-left py-3 px-3 sm:px-4 font-semibold text-xs sm:text-sm text-gray-600 uppercase tracking-wider">Ingrediente Base</th>
+                                            <th class="text-center py-3 px-2 sm:px-4 font-semibold text-xs sm:text-sm text-gray-600 uppercase tracking-wider">Peso (g)</th>
+                                            <th class="text-center py-3 px-2 sm:px-4 font-semibold text-xs sm:text-sm text-gray-600 uppercase tracking-wider">Estado</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="results-table-body" class="text-gray-700 divide-y divide-gray-200 text-sm sm:text-base">
+                                    </tbody>
+                                </table>
+                            </div>
+                             <button id="export-csv-button" class="hidden w-full mt-4 bg-gray-700 hover:bg-gray-800 text-white font-bold py-2 px-4 rounded-lg transition-all">
+                                <i class="fas fa-file-csv mr-2"></i> Exportar a CSV
+                             </button>
+                        </div>
+                        <div class="lg:col-span-2">
+                            <h3 class="text-xl font-bold text-gray-700 mb-3">Render Generativo</h3>
+                            <div id="generative-image-container" class="w-full aspect-square bg-gray-100 rounded-xl flex items-center justify-center border border-gray-200 shadow-inner overflow-hidden relative mx-auto">
+                                <div class="skeleton-loader w-full h-full"></div>
+                            </div>
+                            <div id="nutrition-analysis" class="mt-4">
+                                <h3 class="text-xl font-bold text-gray-700 mb-2">Análisis Nutricional Estimado</h3>
+                                <div id="nutrition-content" class="bg-gray-50 border border-gray-200 rounded-xl p-4 space-y-3">
+                                    <div class="skeleton-loader h-6 w-full"></div>
+                                    <div class="skeleton-loader h-6 w-3/4"></div>
+                                    <div class="skeleton-loader h-6 w-full"></div>
+                                </div>
+                            </div>
+                            <!-- NUEVO: Sección de Alérgenos -->
+                            <div id="allergen-analysis" class="mt-4">
+                                <h3 class="text-xl font-bold text-gray-700 mb-2">Alérgenos Potenciales</h3>
+                                <div id="allergen-content" class="bg-red-50 border border-red-200 rounded-xl p-4">
+                                    <div class="skeleton-loader h-6 w-full"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Acción: nueva consulta -->
+                    <div class="mt-8 flex justify-center">
+                        <button id="new-query-button" class="hidden bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-5 rounded-lg shadow">
+                            <i class="fas fa-rotate-left mr-2"></i> Hacer nueva consulta
+                        </button>
+                    </div>
+                </div>
+
+                <div id="error-area" class="hidden mt-6 text-center p-6 bg-red-50 border border-red-200 rounded-lg">
+                    <i class="fas fa-times-circle text-4xl text-red-500 mb-3"></i>
+                    <h3 class="text-xl font-bold text-red-700">¡Ups! Algo salió mal</h3>
+                    <p id="error-message" class="text-red-600 mt-2">No se pudo analizar la imagen. Inténtalo de nuevo.</p>
+                </div>
+
+            </div>
+            <p class="text-center text-xs text-gray-400 mt-4">Desarrollado con el poder de Google Gemini & Imagen</p>
+        </div>
+    </div>
+
+    <script>
+        const uploadArea = document.getElementById('upload-area');
+        const uploadBox = document.getElementById('upload-box');
+        const fileInput = document.getElementById('file-input');
+        const previewArea = document.getElementById('preview-area');
+        const imagePreview = document.getElementById('image-preview');
+        const analyzeButton = document.getElementById('analyze-button');
+        const changeImageButton = document.getElementById('change-image-button');
+        const loadingArea = document.getElementById('loading-area');
+        const loadingText = document.getElementById('loading-text');
+        const resultsArea = document.getElementById('results-area');
+        const dishNameHeader = document.getElementById('dish-name-header');
+        const aiSummary = document.getElementById('ai-summary');
+        const resultsTableBody = document.getElementById('results-table-body');
+        const generativeImageContainer = document.getElementById('generative-image-container');
+        const errorArea = document.getElementById('error-area');
+        const errorMessage = document.getElementById('error-message');
+        const exportCsvButton = document.getElementById('export-csv-button');
+        const nutritionContent = document.getElementById('nutrition-content');
+        const allergenContent = document.getElementById('allergen-content');
+        const newQueryButton = document.getElementById('new-query-button');
+
+        let currentFile = null;
+        let lastAnalysisResult = null;
+        
+        const handleFile = (file) => {
+            if (file && file.type.startsWith('image/')) {
+                if (file.size > 10 * 1024 * 1024) {
+                    alert('La imagen es demasiado grande. El tamaño máximo es 10MB.');
+                    return;
+                }
+                
+                currentFile = file;
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    imagePreview.src = e.target.result;
+                    uploadArea.classList.add('hidden');
+                    previewArea.classList.remove('hidden');
+                    previewArea.classList.add('fade-in');
+                    resetResults();
+                };
+                reader.readAsDataURL(file);
+            } else {
+                alert('Por favor, selecciona un archivo de imagen válido.');
+            }
+        };
+
+        fileInput.addEventListener('change', (e) => handleFile(e.target.files[0]));
+        uploadBox.addEventListener('dragover', (e) => { e.preventDefault(); uploadBox.classList.add('dragover'); });
+        uploadBox.addEventListener('dragleave', () => uploadBox.classList.remove('dragover'));
+        uploadBox.addEventListener('drop', (e) => { e.preventDefault(); uploadBox.classList.remove('dragover'); handleFile(e.dataTransfer.files[0]); });
+        changeImageButton.addEventListener('click', () => {
+            previewArea.classList.add('hidden');
+            uploadArea.classList.remove('hidden');
+            fileInput.value = '';
+            currentFile = null;
+            resetResults();
+        });
+
+        const resetResults = () => {
+            resultsArea.classList.add('hidden');
+            errorArea.classList.add('hidden');
+            exportCsvButton.classList.add('hidden');
+            newQueryButton.classList.add('hidden');
+            resultsTableBody.innerHTML = '';
+            aiSummary.innerHTML = '';
+            dishNameHeader.textContent = '';
+            generativeImageContainer.innerHTML = '<div class="skeleton-loader w-full h-full"></div>';
+            nutritionContent.innerHTML = '<div class="skeleton-loader h-6 w-full"></div><div class="skeleton-loader h-6 w-3/4"></div><div class="skeleton-loader h-6 w-full"></div>';
+            allergenContent.innerHTML = '<div class="skeleton-loader h-6 w-full"></div>';
+            lastAnalysisResult = null;
+        };
+
+        analyzeButton.addEventListener('click', async () => {
+            if (!currentFile) {
+                alert('No hay ninguna imagen para analizar.');
+                return;
+            }
+
+            previewArea.classList.add('hidden');
+            loadingArea.classList.remove('hidden');
+            loadingText.textContent = 'Analizando ingredientes y pesos...';
+            resetResults();
+
+            try {
+                const base64Image = await toBase64(currentFile);
+                const analysisResult = await callGeminiAPI(base64Image);
+                lastAnalysisResult = analysisResult;
+                
+                displayResults(analysisResult);
+                loadingArea.classList.add('hidden');
+                resultsArea.classList.remove('hidden');
+                newQueryButton.classList.remove('hidden');
+
+                generateDishImage(analysisResult.base_ingredients, analysisResult.dish_name, analysisResult.detected_items);
+                getNutritionInfo(analysisResult.base_ingredients);
+                displayAllergens(analysisResult.allergens);
+
+            } catch (error) {
+                console.error('Error durante el análisis:', error);
+                loadingArea.classList.add('hidden');
+                displayError(error.message);
+            }
+        });
+
+        async function callGeminiAPI(base64ImageData) {
+            const apiKey = "AIzaSyD3RPlZagpBOg7qXQgSizoDRcSIf2z8Sv8";
+            const prompt = `
+                Eres un chef forense de alimentos. Analiza la IMAGEN y devuelve un JSON ESTRICTO con:
+                - dish_name (string)
+                - summary (string)
+                - base_ingredients: [{ ingredient (string), estimated_grams (number, 1 decimal), state ("crudo"|"cocinado") }]
+                - allergens: [string] (de entre: Gluten/Harinas, Crustáceos, Huevos, Pescado, Cacahuetes, Soja, Leche/Lácteos, Frutos de cáscara, Apio, Mostaza, Sésamo, Sulfitos, Altramuces/Lupino, Moluscos)
+                - detected_items: SOLO ingredientes claramente visibles, con [{ ingredient (string), estimated_grams (number), bbox ([x,y,w,h] 0–1), confidence (0–1) }]. NUNCA inventes cajas. Si no estás seguro, omite ese elemento.
+
+                Reglas:
+                - No agrupes ingredientes; usa referencia de escala (cubiertos o plato 26 cm); ración total realista 350–900 g; devuelve números, no strings.
+            `;
+            
+            const payload = {
+                contents: [{
+                    parts: [
+                        { text: prompt },
+                        {
+                            inlineData: {
+                                mimeType: currentFile.type,
+                                data: base64ImageData
+                            }
+                        }
+                    ]
+                }],
+                 generationConfig: {
+                    responseMimeType: "application/json",
+                }
+            };
+            
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                const errorBody = await response.json();
+                console.error("Error en la API:", errorBody);
+                throw new Error(`Error de la API: ${errorBody.error?.message || response.statusText}`);
+            }
+
+            const result = await response.json();
+            
+            if (result.candidates && result.candidates[0].content && result.candidates[0].content.parts[0]) {
+                const jsonText = result.candidates[0].content.parts[0].text || '';
+                // Intenta parsear robustamente por si viniera con ```json ... ```
+                try { return JSON.parse(jsonText); } catch(e) {}
+                try {
+                    const unfenced = jsonText.replace(/^```(?:json)?/gm, '').replace(/```/gm, '').trim();
+                    return JSON.parse(unfenced);
+                } catch(e) {}
+                const match = jsonText.match(/\{[\s\S]*\}/);
+                if (match) {
+                    try { return JSON.parse(match[0]); } catch(e) {}
+                }
+                throw new Error('La IA devolvió un JSON inválido.');
+            } else {
+                throw new Error("La respuesta de la API no tuvo el formato esperado.");
+            }
+        }
+
+        async function generateDishImage(ingredients, dishName, detectedItems = []) {
+            const apiKey = "AIzaSyD3RPlZagpBOg7qXQgSizoDRcSIf2z8Sv8";
+            const ingredientsString = ingredients.map(i => i.ingredient.split('(')[0].trim()).join(', ');
+            const prompt = `Fotografía de comida profesional de un plato gourmet llamado '${dishName}' que contiene ${ingredientsString}, vista cenital, luz de estudio, alta definición, aspecto delicioso, emplatado artístico en un plato de cerámica blanca.`;
+            
+            const payload = { instances: [{ prompt: prompt }], parameters: { "sampleCount": 1} };
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`;
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error("Error en la API de Imagen:", errorText);
+                    throw new Error('Error en la generación de imagen.');
+                }
+                
+                const result = await response.json();
+                if (result.predictions && result.predictions[0].bytesBase64Encoded) {
+                    const imageUrl = `data:image/png;base64,${result.predictions[0].bytesBase64Encoded}`;
+                    generativeImageContainer.innerHTML = `<img id=\"generated-dish\" src=\"${imageUrl}\" alt=\"Render generativo del plato\" class=\"w-full h-full object-cover rounded-xl fade-in\">`;
+                    renderOverlays(detectedItems || []);
+                } else {
+                    const fallbackUrl = imagePreview?.src;
+                    if (fallbackUrl) {
+                        generativeImageContainer.innerHTML = `<img id=\"generated-dish\" src=\"${fallbackUrl}\" alt=\"Foto original del plato\" class=\"w-full h-full object-cover rounded-xl fade-in\">`;
+                        renderOverlays(detectedItems || []);
+                    } else {
+                        generativeImageContainer.innerHTML = `<div class=\"text-center text-gray-500 p-4\">No se pudo generar la imagen.</div>`;
+                    }
+                }
+            } catch (error) {
+                console.error("Error generando imagen:", error);
+                const fallbackUrl = imagePreview?.src;
+                if (fallbackUrl) {
+                    generativeImageContainer.innerHTML = `<img id=\"generated-dish\" src=\"${fallbackUrl}\" alt=\"Foto original del plato\" class=\"w-full h-full object-cover rounded-xl fade-in\">`;
+                    renderOverlays(detectedItems || []);
+                } else {
+                    generativeImageContainer.innerHTML = `<div class=\"text-center text-red-500 p-4\">Error al generar la imagen.</div>`;
+                }
+            }
+        }
+
+        function renderOverlays(detectedItems = []) {
+            // Limpia overlays anteriores
+            const old = generativeImageContainer.querySelectorAll('.overlay-item');
+            old.forEach(n => n.remove());
+
+            const analysis = lastAnalysisResult || { base_ingredients: [] };
+            const baseIngs = Array.isArray(analysis.base_ingredients) ? analysis.base_ingredients : [];
+            if (baseIngs.length === 0) return;
+
+            // Utilidades
+            const normalize = s => String(s || '')
+                .toLowerCase()
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .trim();
+            const nameToIndex = new Map();
+            baseIngs.forEach((b, i) => nameToIndex.set(normalize(b.ingredient), i + 1));
+
+            // Parámetros de la elipse del plato (más generosa para incluir borde)
+            const rx = 0.7, ry = 0.7;
+            const clampToEllipse = (cx, cy) => {
+                let dx = (cx - 0.5) / rx;
+                let dy = (cy - 0.5) / ry;
+                const d2 = dx * dx + dy * dy;
+                if (d2 <= 1) return { x: cx, y: cy };
+                const scale = 1 / Math.sqrt(d2);
+                dx *= scale; dy *= scale;
+                return { x: dx * rx + 0.5, y: dy * ry + 0.5 };
+            };
+
+            // 1) Posiciones desde la detección (filtradas)
+            const filtered = (Array.isArray(detectedItems) ? detectedItems : []).filter(it => {
+                const conf = typeof it.confidence === 'number' ? it.confidence : 1;
+                const bbox = Array.isArray(it.bbox) ? it.bbox : [];
+                if (bbox.length !== 4) return false;
+                const [x, y, w, h] = bbox;
+                if ([x, y, w, h].some(v => typeof v !== 'number')) return false;
+                if (w < 0.03 || h < 0.03) return false;
+                return conf >= 0.55;
+            });
+
+            const taken = new Set();
+            const posByName = new Map();
+
+            filtered.forEach(item => {
+                const n = normalize(item.ingredient);
+                // match exacto o parcial con base
+                let match = null;
+                if (nameToIndex.has(n)) {
+                    match = n;
+                } else {
+                    for (const key of nameToIndex.keys()) {
+                        if (key.includes(n) || n.includes(key)) { match = key; break; }
+                    }
+                }
+                if (!match || taken.has(match)) return;
+
+                const [x, y, w, h] = item.bbox;
+                const c = clampToEllipse(x + w / 2, y + h / 2);
+                posByName.set(match, c);
+                taken.add(match);
+            });
+
+            // 2) Fallback: ingredientes sin posición -> coloca puntos distribuidos en círculo
+            const missing = baseIngs
+                .map(b => normalize(b.ingredient))
+                .filter(n => !posByName.has(n));
+            const N = missing.length;
+            missing.forEach((n, i) => {
+                const angle = (i / Math.max(1, N)) * Math.PI * 2;
+                const r = 0.35 + (i % 2) * 0.05; // alterna radios para evitar solape
+                const cx = 0.5 + Math.cos(angle) * r * rx;
+                const cy = 0.5 + Math.sin(angle) * r * ry;
+                const c = clampToEllipse(cx, cy);
+                posByName.set(n, c);
+            });
+
+            // 3) Dibuja un círculo por cada ingrediente base, sin duplicados
+            baseIngs.forEach(b => {
+                const key = normalize(b.ingredient);
+                const idx = nameToIndex.get(key) || 0;
+                const p = posByName.get(key);
+                if (!p) return;
+                const num = document.createElement('div');
+                num.className = 'overlay-item overlay-badge absolute bg-teal-600 text-white font-bold rounded-full flex items-center justify-center shadow z-20';
+                num.style.left = (p.x * 100) + '%';
+                num.style.top = (p.y * 100) + '%';
+                num.style.transform = 'translate(-50%, -50%)';
+                num.textContent = String(idx);
+                generativeImageContainer.appendChild(num);
+            });
+        }
+
+        async function getNutritionInfo(ingredients) {
+            const apiKey = "AIzaSyD3RPlZagpBOg7qXQgSizoDRcSIf2z8Sv8";
+            const ingredientsList = ingredients.map(i => `${i.estimated_grams}g de ${i.ingredient}`).join(', ');
+
+            const prompt = `
+                Basado en la siguiente lista de ingredientes y sus pesos, calcula una estimación de los macronutrientes totales del plato.
+                Ingredientes: ${ingredientsList}.
+
+                Devuelve tu respuesta únicamente como un objeto JSON con las siguientes claves: 'calories' (kcal), 'protein' (g), 'carbohydrates' (g), y 'fats' (g). Todos los valores deben ser números.
+                
+                Ejemplo de formato de respuesta:
+                {
+                  "calories": 550,
+                  "protein": 25,
+                  "carbohydrates": 40,
+                  "fats": 30
+                }
+            `;
+            
+            const payload = {
+                contents: [{ parts: [{ text: prompt }] }],
+                generationConfig: { responseMimeType: "application/json" }
+            };
+
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (!response.ok) throw new Error('Error en la API de nutrición');
+                const result = await response.json();
+                const nutritionData = JSON.parse(result.candidates[0].content.parts[0].text);
+                
+                nutritionContent.innerHTML = `
+                    <div class="flex justify-between items-center text-lg">
+                        <span class="font-bold text-red-500"><i class="fas fa-fire-alt mr-2"></i>Calorías</span>
+                        <span class="font-bold">${nutritionData.calories || 0} kcal</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="font-semibold text-blue-500"><i class="fas fa-drumstick-bite mr-2"></i>Proteínas</span>
+                        <span>${nutritionData.protein || 0} g</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="font-semibold text-green-500"><i class="fas fa-bread-slice mr-2"></i>Carbohidratos</span>
+                        <span>${nutritionData.carbohydrates || 0} g</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="font-semibold text-yellow-500"><i class="fas fa-bacon mr-2"></i>Grasas</span>
+                        <span>${nutritionData.fats || 0} g</span>
+                    </div>
+                `;
+            } catch (error) {
+                console.error("Error obteniendo info nutricional:", error);
+                nutritionContent.innerHTML = `<p class="text-sm text-gray-500">No se pudo calcular la información nutricional.</p>`;
+            }
+        }
+
+        function displayResults(analysis) {
+            resultsTableBody.innerHTML = ''; 
+            
+            if (!analysis || !analysis.base_ingredients || analysis.base_ingredients.length === 0) {
+                 displayError("La IA no pudo desglosar los ingredientes base de esta imagen.");
+                 return;
+            }
+
+            dishNameHeader.textContent = analysis.dish_name || 'Análisis del Plato';
+            aiSummary.innerHTML = `<p>${analysis.summary || 'Análisis completado.'}</p>`;
+
+            analysis.base_ingredients.forEach((item, index) => {
+                const row = document.createElement('tr');
+                row.className = 'hover:bg-gray-50';
+                row.id = `row-${index}`;
+
+                const state = item.state || 'N/A';
+                const stateClass = state.toLowerCase().includes('cocinado') 
+                    ? 'bg-orange-100 text-orange-800' 
+                    : 'bg-blue-100 text-blue-800';
+
+                row.innerHTML = `
+                    <td class="py-3 px-4 font-medium" data-label="ingredient"><span class="inline-flex items-center justify-center w-5 h-5 mr-2 text-[11px] bg-teal-600 text-white rounded-full font-bold">${index + 1}</span>${item.ingredient || 'N/A'}</td>
+                    <td class="py-3 px-4 text-center" data-label="grams">${item.estimated_grams !== null ? Number(item.estimated_grams).toFixed(1) : 'N/A'}</td>
+                    <td class="py-3 px-4 text-center">
+                         <span class="px-2 py-1 rounded-full text-xs font-semibold ${stateClass}">${state}</span>
+                    </td>
+                `;
+                resultsTableBody.appendChild(row);
+            });
+            exportCsvButton.classList.remove('hidden');
+        }
+
+        function displayAllergens(allergens) {
+            if (!allergens || allergens.length === 0) {
+                allergenContent.innerHTML = `<p class="text-sm text-gray-600"><i class="fas fa-check-circle text-green-500 mr-2"></i>No se detectaron alérgenos comunes.</p>`;
+                return;
+            }
+
+            const allergenHtml = allergens.map(allergen => 
+                `<span class="inline-block bg-red-200 text-red-800 text-sm font-semibold mr-2 mb-2 px-3 py-1 rounded-full">${allergen}</span>`
+            ).join('');
+
+            allergenContent.innerHTML = `<div class="flex flex-wrap items-center">${allergenHtml}</div>`;
+        }
+
+        exportCsvButton.addEventListener('click', () => {
+            if (!lastAnalysisResult) {
+                alert("No hay datos para exportar.");
+                return;
+            }
+
+            let csvContent = "data:text/csv;charset=utf-8,Ingrediente,Peso (g),Estado\n";
+            lastAnalysisResult.base_ingredients.forEach(item => {
+                const row = [`"${item.ingredient}"`, item.estimated_grams, item.state].join(",");
+                csvContent += row + "\n";
+            });
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `${lastAnalysisResult.dish_name.replace(/ /g, "_")}_analisis.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        });
+
+        // Nueva consulta: vuelve a la pantalla inicial y limpia estado
+        newQueryButton.addEventListener('click', () => {
+            previewArea.classList.add('hidden');
+            uploadArea.classList.remove('hidden');
+            fileInput.value = '';
+            currentFile = null;
+            resetResults();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        function displayError(message) {
+            errorMessage.textContent = message;
+            errorArea.classList.remove('hidden');
+        }
+
+        const toBase64 = (file) => new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => {
+                resolve(reader.result.split(',')[1]);
+            };
+            reader.onerror = error => reject(error);
+        });
+
+    </script>
+
+</body>
+</html>

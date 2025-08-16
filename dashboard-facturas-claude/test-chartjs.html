@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🧠 Test Chart.js - FacturasIA</title>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 20px;
+            background: #f8fafc;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .btn {
+            background: #00D4AA;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin: 10px;
+        }
+        .status {
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 8px;
+            font-weight: 500;
+        }
+        .success { background: #dcfce7; color: #166534; }
+        .error { background: #fef2f2; color: #dc2626; }
+        .info { background: #dbeafe; color: #1e40af; }
+        .chart-container {
+            width: 100%;
+            height: 400px;
+            margin: 20px 0;
+            border: 2px dashed #e2e8f0;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f8fafc;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧠 Test Chart.js - FacturasIA by BrainStormers</h1>
+        <p>Prueba de carga de Chart.js y creación de gráficos</p>
+        
+        <div style="text-align: center; margin: 20px 0;">
+            <button class="btn" onclick="testChartJSLoad()">📥 Probar Carga Chart.js</button>
+            <button class="btn" onclick="createTestChart()">📊 Crear Gráfico de Prueba</button>
+            <button class="btn" onclick="clearChart()">🗑️ Limpiar Gráfico</button>
+        </div>
+        
+        <div id="status" class="status info">Listo para probar Chart.js</div>
+        
+        <div class="chart-container" id="chartContainer">
+            <p>El gráfico aparecerá aquí</p>
+        </div>
+    </div>
+
+    <script>
+        let testChart = null;
+        
+        function showStatus(message, type = 'info') {
+            const statusEl = document.getElementById('status');
+            statusEl.textContent = message;
+            statusEl.className = `status ${type}`;
+        }
+        
+        function testChartJSLoad() {
+            try {
+                showStatus('Probando carga de Chart.js...', 'info');
+                
+                if (typeof Chart !== 'undefined') {
+                    showStatus('✅ Chart.js está disponible', 'success');
+                    console.log('✅ Chart.js disponible:', Chart.version);
+                } else {
+                    showStatus('❌ Chart.js NO está disponible', 'error');
+                    console.error('❌ Chart.js no disponible');
+                }
+                
+            } catch (error) {
+                console.error('Error probando Chart.js:', error);
+                showStatus('Error: ' + error.message, 'error');
+            }
+        }
+        
+        function createTestChart() {
+            try {
+                if (typeof Chart === 'undefined') {
+                    showStatus('❌ Chart.js no está disponible. Cárgalo primero.', 'error');
+                    return;
+                }
+                
+                showStatus('Creando gráfico de prueba...', 'info');
+                
+                const container = document.getElementById('chartContainer');
+                container.innerHTML = '<canvas id="testChart" width="400" height="400"></canvas>';
+                
+                const ctx = document.getElementById('testChart');
+                
+                if (testChart) {
+                    testChart.destroy();
+                }
+                
+                testChart = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Proveedor A', 'Proveedor B', 'Proveedor C'],
+                        datasets: [{
+                            data: [300, 200, 100],
+                            backgroundColor: ['#00D4AA', '#1DE9B6', '#14B8A6'],
+                            borderWidth: 2,
+                            borderColor: '#ffffff'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom'
+                            }
+                        }
+                    }
+                });
+                
+                showStatus('✅ Gráfico de prueba creado exitosamente', 'success');
+                
+            } catch (error) {
+                console.error('Error creando gráfico:', error);
+                showStatus('Error: ' + error.message, 'error');
+            }
+        }
+        
+        function clearChart() {
+            if (testChart) {
+                testChart.destroy();
+                testChart = null;
+            }
+            
+            const container = document.getElementById('chartContainer');
+            container.innerHTML = '<p>El gráfico aparecerá aquí</p>';
+            
+            showStatus('Gráfico limpiado', 'info');
+        }
+        
+        // Verificar al cargar la página
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🧠 Test Chart.js cargado');
+            
+            // Verificar Chart.js después de un pequeño delay
+            setTimeout(() => {
+                if (typeof Chart !== 'undefined') {
+                    showStatus('✅ Chart.js cargado automáticamente', 'success');
+                    console.log('✅ Chart.js versión:', Chart.version);
+                } else {
+                    showStatus('⚠️ Chart.js no se cargó automáticamente', 'info');
+                    console.warn('⚠️ Chart.js no disponible al cargar la página');
+                }
+            }, 1000);
+        });
+    </script>
+</body>
+</html>

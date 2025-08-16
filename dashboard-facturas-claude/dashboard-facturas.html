@@ -6,8 +6,15 @@
     <title>Gestión de Facturas Empresarial</title>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <script>
+        // Verificar que Chart.js se cargó correctamente
+        if (typeof Chart !== 'undefined') {
+            console.log('✅ Chart.js cargado correctamente desde HTML');
+        } else {
+            console.warn('⚠️ Chart.js no se cargó desde HTML, se intentará cargar dinámicamente');
+        }
+        
         // Configurar el worker de PDF.js
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
     </script>
@@ -2039,60 +2046,156 @@
             </div>
         </header>
 
+        <!-- 📧 INFORMACIÓN DE CONTACTO IMPORTANTE -->
+        <section class="contact-info-section">
+            <div class="contact-container">
+                <div class="contact-header">
+                    <h2>
+                        <span class="brain-icon">🧠</span>
+                        FacturasIA by BrainStormers
+                    </h2>
+                    <p>Canales asignados para envío de facturas</p>
+                    <div class="powered-by">Powered by IA</div>
+                </div>
+                
+                <div class="contact-single-card">
+                    <!-- WhatsApp - Canal Principal -->
+                    <div class="contact-item whatsapp-item">
+                        <div class="contact-icon">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893A11.821 11.821 0 0020.885 3.488" fill="#25D366"/>
+                            </svg>
+                        </div>
+                        <div class="contact-content">
+                            <h3>WhatsApp</h3>
+                            <div class="contact-value">+34 622 902 777</div>
+                            <div class="contact-label">Canal principal para envío rápido</div>
+                            <div class="phone-list">
+                                <span class="phone-label">Números asignados:</span>
+                                <div class="phone-item">+34 569 823 658</div>
+                                <div class="phone-item">+34 659 818 15</div>
+                                <div class="phone-item">+34 652 981 56</div>
+                            </div>
+                        </div>
+                        <div class="contact-badge">PRINCIPAL</div>
+                    </div>
+
+                    <!-- Email -->
+                    <div class="contact-item email-item">
+                        <div class="contact-icon">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z" fill="#10b981"/>
+                            </svg>
+                        </div>
+                        <div class="contact-content">
+                            <h3>Email</h3>
+                            <div class="contact-value">pizza-roma.x7k2m1@facturas-restaurantes.brainstormersagency.com</div>
+                            <div class="contact-label">Para facturas en formato digital</div>
+                        </div>
+                        <div class="contact-badge important">IMPORTANTE</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 📁 ZONA DE SUBIDA DE ARCHIVOS MEJORADA -->
+        <section class="upload-section">
+            <div class="upload-container">
+                <div class="upload-header">
+                    <h3>📁 Subir Facturas (PDF)</h3>
+                    <p class="upload-subtitle">Formato: PDF • Máximo 10MB • Sin cabecera</p>
+                </div>
+                
+                <div class="upload-zone-compact" id="uploadZone">
+                    <div class="upload-content-compact">
+                        <div class="upload-icon-compact">📁</div>
+                        <div class="upload-text-compact">
+                            <span class="upload-main-text">Arrastra PDF aquí o</span>
+                            <button class="btn-select-compact" id="selectFileBtn">
+                                Seleccionar archivo
+                            </button>
+                        </div>
+                        <div class="upload-format-text">PDF • Máx 10MB</div>
+                    </div>
+                    
+                    <input type="file" id="fileInput" accept=".pdf" hidden>
+                </div>
+                
+                <div class="upload-status" id="uploadStatus" style="display: none;">
+                    <div class="status-content">
+                        <div class="status-icon" id="statusIcon">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M22 12H18L15 21L9 3L6 12H2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </div>
+                        <div class="status-text">
+                            <p id="uploadText">Procesando documento...</p>
+                            <div class="progress-container">
+                                <div class="progress-bar">
+                                    <div class="progress-fill" id="progressFill"></div>
+                                </div>
+                                <span class="progress-text" id="progressText">0%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
         <!-- 🎯 MÉTRICAS PRINCIPALES - DISEÑO MODERNO BRAIN STORMERS -->
         <section class="metrics-section">
-            <!-- Fila 1: KPIs Principales -->
-            <div class="metrics-grid">
-                <div class="metric-card" data-metric="total">
+            <!-- Fila 1: KPIs Principales (4 tarjetas) -->
+            <div class="metrics-grid main-kpis">
+                <div class="metric-card primary" data-metric="total">
                     <div class="metric-icon">📈</div>
                     <div class="metric-value">0</div>
                     <div class="metric-label">Total Facturas</div>
                     <div class="metric-trend">+12% vs mes anterior</div>
                 </div>
                 
-                <div class="metric-card" data-metric="pendientes">
-                    <div class="metric-icon">⏳</div>
-                    <div class="metric-value">0</div>
-                    <div class="metric-label">Pendientes Revisión</div>
-                    <div class="metric-trend">Bajo control</div>
+                <div class="metric-card primary" data-metric="importes">
+                    <div class="metric-icon">€</div>
+                    <div class="metric-value">0 €</div>
+                    <div class="metric-label">Total Importes</div>
+                    <div class="metric-trend">+15% vs mes anterior</div>
                 </div>
                 
-                <div class="metric-card" data-metric="aprobadas">
+                <div class="metric-card primary" data-metric="aprobadas">
                     <div class="metric-icon">✓</div>
                     <div class="metric-value">0</div>
                     <div class="metric-label">Aprobadas</div>
                     <div class="metric-trend">+8% vs mes anterior</div>
                 </div>
                 
-                <div class="metric-card" data-metric="importes">
-                    <div class="metric-icon">€</div>
-                    <div class="metric-value">0 €</div>
-                    <div class="metric-label">Total Importes</div>
-                    <div class="metric-trend">+15% vs mes anterior</div>
+                <div class="metric-card primary" data-metric="pendientes">
+                    <div class="metric-icon">⏳</div>
+                    <div class="metric-value">0</div>
+                    <div class="metric-label">Pendientes Revisión</div>
+                    <div class="metric-trend">Bajo control</div>
                 </div>
             </div>
 
-            <!-- Fila 2: Gestión de Pagos -->
-            <div class="metrics-grid">
+            <!-- Fila 2: Gestión de Pagos (4 tarjetas) -->
+            <div class="metrics-grid payment-kpis">
                 <div class="metric-card payment-card urgente" data-metric="pagos_7_dias">
                     <div class="metric-icon">!</div>
                     <div class="metric-value">0 €</div>
                     <div class="metric-label">Pagos 7 días</div>
-                    <div class="metric-trend">X facturas pendientes</div>
+                    <div class="metric-trend">0 facturas pendientes</div>
                 </div>
                 
                 <div class="metric-card payment-card warning" data-metric="pagos_15_dias">
                     <div class="metric-icon">!</div>
                     <div class="metric-value">0 €</div>
                     <div class="metric-label">Pagos 15 días</div>
-                    <div class="metric-trend">X facturas pendientes</div>
+                    <div class="metric-trend">0 facturas pendientes</div>
                 </div>
                 
                 <div class="metric-card payment-card normal" data-metric="pagos_30_dias">
                     <div class="metric-icon">✓</div>
                     <div class="metric-value">0 €</div>
                     <div class="metric-label">Pagos 30 días</div>
-                    <div class="metric-trend">X facturas pendientes</div>
+                    <div class="metric-trend">0 facturas pendientes</div>
                 </div>
                 
                 <div class="metric-card" data-metric="facturas_vencidas">
@@ -2103,13 +2206,13 @@
                 </div>
             </div>
 
-            <!-- Fila 3: Análisis de Proveedores y Productos -->
-            <div class="metrics-grid">
+            <!-- Fila 3: Análisis de Proveedores y Productos (4 tarjetas) -->
+            <div class="metrics-grid business-kpis">
                 <div class="metric-card" data-metric="total_proveedores">
                     <div class="metric-icon">🏢</div>
                     <div class="metric-value">0</div>
                     <div class="metric-label">Total Proveedores</div>
-                    <div class="metric-trend">X nuevos esta semana</div>
+                    <div class="metric-trend">0 nuevos esta semana</div>
                 </div>
                 
                 <div class="metric-card" data-metric="nuevos_proveedores">
@@ -2123,7 +2226,7 @@
                     <div class="metric-icon">📦</div>
                     <div class="metric-value">0</div>
                     <div class="metric-label">Total Productos</div>
-                    <div class="metric-trend">X nuevos esta semana</div>
+                    <div class="metric-trend">0 nuevos esta semana</div>
                 </div>
                 
                 <div class="metric-card" data-metric="nuevos_productos">
@@ -2166,8 +2269,10 @@
                         <canvas id="categoriaChart" width="400" height="200"></canvas>
                     </div>
                 </div>
+            </div>
 
-                <!-- Evolución Temporal -->
+            <!-- Gráfico de evolución a ancho completo -->
+            <div class="evolution-chart-container">
                 <div class="chart-card full-width">
                     <div class="chart-header">
                         <h3>📊 Evolución de Facturas - Últimos 30 días</h3>
@@ -2176,64 +2281,13 @@
                             <span class="legend-item"><span class="legend-color green"></span>Importe total</span>
                         </div>
                     </div>
-                    <div class="chart-container">
+                    <div class="chart-container evolution">
                         <canvas id="evolutionChart" width="800" height="200"></canvas>
                     </div>
                 </div>
             </div>
         </section>
         
-        <!-- Botón de debug temporal -->
-        <div style="text-align: center; margin: 20px 0;">
-            <button class="btn primary" onclick="debugFacturasData()" style="background: #dc3545;">
-                🔍 Debug - Ver Datos de Facturas
-            </button>
-        </div>
-
-        <!-- ZONA DE SUBIDA DE ARCHIVOS MEJORADA -->
-        <section class="upload-section">
-            <div class="upload-container">
-                <div class="upload-header">
-                    <h3>Importar Facturas (PDF)</h3>
-                    <p class="upload-subtitle">Formato: PDF • Máximo 10MB • Sin cabecera</p>
-                </div>
-                
-                <div class="upload-zone-compact" id="uploadZone">
-                    <div class="upload-content-compact">
-                        <div class="upload-icon-compact">📁</div>
-                        <div class="upload-text-compact">
-                            <span class="upload-main-text">Arrastra PDF aquí o</span>
-                            <button class="btn-select-compact" id="selectFileBtn">
-                                Seleccionar archivo
-                            </button>
-                        </div>
-                        <div class="upload-format-text">PDF • Máx 10MB</div>
-                    </div>
-                    
-                    <input type="file" id="fileInput" accept=".pdf" hidden>
-                </div>
-                
-                <div class="upload-status" id="uploadStatus" style="display: none;">
-                    <div class="status-content">
-                        <div class="status-icon" id="statusIcon">
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M22 12H18L15 21L9 3L6 12H2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            </svg>
-                        </div>
-                        <div class="status-text">
-                            <p id="uploadText">Procesando documento...</p>
-                            <div class="progress-container">
-                                <div class="progress-bar">
-                                    <div class="progress-fill" id="progressFill"></div>
-                                </div>
-                                <span class="progress-text" id="progressText">0%</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
 
 
         <!-- Tabla de facturas -->
