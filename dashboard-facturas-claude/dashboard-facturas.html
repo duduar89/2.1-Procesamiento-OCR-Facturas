@@ -1322,28 +1322,33 @@
 
 .panel-left {
     flex: 1;
-    background: white;
+    background: #f8f9fa;  /* ✅ CAMBIADO A FONDO GRIS CLARO */
     border-right: 1px solid rgba(0, 212, 170, 0.1);
     display: flex;
     flex-direction: column;
+    padding: 20px;        /* ✅ AGREGADO PADDING */
+    overflow: hidden;      /* ✅ EVITAR SCROLLBARS */
 }
 
 .panel-right {
-    width: 400px;
+    width: 500px;  /* ✅ AUMENTADO DE 400px A 500px */
     background: var(--bs-gradient-card);
     display: flex;
     flex-direction: column;
     overflow-y: auto;
     border-left: 1px solid rgba(0, 212, 170, 0.1);
+    padding: 24px;  /* ✅ AGREGADO PADDING INTERNO */
 }
 
 .pdf-viewer-header {
-    background: var(--bs-light-gray);
-    padding: 16px 20px;
+    background: white;     /* ✅ CAMBIADO A FONDO BLANCO */
+    padding: 20px 24px;   /* ✅ AUMENTADO DE 16px 20px A 20px 24px */
     border-bottom: 1px solid rgba(0, 212, 170, 0.1);
     display: flex;
     justify-content: space-between;
     align-items: center;
+    border-radius: 12px 12px 0 0;  /* ✅ AGREGADO BORDE REDONDEADO */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);  /* ✅ AGREGADA SOMBRA */
 }
 
 .pdf-viewer-header h3 {
@@ -1352,6 +1357,68 @@
     font-weight: 600;
     color: var(--bs-dark);
     margin: 0;
+}
+
+/* 🆕 MEJORAR CONTENEDOR DEL PDF */
+.pdf-container {
+    flex: 1;
+    background: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+    border-radius: 0 0 12px 12px;  /* ✅ AGREGADO BORDE REDONDEADO */
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);  /* ✅ AGREGADA SOMBRA */
+    margin: 0 20px 20px 20px;      /* ✅ AGREGADO MARGEN */
+}
+
+/* 🆕 ESTILOS PARA IMÁGENES */
+.image-container {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: auto;
+    padding: 20px;
+}
+
+.image-container img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s ease;
+}
+
+.image-container img:hover {
+    transform: scale(1.02);
+}
+
+/* 🆕 PLACEHOLDER GENÉRICO */
+.document-placeholder {
+    text-align: center;
+    color: var(--bs-medium-gray);
+    padding: 40px;
+}
+
+.document-icon {
+    margin-bottom: 16px;
+    opacity: 0.6;
+}
+
+.document-placeholder h4 {
+    margin: 0 0 8px 0;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.document-placeholder p {
+    margin: 0;
+    font-size: 14px;
+    opacity: 0.8;
 }
 
 .pdf-controls {
@@ -1388,9 +1455,11 @@
 }
 
 .detalles-header {
-    padding: 20px 24px 16px;
+    padding: 24px 24px 20px;  /* ✅ AUMENTADO DE 20px 24px 16px A 24px 24px 20px */
     border-bottom: 1px solid rgba(0, 212, 170, 0.1);
     background: white;
+    border-radius: 12px 12px 0 0;  /* ✅ AGREGADO BORDE REDONDEADO */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);  /* ✅ AGREGADA SOMBRA */
 }
 
 .detalles-header h3 {
@@ -1429,20 +1498,44 @@
     flex: 1;
 }
 
+/* 🆕 SCROLLBAR PERSONALIZADO PARA EL PANEL DERECHO */
+.panel-right::-webkit-scrollbar {
+    width: 8px;
+}
+
+.panel-right::-webkit-scrollbar-track {
+    background: rgba(0, 212, 170, 0.05);
+    border-radius: 4px;
+}
+
+.panel-right::-webkit-scrollbar-thumb {
+    background: rgba(0, 212, 170, 0.3);
+    border-radius: 4px;
+    transition: background 0.2s ease;
+}
+
+.panel-right::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 212, 170, 0.5);
+}
+
 .form-section {
-    margin-bottom: 24px;
+    margin-bottom: 32px;  /* ✅ AUMENTADO DE 24px A 32px */
+    padding: 20px;        /* ✅ AGREGADO PADDING INTERNO */
+    background: rgba(255, 255, 255, 0.6);  /* ✅ AGREGADO FONDO */
+    border-radius: 12px;  /* ✅ AGREGADO BORDE REDONDEADO */
+    border: 1px solid rgba(0, 212, 170, 0.1);  /* ✅ AGREGADO BORDE */
 }
 
 .form-section h4 {
     font-family: var(--bs-font-family);
-    font-size: 14px;
+    font-size: 16px;      /* ✅ AUMENTADO DE 14px A 16px */
     font-weight: 700;
     color: var(--bs-turquoise);
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    margin: 0 0 16px 0;
-    border-bottom: 2px solid rgba(0, 212, 170, 0.1);
-    padding-bottom: 8px;
+    margin: 0 0 20px 0;   /* ✅ AUMENTADO DE 16px A 20px */
+    border-bottom: 2px solid rgba(0, 212, 170, 0.2);  /* ✅ BORDE MÁS VISIBLE */
+    padding-bottom: 12px; /* ✅ AUMENTADO DE 8px A 12px */
 }
 
 .form-row {
@@ -1455,27 +1548,31 @@
 .form-group {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 8px;  /* ✅ AUMENTADO DE 6px A 8px */
+    margin-bottom: 16px;  /* ✅ AGREGADO MARGEN INFERIOR */
 }
 
 .form-group label {
     font-family: var(--bs-font-family);
-    font-size: 12px;
+    font-size: 13px;      /* ✅ AUMENTADO DE 12px A 13px */
     font-weight: 600;
     color: var(--bs-medium-gray);
     text-transform: uppercase;
     letter-spacing: 0.5px;
+    margin-bottom: 2px;   /* ✅ AGREGADO MARGEN INFERIOR */
 }
 
 .form-group input,
 .form-group select {
-    padding: 10px 12px;
+    padding: 12px 16px;   /* ✅ AUMENTADO DE 10px 12px A 12px 16px */
     border: 1px solid rgba(0, 212, 170, 0.2);
-    border-radius: 8px;
+    border-radius: 10px;  /* ✅ AUMENTADO DE 8px A 10px */
     font-family: var(--bs-font-family);
     font-size: 14px;
     background: white;
     transition: all 0.2s ease;
+    min-height: 44px;     /* ✅ AGREGADA ALTURA MÍNIMA */
+    box-sizing: border-box; /* ✅ AGREGADO BOX-SIZING */
 }
 
 .form-group input:focus,
@@ -2532,6 +2629,91 @@
     }
 }
 
+/* ===== NUEVOS ESTILOS PARA ENLACES AUTOMÁTICOS ===== */
+
+/* Estado automático (verde) */
+.estado-automatico {
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.8em;
+    font-weight: 600;
+    display: inline-block;
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+}
+
+/* Estado sugerencia (amarillo) */
+.estado-sugerencia {
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.8em;
+    font-weight: 600;
+    display: inline-block;
+    box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
+}
+
+/* Badge automático */
+.badge-automatico {
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: white;
+    padding: 2px 6px;
+    border-radius: 8px;
+    font-size: 0.7em;
+    font-weight: 700;
+    display: inline-block;
+    margin-left: 8px;
+    box-shadow: 0 2px 6px rgba(16, 185, 129, 0.4);
+}
+
+/* Validador IA */
+.validador.ia {
+    color: #059669;
+    font-weight: 600;
+    background: rgba(16, 185, 129, 0.1);
+    padding: 2px 6px;
+    border-radius: 6px;
+    display: inline-block;
+}
+
+/* Validador usuario */
+.validador.usuario {
+    color: #3b82f6;
+    font-weight: 600;
+    background: rgba(59, 130, 246, 0.1);
+    padding: 2px 6px;
+    border-radius: 6px;
+    display: inline-block;
+}
+
+/* Enlace automático destacado */
+.enlace-card.enlace-automatico {
+    border: 2px solid #10b981;
+    background: linear-gradient(135deg, #f0fdf4, #ecfdf5);
+    box-shadow: 0 4px 20px rgba(16, 185, 129, 0.15);
+}
+
+.enlace-card.enlace-automatico .enlace-header {
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: white;
+    margin: -12px -12px 12px -12px;
+    padding: 12px;
+    border-radius: 12px 12px 0 0;
+}
+
+.enlace-card.enlace-automatico .enlace-tipo,
+.enlace-card.enlace-automatico .enlace-confianza {
+    color: white;
+}
+
+.enlace-card.enlace-automatico .enlace-confianza.alta {
+    background: rgba(255, 255, 255, 0.2);
+    padding: 2px 8px;
+    border-radius: 8px;
+}
+
 /* Responsive para productos compactos */
 @media (max-width: 768px) {
     .product-data-horizontal {
@@ -2931,6 +3113,7 @@
                             <tr>
                                 <th class="expand-column">📦</th>
                                 <th class="sortable" data-field="estado">Estado</th>
+                                <th class="sortable" data-field="tipo_documento">Tipo</th>
                                 <th class="sortable" data-field="numero_factura">Número</th>
                                 <th class="sortable" data-field="proveedor_nombre">Proveedor</th>
                                 <th class="sortable" data-field="fecha_factura">Fecha</th>
@@ -2952,22 +3135,22 @@
                 <!-- Loading y estados vacíos -->
                 <div class="table-loading" id="tableLoading">
                     <div class="loading-spinner"></div>
-                    <p>Cargando facturas...</p>
+                    <p>Cargando documentos...</p>
                 </div>
 
                 <div class="table-empty" id="tableEmpty" style="display: none;">
                     <div class="empty-icon">📄</div>
-                    <h3>No hay facturas</h3>
-                    <p>No se encontraron facturas con los filtros aplicados.</p>
+                    <h3>No hay documentos</h3>
+                    <p>No se encontraron facturas ni albaranes con los filtros aplicados.</p>
                     <button class="btn primary" onclick="window.location.href='index.html'">
-                        Subir Primera Factura
+                        Subir Primer Documento
                     </button>
                 </div>
 
                 <!-- Paginación -->
                 <div class="pagination-container" id="paginationContainer">
                     <div class="pagination-info">
-                        <span id="paginationInfo">Mostrando 1-10 de 47 facturas</span>
+                        <span id="paginationInfo">Mostrando 1-10 de 47 documentos</span>
                     </div>
                     <div class="pagination-controls">
                         <button class="btn tertiary" id="prevPageBtn">Anterior</button>
@@ -2998,8 +3181,8 @@
                     <!-- Panel Izquierdo - Visor de PDF -->
                     <div class="panel-left">
                         <div class="pdf-viewer-header">
-                            <h3>Vista previa de la factura</h3>
-                            <div class="pdf-controls">
+                            <h3 id="viewerTitle">Vista previa del documento</h3>
+                            <div class="pdf-controls" id="pdfControls" style="display: none;">
                                 <button class="btn-pdf-control" id="prevPage" title="Página anterior">
                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                         <path d="M15 18l-6-6 6-6"/>
@@ -3022,11 +3205,30 @@
                                     </svg>
                                 </button>
                             </div>
+                            <div class="image-controls" id="imageControls" style="display: none;">
+                                <button class="btn-pdf-control" id="imageZoomIn" title="Zoom +">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M12 5v14M5 12h14"/>
+                                    </svg>
+                                </button>
+                                <button class="btn-pdf-control" id="imageZoomOut" title="Zoom -">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M5 12h14"/>
+                                    </svg>
+                                </button>
+                                <button class="btn-pdf-control" id="imageReset" title="Restablecer zoom">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M3 12a9 9 0 1 0 18 0 9 9 0 0 0-18 0z"/>
+                                        <path d="M12 3v18"/>
+                                    </svg>
+                                </button>
+                            </div>
                         </div>
                         
                         <div class="pdf-container">
-                            <div class="pdf-placeholder" id="pdfPlaceholder">
-                                <div class="pdf-icon">
+                            <!-- 🆕 PLACEHOLDER GENÉRICO -->
+                            <div class="document-placeholder" id="documentPlaceholder">
+                                <div class="document-icon">
                                     <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
                                         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
                                         <polyline points="14,2 14,8 20,8"/>
@@ -3035,10 +3237,18 @@
                                         <polyline points="10,9 9,9 8,9"/>
                                     </svg>
                                 </div>
-                                <h4>Visor de PDF</h4>
-                                <p>El visor de PDF se implementará en la siguiente fase</p>
+                                <h4>Visor de Documentos</h4>
+                                <p>Selecciona un documento para visualizarlo</p>
                             </div>
+                            
+                            <!-- 🆕 CONTENEDOR PARA IMÁGENES -->
+                            <div class="image-container" id="imageContainer" style="display: none;">
+                                <img id="documentImage" alt="Vista previa del documento" style="max-width: 100%; max-height: 100%; object-fit: contain;">
+                            </div>
+                            
+                            <!-- 🆕 CONTENEDOR PARA PDFS -->
                             <canvas id="pdfCanvas" style="display: none;"></canvas>
+                            
                             <!-- 🔥 CONTENEDOR PARA COORDENADAS Y OVERLAYS -->
                             <div id="coordinatesOverlay" class="coordinates-overlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10;"></div>
                         </div>

@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Panel de Cotejo</title>
+    <link rel="stylesheet" href="dashboard-facturas.css">
+    <style>
+        body {
+            padding: 20px;
+            font-family: 'Inter', sans-serif;
+        }
+        .test-container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .test-button {
+            background: #00D4AA;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 10px;
+            font-size: 16px;
+        }
+        .test-button:hover {
+            background: #00BFA5;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🧪 Test Panel de Resultados del Cotejo</h1>
+        <p>Esta página permite probar el panel de resultados del cotejo sin necesidad de ejecutar el cotejo real.</p>
+        
+        <div class="test-buttons">
+            <button class="test-button" onclick="testCotejoExitoso()">
+                ✅ Test Cotejo Exitoso (Alta Confianza)
+            </button>
+            
+            <button class="test-button" onclick="testCotejoParcial()">
+                ⚠️ Test Cotejo Parcial (Media Confianza)
+            </button>
+            
+            <button class="test-button" onclick="testCotejoBajo()">
+                ❌ Test Cotejo Bajo (Baja Confianza)
+            </button>
+            
+            <button class="test-button" onclick="testCotejoError()">
+                🚨 Test Cotejo Error
+            </button>
+        </div>
+        
+        <div class="test-info">
+            <h3>📋 Información del Test:</h3>
+            <ul>
+                <li><strong>Panel de Resultados:</strong> Se muestra automáticamente al ejecutar el cotejo</li>
+                <li><strong>Estado Visual:</strong> Los botones cambian a "✅ Cotejado"</li>
+                <li><strong>Indicadores:</strong> Se muestran badges de estado y contadores</li>
+                <li><strong>Auto-ocultado:</strong> El panel se oculta automáticamente después de 10 segundos</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        // Simular datos de cotejo exitoso
+        function testCotejoExitoso() {
+            const resultado = {
+                success: true,
+                enlaces_automaticos: 3,
+                sugerencias: 1,
+                requiere_revision: 0,
+                notificacion: {
+                    tipo: "alta_confianza",
+                    mensaje: "✅ COTEJO INVERSO AUTOMÁTICO COMPLETADO\n" +
+                              " 01 25006320 - TIERRA NUESTRA HUELVA CONSTANTIN BECERRA, S.L.\n" +
+                              "📄 3 factura(s) enlazada(s) automáticamente\n" +
+                              "🎯 Confianza: 100%",
+                    acciones_disponibles: ["ver_enlaces", "revisar_detalles"]
+                }
+            };
+            
+            // Simular información del último cotejo
+            window.ultimoCotejoEjecutado = {
+                documento_id: "9a669245-50ef-4935-939e-1d0038f1c6b7",
+                tipo_documento: "albaran",
+                timestamp: new Date().toISOString()
+            };
+            
+            mostrarPanelResultadosCotejo(resultado);
+            console.log('🧪 Test cotejo exitoso ejecutado');
+        }
+        
+        // Simular datos de cotejo parcial
+        function testCotejoParcial() {
+            const resultado = {
+                success: true,
+                enlaces_automaticos: 1,
+                sugerencias: 2,
+                requiere_revision: 1,
+                notificacion: {
+                    tipo: "media_confianza",
+                    mensaje: "⚠️ COTEJO PARCIAL COMPLETADO\n" +
+                              "📄 1 factura enlazada automáticamente\n" +
+                              "💡 2 sugerencias para revisión manual\n" +
+                              "🎯 Confianza: 75%",
+                    acciones_disponibles: ["ver_enlaces", "revisar_detalles"]
+                }
+            };
+            
+            mostrarPanelResultadosCotejo(resultado);
+            console.log('🧪 Test cotejo parcial ejecutado');
+        }
+        
+        // Simular datos de cotejo bajo
+        function testCotejoBajo() {
+            const resultado = {
+                success: true,
+                enlaces_automaticos: 0,
+                sugerencias: 3,
+                requiere_revision: 2,
+                notificacion: {
+                    tipo: "baja_confianza",
+                    mensaje: "❌ COTEJO CON BAJA CONFIANZA\n" +
+                              "📄 0 facturas enlazadas automáticamente\n" +
+                              "💡 3 sugerencias para revisión manual\n" +
+                              "🎯 Confianza: 45%",
+                    acciones_disponibles: ["revisar_detalles", "verificar_id"]
+                }
+            };
+            
+            mostrarPanelResultadosCotejo(resultado);
+            console.log('🧪 Test cotejo bajo ejecutado');
+        }
+        
+        // Simular datos de cotejo con error
+        function testCotejoError() {
+            const resultado = {
+                success: false,
+                enlaces_automaticos: 0,
+                sugerencias: 0,
+                requiere_revision: 0,
+                notificacion: {
+                    tipo: "error",
+                    mensaje: "🚨 ERROR EN EL COTEJO\n" +
+                              "❌ No se pudo completar el cotejo\n" +
+                              "🔍 Verificar la conexión y los datos",
+                    acciones_disponibles: ["verificar_id", "contactar_soporte"]
+                }
+            };
+            
+            mostrarPanelResultadosCotejo(resultado);
+            console.log('🧪 Test cotejo error ejecutado');
+        }
+        
+        // Función para mostrar el panel (simulada)
+        function mostrarPanelResultadosCotejo(resultado) {
+            const { notificacion, enlaces_automaticos, sugerencias, requiere_revision } = resultado
+            
+            // Crear o actualizar el panel de resultados
+            let panel = document.getElementById('cotejo-resultados-panel')
+            if (!panel) {
+                panel = document.createElement('div')
+                panel.id = 'cotejo-resultados-panel'
+                panel.className = 'cotejo-resultados-panel'
+                document.body.appendChild(panel)
+            }
+            
+            // Generar contenido del panel
+            const contenido = `
+                <div class="cotejo-panel-header">
+                    <h3>🎯 Resultados del Cotejo Inteligente</h3>
+                    <button class="close-panel-btn" onclick="cerrarPanelCotejo()">×</button>
+                </div>
+                
+                <div class="cotejo-panel-content">
+                    <div class="cotejo-status ${notificacion.tipo}">
+                        <div class="status-icon">
+                            ${getStatusIcon(notificacion.tipo)}
+                        </div>
+                        <div class="status-info">
+                            <h4>${getStatusTitle(notificacion.tipo)}</h4>
+                            <p>${notificacion.mensaje}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="cotejo-metrics">
+                        <div class="metric-card">
+                            <div class="metric-icon">🔗</div>
+                            <div class="metric-value">${enlaces_automaticos}</div>
+                            <div class="metric-label">Enlaces Automáticos</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-icon">💡</div>
+                            <div class="metric-value">${sugerencias}</div>
+                            <div class="metric-label">Sugerencias</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-icon">⚠️</div>
+                            <div class="metric-value">${requiere_revision}</div>
+                            <div class="metric-label">Requiere Revisión</div>
+                        </div>
+                    </div>
+                    
+                    ${enlaces_automaticos > 0 ? `
+                        <div class="cotejo-enlaces-detalle">
+                            <h4>🔗 Enlaces Creados Automáticamente</h4>
+                            <div class="enlaces-grid" id="enlaces-grid">
+                                <div class="enlace-loading">🔄 Cargando detalles de enlaces...</div>
+                            </div>
+                        </div>
+                    ` : ''}
+                    
+                    <div class="cotejo-actions">
+                        ${notificacion.acciones_disponibles.map(accion => 
+                            `<button class="btn-accion-cotejo" onclick="ejecutarAccionCotejo('${accion}')">${getActionLabel(accion)}</button>`
+                        ).join('')}
+                    </div>
+                </div>
+            `
+            
+            panel.innerHTML = contenido
+            panel.style.display = 'block'
+            
+            // Si hay enlaces automáticos, cargar los detalles simulados
+            if (enlaces_automaticos > 0) {
+                setTimeout(() => {
+                    cargarEnlacesSimulados(enlaces_automaticos)
+                }, 1000)
+            }
+            
+            // Auto-ocultar después de 15 segundos
+            setTimeout(() => {
+                if (panel.style.display === 'block') {
+                    cerrarPanelCotejo()
+                }
+            }, 15000)
+        }
+        
+        // 🆕 Función para cargar enlaces simulados
+        function cargarEnlacesSimulados(cantidad) {
+            const enlacesGrid = document.getElementById('enlaces-grid')
+            if (!enlacesGrid) return
+            
+            // Simular enlaces de cotejo inverso (Albarán -> Facturas)
+            const enlacesSimulados = []
+            
+            for (let i = 1; i <= cantidad; i++) {
+                enlacesSimulados.push({
+                    id: `enlace-${i}`,
+                    datos_extraidos_facturas: {
+                        numero_factura: `FAC-2025-${String(i).padStart(3, '0')}`,
+                        proveedor_nombre: 'TIERRA NUESTRA HUELVA CONSTANTIN BECERRA, S.L.',
+                        fecha_factura: new Date(2025, 7, 15 + i).toISOString(),
+                        total_factura: 150.50 + (i * 25.30),
+                        importe_neto: 120.00 + (i * 20.00),
+                        iva: 30.50 + (i * 5.30)
+                    },
+                    fecha_cotejo: new Date().toISOString()
+                })
+            }
+            
+            // Mostrar los enlaces simulados
+            mostrarEnlacesSimuladosEnPanel(enlacesSimulados)
+        }
+        
+        // 🆕 Función para mostrar enlaces simulados
+        function mostrarEnlacesSimuladosEnPanel(enlaces) {
+            const enlacesGrid = document.getElementById('enlaces-grid')
+            if (!enlacesGrid) return
+            
+            const enlacesHTML = enlaces.map((enlace, index) => {
+                const factura = enlace.datos_extraidos_facturas
+                return `
+                    <div class="enlace-card enlace-inverso">
+                        <div class="enlace-header">
+                            <span class="enlace-tipo">📄 FACTURA ENLAZADA</span>
+                            <span class="enlace-confianza alta">🎯 100%</span>
+                        </div>
+                        <div class="enlace-content">
+                            <div class="enlace-info">
+                                <strong>Número:</strong> ${factura.numero_factura}
+                            </div>
+                            <div class="enlace-info">
+                                <strong>Proveedor:</strong> ${factura.proveedor_nombre}
+                            </div>
+                            <div class="enlace-info">
+                                <strong>Fecha:</strong> ${formatearFecha(factura.fecha_factura)}
+                            </div>
+                            <div class="enlace-info">
+                                <strong>Total:</strong> ${formatearMoneda(factura.total_factura)}
+                            </div>
+                        </div>
+                        <div class="enlace-metadata">
+                            <span class="metodo-enlace">⏰ Proximidad Temporal</span>
+                            <span class="fecha-cotejo">${formatearFecha(enlace.fecha_cotejo)}</span>
+                        </div>
+                    </div>
+                `
+            }).join('')
+            
+            enlacesGrid.innerHTML = enlacesHTML
+        }
+        
+        // 🆕 Funciones auxiliares para formateo
+        function formatearFecha(fecha) {
+            if (!fecha) return 'N/A'
+            try {
+                return new Date(fecha).toLocaleDateString('es-ES')
+            } catch (error) {
+                return fecha
+            }
+        }
+        
+        function formatearMoneda(valor) {
+            if (!valor) return 'N/A'
+            try {
+                return new Intl.NumberFormat('es-ES', {
+                    style: 'currency',
+                    currency: 'EUR'
+                }).format(valor)
+            } catch (error) {
+                return valor
+            }
+        }
+        
+        // Funciones auxiliares
+        function getStatusIcon(tipo) {
+            const icons = {
+                'alta_confianza': '✅',
+                'media_confianza': '⚠️',
+                'baja_confianza': '❌',
+                'error': '🚨'
+            }
+            return icons[tipo] || 'ℹ️'
+        }
+        
+        function getStatusTitle(tipo) {
+            const titles = {
+                'alta_confianza': 'Cotejo Exitoso',
+                'media_confianza': 'Cotejo Parcial',
+                'baja_confianza': 'Cotejo Bajo',
+                'error': 'Error en Cotejo'
+            }
+            return titles[tipo] || 'Información'
+        }
+        
+        function getActionLabel(accion) {
+            const labels = {
+                'ver_enlaces': '🔗 Ver Enlaces',
+                'revisar_detalles': '📋 Revisar Detalles',
+                'verificar_id': '🔍 Verificar ID',
+                'contactar_soporte': '📞 Contactar Soporte'
+            }
+            return labels[accion] || accion
+        }
+        
+        function cerrarPanelCotejo() {
+            const panel = document.getElementById('cotejo-resultados-panel')
+            if (panel) {
+                panel.style.display = 'none'
+            }
+        }
+        
+        function ejecutarAccionCotejo(accion) {
+            console.log('🔧 Ejecutando acción del cotejo:', accion)
+            alert(`Acción ejecutada: ${accion}`)
+        }
+    </script>
+</body>
+</html>
