@@ -155,6 +155,146 @@ async function getAccessToken() {
   }
 }
 
+// 🔐 NUEVA FUNCIÓN: Obtener contexto del usuario autenticado
+async function getAuthenticatedUserContext(req: Request, supabaseClient: any) {
+  console.log('🔐 === VERIFICANDO AUTENTICACIÓN Y CONTEXTO ===')
+  
+  try {
+    // 1. Extraer token de autorización
+    const authHeader = req.headers.get('Authorization')
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      throw new Error('Token de autorización no encontrado')
+    }
+    
+    const token = authHeader.replace('Bearer ', '')
+    console.log('🎫 Token extraído, longitud:', token.length)
+    
+    // 2. Verificar token y obtener usuario
+    const { data: { user }, error: authError } = await supabaseClient.auth.getUser(token)
+    
+    if (authError || !user) {
+      console.error('❌ Error de autenticación:', authError)
+      throw new Error('Usuario no autenticado')
+    }
+    
+    console.log('✅ Usuario autenticado:', user.id)
+    
+    // 3. Obtener restaurante del usuario
+    const { data: userProfile, error: profileError } = await supabaseClient
+      .from('usuarios')
+      .select('restaurante_id')
+      .eq('id', user.id)
+      .single()
+    
+    if (profileError || !userProfile?.restaurante_id) {
+      console.error('❌ Error obteniendo perfil de usuario:', profileError)
+      throw new Error('Usuario no tiene restaurante asignado')
+    }
+    
+    const restauranteId = userProfile.restaurante_id
+    console.log('🏢 Restaurante ID del usuario:', restauranteId)
+    
+    // 4. Obtener datos del restaurante para contexto
+    const { data: restaurante, error: restauranteError } = await supabaseClient
+      .from('restaurantes')
+      .select('id, nombre, cif, direccion, ciudad')
+      .eq('id', restauranteId)
+      .single()
+    
+    if (restauranteError || !restaurante) {
+      console.error('❌ Error obteniendo datos del restaurante:', restauranteError)
+      throw new Error('No se pudieron obtener datos del restaurante')
+    }
+    
+    console.log('✅ Contexto del restaurante obtenido:', {
+      id: restaurante.id,
+      nombre: restaurante.nombre,
+      cif: restaurante.cif
+    })
+    
+    return {
+      user: {
+        id: user.id,
+        email: user.email
+      },
+      restaurante: {
+        id: restaurante.id,
+        nombre: restaurante.nombre,
+        cif: restaurante.cif,
+        direccion: restaurante.direccion,
+        ciudad: restaurante.ciudad
+      }
+    }
+    
+  } catch (error) {
+    console.error('❌ Error en getAuthenticatedUserContext:', error)
+    throw error
+  }
+}
+
+// 🔍 NUEVA FUNCIÓN: Filtro inteligente con contexto del restaurante
+async function smartRestaurantFilter(fullText: string, restauranteContext: any, supabaseClient: any) {
+  console.log('🔍 === FILTRO INTELIGENTE CON CONTEXTO ===')
+  console.log(`🏢 Restaurante: ${restauranteContext.nombre} (CIF: ${restauranteContext.cif})`)
+  
+  // 1. Extraer todos los CIFs del texto usando regex
+  const cifPattern = /\b[A-Z]\d{8}\b|\b[A-Z]\d{7}[A-Z]\b|\b\d{8}[A-Z]\b/g
+  const foundCIFs = [...new Set(fullText.match(cifPattern) || [])]
+  
+  // 2. Verificar si el CIF del restaurante está en el texto
+  const hasRestaurantCIF = foundCIFs.includes(restauranteContext.cif)
+  
+  // 3. Buscar indicadores de proveedor vs cliente
+  const proveedorIndicators = [
+    'FACTURA', 'INVOICE', 'EMISOR', 'EMITE', 'VENDEDOR', 'PROVEEDOR',
+    'DISTRIBUIDOR', 'SUPPLIER', 'VENDOR', 'SELLER'
+  ]
+  
+  const clienteIndicators = [
+    'FACTURAR A', 'CLIENTE', 'DESTINATARIO', 'ENVIAR A', 'COMPRADOR',
+    'BILL TO', 'CUSTOMER', 'RECIPIENT', 'BUYER'
+  ]
+  
+  // 4. Analizar contexto del texto
+  let contextAnalysis = {
+    foundCIFs,
+    hasRestaurantCIF,
+    excludeCIF: hasRestaurantCIF ? restauranteContext.cif : null,
+    proveedorIndicators: [] as string[],
+    clienteIndicators: [] as string[],
+    recomendacion: '',
+    restaurante: restauranteContext
+  }
+  
+  // Buscar indicadores en el texto
+  proveedorIndicators.forEach(indicator => {
+    if (fullText.toUpperCase().includes(indicator)) {
+      contextAnalysis.proveedorIndicators.push(indicator)
+    }
+  })
+  
+  clienteIndicators.forEach(indicator => {
+    if (fullText.toUpperCase().includes(indicator)) {
+      contextAnalysis.clienteIndicators.push(indicator)
+    }
+  })
+  
+  // 5. Generar recomendación
+  if (hasRestaurantCIF) {
+    if (contextAnalysis.proveedorIndicators.length > contextAnalysis.clienteIndicators.length) {
+      contextAnalysis.recomendacion = '⚠️ CUIDADO: El restaurante aparece como proveedor. Verificar extracción.'
+    } else {
+      contextAnalysis.recomendacion = '✅ El restaurante aparece como cliente (correcto)'
+    }
+  } else {
+    contextAnalysis.recomendacion = '✅ No hay confusión de CIFs'
+  }
+  
+  console.log('📊 Análisis de contexto:', contextAnalysis)
+  
+  return contextAnalysis
+}
+
 // 🔧 FUNCIÓN AUXILIAR PARA EXTRAER COORDENADAS CORRECTAMENTE
 function extractCoordinates(field: any, confidence: number, fieldValue: string) {
   try {
@@ -2205,7 +2345,9 @@ async function processProveedorUpsert(nombreProveedor: string, cifProveedor: str
         dias_pago: 30, // Default
         tipo_proveedor: 'distribuidor', // Default
         tipo_proveedor_especifico: 'alimentacion', // Default
-        pais: 'España' // Default
+        pais: 'España', // Default
+        alias: [],
+        created_at: new Date().toISOString()
       }
       
       const { data: newProveedor, error: insertError } = await supabaseClient
@@ -2408,28 +2550,47 @@ function levenshteinDistance(str1: string, str2: string): number {
 }
 
 // 🔄 FUNCIÓN PARA PROCESAR PRODUCTOS Y HACER UPSERT
-async function processProductsUpsert(productos: any[], restauranteId: string, proveedorId: string | null, documentId: string, supabaseClient: any) {
-  console.log('🔄 === PROCESANDO UPSERT DE PRODUCTOS ===')
+async function processProductsUpsert(
+  productos: any[], 
+  restauranteId: string, 
+  proveedorId: string | null, 
+  documentId: string, 
+  supabaseClient: any,
+  proveedorNombre: string, // ✅ NUEVO: Nombre del proveedor
+  numeroFactura: string,   // ✅ NUEVO: Número de factura
+  fechaFactura: string     // ✅ NUEVO: Fecha de la factura
+) {
+  console.log('🚀 === INICIANDO PROCESS PRODUCTS UPSERT ===')
+  console.log('📦 Número de productos recibidos:', productos.length)
+  console.log('🏢 Restaurante ID recibido:', restauranteId)
+  console.log('🏭 Proveedor ID recibido:', proveedorId)
+  console.log('📄 Documento ID recibido:', documentId)
+  console.log('🏭 Nombre del proveedor recibido:', proveedorNombre)
+  console.log('📝 Número de factura recibido:', numeroFactura)
+  console.log('📅 Fecha de factura recibida:', fechaFactura)
+  console.log('📅 Tipo de fecha recibida:', typeof fechaFactura)
+  console.log('🔧 Supabase client disponible:', !!supabaseClient)
   
-  // 🔍 DEBUG: Listar productos existentes en la BD para este restaurante
-  try {
-    const { data: existingProducts, error: listError } = await supabaseClient
-      .from('productos_maestro')
-      .select('id, nombre_normalizado, nombre_comercial')
-      .eq('restaurante_id', restauranteId)
-    
-    console.log(`🔍 === PRODUCTOS EXISTENTES EN BD (${existingProducts?.length || 0}) ===`)
-    if (existingProducts && existingProducts.length > 0) {
-      existingProducts.forEach((prod: any, index: number) => {
-        console.log(`  ${index + 1}. "${prod.nombre_normalizado}" (comercial: "${prod.nombre_comercial}")`)
-      })
-    } else {
-      console.log('  No hay productos existentes en la BD')
-    }
-    console.log(`🔍 === FIN LISTA PRODUCTOS EXISTENTES ===`)
-  } catch (error) {
-    console.log('⚠️ No se pudieron listar productos existentes:', error)
+  // Verificar que productos no esté vacío
+  if (!productos || productos.length === 0) {
+    console.log('⚠️ ADVERTENCIA: Array de productos está vacío o es null')
+    console.log('📊 Tipo de productos:', typeof productos)
+    console.log('📊 Contenido de productos:', productos)
+    return []
   }
+  
+  // Verificar estructura del primer producto
+  if (productos[0]) {
+    console.log('📋 Estructura del primer producto:')
+    console.log('  - descripcion_original:', productos[0].descripcion_original)
+    console.log('  - precio_unitario_sin_iva:', productos[0].precio_unitario_sin_iva)
+    console.log('  - cantidad:', productos[0].cantidad)
+    console.log('  - unidad_medida:', productos[0].unidad_medida)
+    console.log('  - peso_neto:', productos[0].peso_neto)
+    console.log('  - formato_comercial:', productos[0].formato_comercial)
+  }
+  
+  console.log('🔄 === PROCESANDO UPSERT DE PRODUCTOS ===')
   
   const productosConMaestroId: any[] = []
   
@@ -2451,6 +2612,7 @@ async function processProductsUpsert(productos: any[], restauranteId: string, pr
       if (existingProduct) {
         // 2a. Actualizar producto existente
         console.log(`✅ Producto existente encontrado: ${existingProduct.id}`)
+        console.log(`📊 NO es primera compra - Producto ya existe en el sistema`)
         
         // ✅ USAR NUEVA FUNCIÓN DE ESTADÍSTICAS
         await updateProductPriceStatistics(
@@ -2462,19 +2624,25 @@ async function processProductsUpsert(productos: any[], restauranteId: string, pr
         )
         
         productoMaestroId = existingProduct.id
+        producto.es_primera_compra = false // ✅ NO es primera compra
         
       } else {
         // 2b. Crear nuevo producto maestro
         console.log(`🆕 Creando nuevo producto maestro: ${producto.descripcion_normalizada}`)
+        console.log(`📊 SÍ es primera compra - Producto nuevo en el sistema`)
         
         const nuevoProductoMaestroId = crypto.randomUUID()
+        // ✅ DETERMINAR CATEGORÍA DEL PRODUCTO
+        const categoriaProducto = inferCategory(producto.descripcion_original)
+        console.log(`🏷️ Categoría inferida para "${producto.descripcion_original}": ${categoriaProducto}`)
+        
         const nuevoProductoMaestro = {
           id: nuevoProductoMaestroId,
           restaurante_id: restauranteId,
           nombre_normalizado: producto.descripcion_normalizada,
           nombre_comercial: producto.descripcion_original,
           unidad_base: producto.unidad_medida,
-          categoria_principal: inferCategory(producto.descripcion_original),
+          categoria_principal: categoriaProducto,
           precio_ultimo: producto.precio_unitario_sin_iva,
           peso_unitario_kg: producto.peso_neto,
           contenido_neto: producto.formato_comercial,
@@ -2485,7 +2653,8 @@ async function processProductsUpsert(productos: any[], restauranteId: string, pr
           variacion_precio_porcentaje: 0,
           numero_compras_historicas: 1,
           fecha_ultima_compra: new Date().toISOString(),
-          fecha_creacion: new Date().toISOString()
+          fecha_creacion: new Date().toISOString(),
+          es_primera_compra: true // ✅ NUEVO CAMPO para productos nuevos
         }
         
         const { data: newProduct, error: insertError } = await supabaseClient
@@ -2500,18 +2669,35 @@ async function processProductsUpsert(productos: any[], restauranteId: string, pr
         } else {
           console.log(`✅ Nuevo producto maestro creado: ${newProduct.id}`)
           productoMaestroId = newProduct.id
+          producto.es_primera_compra = true // ✅ SÍ es primera compra
         }
       }
       
       // 3. ✅ CREAR ENTRADA EN HISTORIAL DE PRECIOS
       if (productoMaestroId && producto.precio_unitario_sin_iva > 0) {
+        // ✅ ENRIQUECER PRODUCTO CON INFORMACIÓN DEL PROVEEDOR
+        const productoEnriquecido = {
+          ...producto,
+          numero_factura: numeroFactura || 'SIN_NUMERO',
+          proveedor_nombre: proveedorNombre || 'Proveedor no identificado',
+          fecha_factura: new Date().toISOString().split('T')[0] // ✅ Fecha por defecto (se puede mejorar después)
+        }
+        
+        console.log(`📊 Enviando producto enriquecido al historial:`, {
+          descripcion: productoEnriquecido.descripcion_original,
+          precio: productoEnriquecido.precio_unitario_sin_iva,
+          factura: productoEnriquecido.numero_factura,
+          proveedor: productoEnriquecido.proveedor_nombre
+        })
+        
         await createPriceHistoryEntry(
-          producto, 
+          productoEnriquecido, 
           productoMaestroId, 
           restauranteId, 
           proveedorId, 
           documentId, 
-          supabaseClient
+          supabaseClient,
+          fechaFactura // ✅ NUEVO: Pasar fecha de la factura
         )
       }
       
@@ -2539,19 +2725,81 @@ async function processProductsUpsert(productos: any[], restauranteId: string, pr
   return productosConMaestroId
 }
 
-// 🏷️ FUNCIÓN PARA INFERIR CATEGORÍA DE PRODUCTO
+// 🏷️ FUNCIÓN MEJORADA PARA INFERIR CATEGORÍA DE PRODUCTO
 function inferCategory(description: string): string {
   const desc = description.toLowerCase()
   
-  if (desc.includes('aceite') || desc.includes('vinagre') || desc.includes('sal')) return 'condimentos'
-  if (desc.includes('carne') || desc.includes('pollo') || desc.includes('ternera')) return 'carnes'
-  if (desc.includes('pescado') || desc.includes('merluza') || desc.includes('salmon')) return 'pescados'
-  if (desc.includes('verdura') || desc.includes('tomate') || desc.includes('lechuga')) return 'verduras'
-  if (desc.includes('fruta') || desc.includes('manzana') || desc.includes('naranja')) return 'frutas'
-  if (desc.includes('pan') || desc.includes('harina') || desc.includes('pasta')) return 'panaderia'
-  if (desc.includes('leche') || desc.includes('queso') || desc.includes('yogur')) return 'lacteos'
-  if (desc.includes('cerveza') || desc.includes('vino') || desc.includes('refresco')) return 'bebidas'
-  if (desc.includes('limpieza') || desc.includes('detergente') || desc.includes('papel')) return 'limpieza'
+  // 🧀 LÁCTEOS (prioridad alta)
+  if (desc.includes('queso') || desc.includes('leche') || desc.includes('yogur') || 
+      desc.includes('mantequilla') || desc.includes('nata') || desc.includes('crema') ||
+      desc.includes('stilton') || desc.includes('gouda') || desc.includes('brie') ||
+      desc.includes('alp blossom') || desc.includes('tres leches')) {
+    return 'lacteos'
+  }
+  
+  // 🥩 CÁRNICOS
+  if (desc.includes('carne') || desc.includes('pollo') || desc.includes('cerdo') || 
+      desc.includes('ternera') || desc.includes('cordero') || desc.includes('jamón') || 
+      desc.includes('embutido') || desc.includes('pastrami') || desc.includes('lomo')) {
+    return 'carnes'
+  }
+  
+  // 🐟 PESCADOS
+  if (desc.includes('pescado') || desc.includes('merluza') || desc.includes('salmon') ||
+      desc.includes('gambas') || desc.includes('marisco') || desc.includes('anchoa') ||
+      desc.includes('boquerón') || desc.includes('gildas')) {
+    return 'pescados'
+  }
+  
+  // 🥬 VERDURAS
+  if (desc.includes('verdura') || desc.includes('tomate') || desc.includes('lechuga') ||
+      desc.includes('gordal') || desc.includes('patatas') || desc.includes('patata')) {
+    return 'verduras'
+  }
+  
+  // 🍎 FRUTAS
+  if (desc.includes('fruta') || desc.includes('manzana') || desc.includes('naranja') ||
+      desc.includes('almendra') || desc.includes('almendras')) {
+    return 'frutas'
+  }
+  
+  // 🍞 PANADERÍA
+  if (desc.includes('pan') || desc.includes('harina') || desc.includes('pasta')) {
+    return 'panaderia'
+  }
+  
+  // 🍺 BEBIDAS
+  if (desc.includes('cerveza') || desc.includes('vino') || desc.includes('refresco') ||
+      desc.includes('gin') || desc.includes('ron') || desc.includes('ginebra') ||
+      desc.includes('heineken') || desc.includes('cruzcampo') || desc.includes('beefeater') ||
+      desc.includes('seagram') || desc.includes('puerto de indias') || desc.includes('barcelo')) {
+    return 'bebidas'
+  }
+  
+  // 🧹 LIMPIEZA
+  if (desc.includes('limpieza') || desc.includes('detergente') || desc.includes('papel') ||
+      desc.includes('lejía') || desc.includes('jabón') || desc.includes('limpiador')) {
+    return 'limpieza'
+  }
+  
+  // 🚚 ENVÍOS Y LOGÍSTICA
+  if (desc.includes('envio') || desc.includes('envío') || desc.includes('portes') ||
+      desc.includes('frio') || desc.includes('frío') || desc.includes('barril') ||
+      desc.includes('caja') || desc.includes('cubitos') || desc.includes('hielo')) {
+    return 'logistica'
+  }
+  
+  // 🏷️ DESCUENTOS Y SERVICIOS
+  if (desc.includes('descuento') || desc.includes('mantenimiento') || desc.includes('gestión') ||
+      desc.includes('redes sociales') || desc.includes('merrychef')) {
+    return 'servicios'
+  }
+  
+  // 🧂 CONDIMENTOS
+  if (desc.includes('aceite') || desc.includes('vinagre') || desc.includes('sal') ||
+      desc.includes('pimienta') || desc.includes('especia') || desc.includes('condimento')) {
+    return 'condimentos'
+  }
   
   return 'general'
 }
@@ -2815,9 +3063,15 @@ function fixPriceCalculation(producto: any): any {
   return producto;
 }
 
-// 📊 FUNCIÓN PARA CREAR ENTRADA EN HISTORIAL DE PRECIOS
-async function createPriceHistoryEntry(producto: any, productoMaestroId: string, restauranteId: string, proveedorId: string | null, documentId: string, supabaseClient: any) {
+// 📊 FUNCIÓN MEJORADA PARA CREAR ENTRADA EN HISTORIAL DE PRECIOS
+async function createPriceHistoryEntry(producto: any, productoMaestroId: string, restauranteId: string, proveedorId: string | null, documentId: string, supabaseClient: any, fechaFactura: string) {
   console.log('📊 === CREANDO ENTRADA EN HISTORIAL DE PRECIOS ===')
+  console.log(`📄 Documento ID: ${documentId}`)
+  console.log(`🏷️ Producto: ${producto.descripcion_original}`)
+  console.log(`💰 Precio: ${producto.precio_unitario_sin_iva}€`)
+  console.log(`📅 Fecha de factura recibida: ${fechaFactura}`)
+  console.log(`📅 Tipo de fecha recibida: ${typeof fechaFactura}`)
+  console.log(`📅 Fecha que se usará para fecha_compra: ${fechaFactura || new Date().toISOString().split('T')[0]}`)
   
   try {
     const historialEntry = {
@@ -2825,14 +3079,14 @@ async function createPriceHistoryEntry(producto: any, productoMaestroId: string,
       producto_maestro_id: productoMaestroId,
       restaurante_id: restauranteId,
       proveedor_id: proveedorId,
-      documento_id: documentId,
+      documento_id: documentId, // ✅ ASEGURAR QUE SE GUARDE
       
       // PRECIOS
       precio_unitario_sin_iva: producto.precio_unitario_sin_iva,
       precio_unitario_con_iva: producto.precio_unitario_sin_iva * (1 + (producto.tipo_iva || 21) / 100),
       precio_por_kg: producto.precio_por_kg || null,
       precio_por_litro: producto.precio_por_litro || null,
-      precio_por_unidad_base: producto.precio_unitario_sin_iva, // Es lo mismo que unitario
+      precio_por_unidad_base: producto.precio_unitario_sin_iva,
       
       // CONTEXTO
       cantidad_comprada: producto.cantidad,
@@ -2840,12 +3094,27 @@ async function createPriceHistoryEntry(producto: any, productoMaestroId: string,
       formato_comercial: producto.formato_comercial,
       tipo_iva: producto.tipo_iva || 21,
       
-      // METADATOS
-      fecha_compra: new Date().toISOString().split('T')[0], // Solo fecha
+      // METADATOS MEJORADOS
+      fecha_compra: fechaFactura || new Date().toISOString().split('T')[0], // ✅ Usar fecha de factura real
       fecha_registro: new Date().toISOString(),
       tipo_documento: 'factura',
-      numero_documento: null
+      numero_documento: producto.numero_factura || null, // ✅ Número de factura
+      proveedor_nombre: producto.proveedor_nombre || null, // ✅ Nombre del proveedor
+      es_primera_compra: producto.es_primera_compra || false // ✅ Indicador de primera compra
     }
+    
+    console.log('📅 === VERIFICACIÓN DE FECHA EN HISTORIAL ===')
+    console.log('📅 fechaFactura recibida:', fechaFactura)
+    console.log('📅 fecha_compra asignada:', historialEntry.fecha_compra)
+    console.log('📅 fecha_registro asignada:', historialEntry.fecha_registro)
+    console.log('📅 Tipo de fecha_compra:', typeof historialEntry.fecha_compra)
+    
+    console.log('📋 Datos del historial a insertar:', {
+      documento_id: historialEntry.documento_id,
+      numero_documento: historialEntry.numero_documento,
+      proveedor: historialEntry.proveedor_nombre,
+      es_primera_compra: historialEntry.es_primera_compra
+    })
     
     const { data: historialResult, error: historialError } = await supabaseClient
       .from('historial_precios_productos')
@@ -2854,9 +3123,11 @@ async function createPriceHistoryEntry(producto: any, productoMaestroId: string,
     
     if (historialError) {
       console.error('❌ Error creando historial de precios:', historialError)
+      console.error('📋 Datos que se intentaron insertar:', historialEntry)
       return null
     } else {
       console.log(`✅ Entrada de historial creada: ${historialResult[0].id}`)
+      console.log(`📄 Documento asociado: ${historialResult[0].documento_id}`)
       return historialResult[0].id
     }
     
@@ -2866,15 +3137,27 @@ async function createPriceHistoryEntry(producto: any, productoMaestroId: string,
   }
 }
 
-// 📈 FUNCIÓN PARA ACTUALIZAR ESTADÍSTICAS DE PRECIOS EN PRODUCTO MAESTRO
+// 📈 FUNCIÓN MEJORADA PARA ACTUALIZAR ESTADÍSTICAS DE PRECIOS EN PRODUCTO MAESTRO
 async function updateProductPriceStatistics(productoMaestroId: string, nuevoPrecio: number, pesoUnitarioKg: number | null, contenidoNeto: string | null, supabaseClient: any) {
   console.log('📈 === ACTUALIZANDO ESTADÍSTICAS DE PRECIOS ===')
   
   try {
-    // 1. Obtener historial de precios de los últimos 30 días
+    // 1. Obtener producto maestro actual para comparar
+    const { data: productoActual, error: productoError } = await supabaseClient
+      .from('productos_maestro')
+      .select('precio_ultimo, precio_minimo_historico, precio_maximo_historico, numero_compras_historicas')
+      .eq('id', productoMaestroId)
+      .single()
+    
+    if (productoError) {
+      console.error('❌ Error obteniendo producto actual:', productoError)
+      return
+    }
+    
+    // 2. Obtener historial de precios de los últimos 30 días
     const { data: historialPrecios, error: historialError } = await supabaseClient
       .from('historial_precios_productos')
-      .select('precio_unitario_sin_iva, fecha_compra')
+      .select('precio_unitario_sin_iva, fecha_compra, documento_id, proveedor_nombre')
       .eq('producto_maestro_id', productoMaestroId)
       .gte('fecha_compra', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0])
       .order('fecha_compra', { ascending: false })
@@ -2887,21 +3170,42 @@ async function updateProductPriceStatistics(productoMaestroId: string, nuevoPrec
     const precios = historialPrecios?.map(h => h.precio_unitario_sin_iva) || []
     precios.push(nuevoPrecio) // Incluir el precio actual
     
-    // 2. Calcular estadísticas
+    // 3. Calcular estadísticas MEJORADAS
     const precioMinimo = Math.min(...precios)
     const precioMaximo = Math.max(...precios)
     const precioPromedio = precios.reduce((sum, precio) => sum + precio, 0) / precios.length
     
-    // 3. Calcular variación porcentual (vs precio anterior)
+    // 4. Calcular variación porcentual (vs precio anterior)
     let variacionPorcentaje = 0
-    if (precios.length > 1) {
-      const precioAnterior = precios[1] // El segundo en la lista (ordenada desc)
-      if (precioAnterior > 0) {
-        variacionPorcentaje = ((nuevoPrecio - precioAnterior) / precioAnterior) * 100
+    let precioAnterior = null
+    let documentoAnterior = null
+    
+    if (productoActual.precio_ultimo && productoActual.precio_ultimo > 0) {
+      variacionPorcentaje = ((nuevoPrecio - productoActual.precio_ultimo) / productoActual.precio_ultimo) * 100
+      precioAnterior = productoActual.precio_ultimo
+      
+      // Buscar documento del precio anterior
+      if (historialPrecios && historialPrecios.length > 0) {
+        const precioAnteriorEntry = historialPrecios.find(h => 
+          h.precio_unitario_sin_iva === productoActual.precio_ultimo
+        )
+        if (precioAnteriorEntry) {
+          documentoAnterior = precioAnteriorEntry.documento_id
+        }
       }
     }
     
-    // 4. Actualizar producto maestro
+    // 5. Determinar si es primera compra o no
+    const esPrimeraCompra = !productoActual.precio_ultimo || productoActual.numero_compras_historicas === 0
+    
+    console.log(`📊 Análisis de precios para producto ${productoMaestroId}:`)
+    console.log(`  - Precio actual: ${nuevoPrecio}€`)
+    console.log(`  - Precio anterior: ${precioAnterior || 'N/A'}€`)
+    console.log(`  - Documento anterior: ${documentoAnterior || 'N/A'}`)
+    console.log(`  - Variación: ${Math.round(variacionPorcentaje * 100) / 100}%`)
+    console.log(`  - Es primera compra: ${esPrimeraCompra}`)
+    
+    // 6. Actualizar producto maestro con información más precisa
     const { error: updateError } = await supabaseClient
       .from('productos_maestro')
       .update({
@@ -2914,7 +3218,8 @@ async function updateProductPriceStatistics(productoMaestroId: string, nuevoPrec
         numero_compras_historicas: precios.length,
         fecha_ultima_compra: new Date().toISOString(),
         peso_unitario_kg: pesoUnitarioKg,
-        contenido_neto: contenidoNeto
+        contenido_neto: contenidoNeto,
+        es_primera_compra: esPrimeraCompra // ✅ NUEVO CAMPO
       })
       .eq('id', productoMaestroId)
     
@@ -2929,7 +3234,8 @@ async function updateProductPriceStatistics(productoMaestroId: string, nuevoPrec
         variacion_porcentaje: Math.round(variacionPorcentaje * 100) / 100,
         numero_compras: precios.length,
         peso_unitario_kg: pesoUnitarioKg,
-        contenido_neto: contenidoNeto
+        contenido_neto: contenidoNeto,
+        es_primera_compra: esPrimeraCompra
       })
     }
     
@@ -2939,15 +3245,40 @@ async function updateProductPriceStatistics(productoMaestroId: string, nuevoPrec
 }
 
 // 🤖 FUNCIÓN PARA EXTRAER DATOS CON OpenAI
-async function extractDataWithOpenAI(text: string): Promise<any> {
-  console.log('🤖 === INICIANDO EXTRACCIÓN CON OpenAI ===')
+async function extractDataWithOpenAI(text: string, contextAnalysis?: any): Promise<any> {
+  console.log('🤖 === INICIANDO EXTRACCIÓN CON OpenAI Y CONTEXTO ===')
   
   const openaiApiKey = Deno.env.get('OPENAI_API_KEY')
   if (!openaiApiKey) {
     throw new Error('OPENAI_API_KEY no encontrada en variables de entorno')
   }
   
-  const prompt = `
+  // ✅ CONSTRUIR PROMPT CON CONTEXTO PREVENTIVO
+  let contextInstructions = ''
+  
+  if (contextAnalysis?.hasRestaurantCIF) {
+    contextInstructions = `
+⚠️ CONTEXTO CRÍTICO - IDENTIFICACIÓN DE PROVEEDOR:
+- El restaurante "${contextAnalysis.restaurante?.nombre}" con CIF "${contextAnalysis.excludeCIF}" es el CLIENTE
+- Este restaurante COMPRA/recibe la factura, NO la emite
+- El proveedor tiene un CIF DIFERENTE y aparece en la parte SUPERIOR de la factura
+- NUNCA extraigas "${contextAnalysis.excludeCIF}" como proveedor_cif
+- Busca otro CIF que NO sea del restaurante
+
+INDICADORES ENCONTRADOS:
+- Proveedor: ${contextAnalysis.proveedorIndicators.join(', ')}
+- Cliente: ${contextAnalysis.clienteIndicators.join(', ')}
+
+REGLAS OBLIGATORIAS:
+1. El proveedor aparece en el ENCABEZADO con logo/membrete
+2. El cliente aparece en secciones como "Facturar a:", "Cliente:"
+3. Si ves el CIF "${contextAnalysis.excludeCIF}", es del CLIENTE, NO del proveedor
+4. El proveedor tiene un CIF diferente que aparece en la parte superior
+
+`
+  }
+  
+  const prompt = `${contextInstructions}
 Eres un experto en extracción de datos de facturas españolas. Extrae TODOS los datos siguientes del texto de la factura.
 
 ⚠️ CRÍTICO - IDENTIFICACIÓN DE PROVEEDOR: 
@@ -3380,26 +3711,101 @@ Deno.serve(async (req) => {
       { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
     )
 
-    console.log('📨 Parseando request JSON...')
-    let requestBody
-    try {
-      requestBody = await req.json()
-      console.log('✅ Request JSON parseado correctamente')
-      console.log('📄 Request body:', requestBody)
-    } catch (jsonError) {
-      console.error('❌ Error parseando request JSON:', jsonError)
-      throw new Error('Request JSON inválido')
-    }
-
-    // ADAPTADO PARA TU FORMATO DE app.js
-    const { record: newFile } = requestBody
-    console.log('📄 Datos del archivo:', newFile)
+    // ✅ NUEVO: Verificar autenticación y obtener contexto del usuario
+    console.log('🔐 === VERIFICANDO AUTENTICACIÓN ===')
     
-    if (!newFile || !newFile.name) {
-      throw new Error('No se encontró información del archivo en el request')
+    let userContext
+    try {
+      // Intentar autenticación de usuario primero
+      userContext = await getAuthenticatedUserContext(req, supabaseClient)
+      console.log('✅ Usuario autenticado:', userContext.user.email)
+      console.log('🏢 Restaurante identificado:', userContext.restaurante.nombre)
+    } catch (authError) {
+      console.log('⚠️ Autenticación de usuario falló, verificando si es llamada de servicio...')
+      
+      // Verificar si es llamada de servicio (desde webhook WhatsApp)
+      const authHeader = req.headers.get('Authorization')
+      const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+      if (authHeader && authHeader === `Bearer ${serviceRoleKey}`) {
+        console.log('✅ Llamada de servicio detectada (webhook WhatsApp)')
+        
+        // Para llamadas de servicio, necesitamos obtener el restaurante del documento
+        console.log('📨 Parseando request body para llamada de servicio...')
+        const requestBody = await req.json()
+        console.log('📄 Request body recibido:', JSON.stringify(requestBody, null, 2))
+        
+        const { documentId, telefono } = requestBody
+        console.log('🆔 DocumentId extraído:', documentId)
+        console.log('📞 Teléfono:', telefono)
+        
+        if (!documentId) {
+          throw new Error('No se encontró documentId en el request')
+        }
+        
+        // Obtener información del documento para determinar el restaurante
+        console.log('🔍 Buscando documento en BD con ID:', documentId)
+        const { data: documentInfo, error: docError } = await supabaseClient
+          .from('documentos')
+          .select('restaurante_id, restaurantes!inner(id, nombre, cif, direccion, ciudad)')
+          .eq('id', documentId)
+          .single()
+        
+        if (docError || !documentInfo) {
+          console.error('❌ Error obteniendo documento:', docError)
+          throw new Error(`Documento no encontrado: ${documentId}`)
+        }
+        
+        console.log('✅ Documento encontrado:', JSON.stringify(documentInfo, null, 2))
+        
+        // Crear contexto de servicio
+        userContext = {
+          user: {
+            id: 'service',
+            email: 'whatsapp-webhook@service'
+          },
+          restaurante: documentInfo.restaurantes,
+          isServiceCall: true,
+          documentId: documentId,
+          telefono: telefono  // 👈 NUEVO
+        }
+        
+        console.log('✅ Contexto de servicio creado para restaurante:', userContext.restaurante.nombre)
+      } else {
+        throw new Error('No se pudo autenticar como usuario ni como servicio')
+      }
     }
 
-    const documentId = newFile.name
+    // Para llamadas de servicio, ya tenemos el requestBody y documentId
+    let requestBody, documentId
+    
+    if (userContext.isServiceCall) {
+      // Ya se parseó en la autenticación de servicio
+      requestBody = { documentId: userContext.documentId }
+      documentId = userContext.documentId
+      console.log('✅ Usando datos de llamada de servicio')
+    } else {
+      // Parsear request JSON para llamadas de usuario
+      console.log('📨 Parseando request JSON...')
+      try {
+        requestBody = await req.json()
+        console.log('✅ Request JSON parseado correctamente')
+        console.log('📄 Request body:', requestBody)
+      } catch (jsonError) {
+        console.error('❌ Error parseando request JSON:', jsonError)
+        throw new Error('Request JSON inválido')
+      }
+
+      // ADAPTADO PARA TU FORMATO DE app.js
+      const { record: newFile } = requestBody
+      console.log('📄 Datos del archivo:', newFile)
+      
+      if (!newFile || !newFile.name) {
+        throw new Error('No se encontró información del archivo en el request')
+      }
+
+      documentId = newFile.name
+    }
+    
     console.log('🆔 Document ID:', documentId)
 
     // OBTENER LA RUTA REAL DEL ARCHIVO DESDE LA BD
@@ -3414,6 +3820,14 @@ Deno.serve(async (req) => {
       console.error('❌ Error obteniendo info del documento:', docError)
       throw new Error(`Documento no encontrado: ${documentId}`)
     }
+
+    // ✅ VERIFICACIÓN ADICIONAL: El documento pertenece al restaurante del usuario
+    if (documentInfo.restaurante_id !== userContext.restaurante.id) {
+      console.error('❌ ACCESO DENEGADO: El documento no pertenece al restaurante del usuario')
+      throw new Error('Acceso no autorizado a este documento')
+    }
+
+    console.log('✅ Autorización verificada: Usuario puede acceder al documento')
 
     const filePath = documentInfo.url_storage
     console.log('📍 Ruta del archivo:', filePath)
@@ -3487,10 +3901,27 @@ Deno.serve(async (req) => {
     console.log('🔧 Google Processor ID:', GOOGLE_PROCESSOR_ID)
     console.log('📋 Tipo de procesador: OCR Puro (solo extrae texto)')
     
+    // Determinar MIME type dinámicamente
+    let mimeType = 'application/pdf' // Default
+    const fileName = documentInfo.nombre_archivo.toLowerCase()
+
+    if (fileName.endsWith('.jpg') || fileName.endsWith('.jpeg')) {
+      mimeType = 'image/jpeg'
+    } else if (fileName.endsWith('.png')) {
+      mimeType = 'image/png'
+    } else if (fileName.endsWith('.pdf')) {
+      mimeType = 'application/pdf'
+    } else if (fileName.includes('whatsapp_')) {
+      // Para archivos de WhatsApp que sabemos que son imágenes
+      mimeType = 'image/jpeg'
+    }
+
+    console.log(`📄 Procesando archivo: ${fileName} como ${mimeType}`)
+
     const documentAiRequest = {
       rawDocument: {
         content: base64File,
-        mimeType: 'application/pdf',
+        mimeType: mimeType,
       },
     }
     
@@ -3637,21 +4068,32 @@ Deno.serve(async (req) => {
     const fullText = extractedResult?.document?.text || ''
     console.log('📝 Texto extraído del OCR (primeros 500 chars):', fullText.substring(0, 500))
 
+    // ✅ NUEVO: Aplicar filtro inteligente PRE-OpenAI
+    console.log('🔍 === APLICANDO FILTRO INTELIGENTE ===')
+    const contextAnalysis = await smartRestaurantFilter(
+      fullText, 
+      userContext.restaurante, 
+      supabaseClient
+    )
+    
+    console.log('📊 Análisis de contexto completado:', contextAnalysis.recomendacion)
+
     // Extraer coordenadas del OCR (como antes)
     console.log('📍 === EXTRAYENDO COORDENADAS DEL OCR ===')
     const coordenadasOCR = extractCoordinatesFromOCR(extractedResult)
     console.log('🎯 Total coordenadas extraídas del OCR:', Object.keys(coordenadasOCR).length)
     console.log('📋 Tipos de coordenadas encontradas:', [...new Set(Object.values(coordenadasOCR).map((c: any) => c.tipo))])
     
-    // Extraer datos con OpenAI
-    console.log('🚀 === LLAMANDO A OPENAI ===')
+    // ✅ NUEVO: Extraer datos con OpenAI usando contexto preventivo
+    console.log('🚀 === LLAMANDO A OPENAI CON CONTEXTO ===')
     console.log('📝 Longitud del texto a enviar:', fullText.length)
     console.log('📝 Primeros 200 caracteres del texto:', fullText.substring(0, 200))
+    console.log('🔍 Contexto del restaurante aplicado:', contextAnalysis.hasRestaurantCIF ? 'SÍ' : 'NO')
     
     let openaiResult: any
     try {
-      openaiResult = await extractDataWithOpenAI(fullText)
-      console.log('✅ OpenAI completado exitosamente')
+      openaiResult = await extractDataWithOpenAI(fullText, contextAnalysis)
+      console.log('✅ OpenAI completado con contexto preventivo')
       console.log('📊 Resultado OpenAI:', JSON.stringify(openaiResult, null, 2))
     } catch (error) {
       console.error('❌ Error en OpenAI:', error)
@@ -3664,6 +4106,14 @@ Deno.serve(async (req) => {
     // Convertir al formato esperado por el resto del sistema
     const extractedData = convertOpenAIToExpectedFormat(openaiResult, coordenadasCampos)
     console.log('📊 Datos extraídos con OpenAI:', extractedData)
+
+    // ✅ NUEVO: Logs de métricas de validación
+    console.log('📈 === MÉTRICAS DE VALIDACIÓN ===')
+    console.log(`🔍 CIFs encontrados en texto: ${contextAnalysis.foundCIFs.length}`)
+    console.log(`🏢 Restaurante detectado en factura: ${contextAnalysis.hasRestaurantCIF}`)
+    console.log(`✅ Proveedor final: ${extractedData.proveedor_nombre}`)
+    console.log(`🆔 CIF final: ${extractedData.proveedor_cif}`)
+    console.log(`📊 Recomendación del filtro: ${contextAnalysis.recomendacion}`)
 
     // 7. Extraer productos con OpenAI
     console.log('🛒 === EXTRAYENDO PRODUCTOS CON OpenAI ===')
@@ -3781,13 +4231,41 @@ Extrae SOLO el proveedor (emisor) que NO sea "${restauranteCheck.nombre}":
     
     // 9. Procesar productos (normalización y upsert en productos_maestro)
     console.log('🔄 === PROCESANDO PRODUCTOS MAESTROS ===')
+    
+    // Logs de seguimiento ANTES de processProductsUpsert
+    console.log('🚀 === ANTES DE PROCESS PRODUCTS UPSERT ===')
+    console.log('📦 Productos a procesar:', productosExtraidos.length)
+    console.log('📊 Estructura del primer producto:', productosExtraidos[0] ? {
+      descripcion: productosExtraidos[0].descripcion_original,
+      precio: productosExtraidos[0].precio_unitario_sin_iva,
+      cantidad: productosExtraidos[0].cantidad,
+      unidad_medida: productosExtraidos[0].unidad_medida
+    } : 'No hay productos')
+    console.log('🏢 Restaurante ID:', documentInfo.restaurante_id)
+    console.log('🏭 Proveedor ID:', proveedorResult?.id || 'null')
+    console.log('📄 Documento ID:', documentId)
+    
+    // Llamada a processProductsUpsert
+    console.log('🔄 === LLAMANDO A PROCESS PRODUCTS UPSERT ===')
+    console.log('📅 Fecha de factura que se va a pasar:', extractedData.fecha_factura)
+    console.log('📅 Tipo de fecha:', typeof extractedData.fecha_factura)
+    console.log('📅 Fecha formateada:', extractedData.fecha_factura ? new Date(extractedData.fecha_factura).toISOString().split('T')[0] : 'null')
+    
     const productosConMaestroId = await processProductsUpsert(
       productosExtraidos,
       documentInfo.restaurante_id,
       proveedorResult?.id || null,
       documentId,
-      supabaseClient
+      supabaseClient,
+      extractedData.proveedor_nombre,
+      extractedData.numero_factura,
+      extractedData.fecha_factura
     )
+    
+    // Logs de seguimiento DESPUÉS de processProductsUpsert
+    console.log('✅ === DESPUÉS DE PROCESS PRODUCTS UPSERT ===')
+    console.log('📊 Productos procesados exitosamente:', productosConMaestroId.length)
+    console.log('🆔 Primer producto maestro ID:', productosConMaestroId[0]?.producto_maestro_id || 'No hay productos')
     
     // 9. Verificar estructura de la tabla y guardar en BD
     console.log('🔍 Verificando estructura de la tabla datos_extraidos_facturas...')
@@ -3888,7 +4366,12 @@ Extrae SOLO el proveedor (emisor) que NO sea "${restauranteCheck.nombre}":
           peso_neto: producto.peso_neto,
           volumen: producto.volumen,
           precio_por_kg: producto.precio_por_kg,
-          precio_por_litro: producto.precio_por_litro
+          precio_por_litro: producto.precio_por_litro,
+          // ✅ NUEVO CAMPO: Indicar si es primera compra
+          es_primera_compra: producto.es_primera_compra || false,
+          // ✅ NUEVOS CAMPOS: Proveedor y número de factura
+          proveedor_nombre: extractedData.proveedor_nombre,
+          numero_factura: extractedData.numero_factura
         }))
         
         console.log('🔍 === DEBUG: INTENTANDO INSERTAR PRODUCTOS ===')
@@ -3908,16 +4391,48 @@ Extrae SOLO el proveedor (emisor) que NO sea "${restauranteCheck.nombre}":
         } else {
           console.log(`✅ ${productosInsertResult.length} productos guardados correctamente en productos_extraidos`)
           
+    // ✅ VERIFICAR HISTORIAL DE PRECIOS CREADO
+    console.log('📊 === VERIFICANDO HISTORIAL DE PRECIOS ===')
+    try {
+      const { data: historialVerificacion, error: historialError } = await supabaseClient
+        .from('historial_precios_productos')
+        .select('id, producto_maestro_id, documento_id, precio_unitario_sin_iva, fecha_compra')
+        .eq('documento_id', documentId)
+        .order('fecha_compra', { ascending: false })
+      
+      if (historialError) {
+        console.error('❌ Error verificando historial:', historialError)
+      } else {
+        console.log(`📊 Historial de precios creado: ${historialVerificacion?.length || 0} entradas`)
+        historialVerificacion?.forEach((entry, index) => {
+          console.log(`  ${index + 1}. Producto: ${entry.producto_maestro_id}, Precio: ${entry.precio_unitario_sin_iva}€, Fecha: ${entry.fecha_compra}`)
+        })
+      }
+    } catch (verificacionError) {
+      console.warn('⚠️ No se pudo verificar el historial de precios:', verificacionError)
+    }
+    
           // 🧠 PROCESAR EMBEDDINGS PARA LOS PRODUCTOS GUARDADOS
           try {
             console.log('🧠 === DEBUG: INICIANDO PROCESAMIENTO DE EMBEDDINGS ===')
             console.log('🧠 Número de productos a procesar:', productosInsertResult.length)
-            console.log('🧠 Primer producto:', productosInsertResult[0]?.descripcion_original)
+      console.log('🧠 Tipo de productosInsertResult:', typeof productosInsertResult)
+      console.log('🧠 Es array:', Array.isArray(productosInsertResult))
+      console.log('🧠 Primer producto:', productosInsertResult[0] ? {
+        id: productosInsertResult[0].id,
+        descripcion: productosInsertResult[0].descripcion_original,
+        documento_id: productosInsertResult[0].documento_id
+      } : 'No hay productos')
             console.log('🧠 Restaurante ID:', documentInfo.restaurante_id)
             
+      if (productosInsertResult && productosInsertResult.length > 0) {
+        console.log('🧠 ✅ Productos encontrados, procesando embeddings...')
             await processProductEmbeddings(supabaseClient, productosInsertResult, documentInfo.restaurante_id)
-            
             console.log('🧠 === DEBUG: PROCESAMIENTO DE EMBEDDINGS COMPLETADO ===')
+      } else {
+        console.log('🧠 ⚠️ No hay productos para procesar embeddings')
+        console.log('🧠 productosInsertResult es:', productosInsertResult)
+      }
           } catch (embeddingError) {
             console.error('❌ Error procesando embeddings:', embeddingError)
             console.error('❌ Stack trace:', embeddingError.stack)
@@ -3954,16 +4469,79 @@ Extrae SOLO el proveedor (emisor) que NO sea "${restauranteCheck.nombre}":
     console.log('🎉 === PROCESAMIENTO COMPLETADO ===')
     console.log('📊 Resumen del procesamiento:')
     console.log('  - Documento ID:', documentId)
+    console.log('  - Usuario autenticado:', userContext.user.email)
+    console.log('  - Restaurante:', userContext.restaurante.nombre)
     console.log('  - Datos extraídos del Form Parser')
     console.log('  - Productos extraídos:', productosExtraidos.length)
     console.log('  - Productos procesados:', productosConMaestroId.length)
     console.log('  - Datos guardados:', insertResult)
     console.log('  - Estado actualizado:', updateResult)
+    console.log('🔍 Métricas de validación:')
+    console.log('    - CIFs encontrados:', contextAnalysis.foundCIFs.length)
+    console.log('    - Confusión detectada:', contextAnalysis.hasRestaurantCIF)
+    console.log('    - Recomendación:', contextAnalysis.recomendacion)
+
+    // ✅ NOTIFICAR COMPLETADO VÍA WHATSAPP (SOLO SI VIENE DE WHATSAPP)
+    if (userContext.isServiceCall && userContext.telefono) {
+      console.log('📱 === ENVIANDO NOTIFICACIÓN DE COMPLETADO ===')
+      
+      try {
+        // ✅ ENVIAR NOTIFICACIÓN DIRECTAMENTE
+        const accessToken = Deno.env.get("WHATSAPP_ACCESS_TOKEN")
+        const phoneNumberId = Deno.env.get("WHATSAPP_PHONE_NUMBER_ID")
+        
+        if (accessToken && phoneNumberId) {
+          const mensaje = `¡Factura procesada exitosamente!
+
+ ${userContext.restaurante.nombre}
+📄 ${documentInfo.nombre_archivo}
+📦 ${productosConMaestroId.length} productos extraídos${extractedData.proveedor_nombre ? `\n🏭 Proveedor: ${extractedData.proveedor_nombre}` : ''}
+
+✅ La factura ya está disponible en tu sistema.
+ Puedes revisar los productos y precios extraídos.`
+
+          const response = await fetch(`https://graph.facebook.com/v18.0/${phoneNumberId}/messages`, {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${accessToken}`,
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+              messaging_product: "whatsapp",
+              to: userContext.telefono,
+              type: "text",
+              text: { body: mensaje }
+            })
+          })
+
+          if (response.ok) {
+            console.log('✅ Notificación enviada exitosamente')
+          } else {
+            console.error('❌ Error enviando notificación:', response.status)
+          }
+        }
+      } catch (notifError) {
+        console.error('❌ Error enviando notificación:', notifError)
+      }
+    } else {
+      console.log('📱 No se envía notificación - No es llamada de WhatsApp')
+    }
 
     return new Response(JSON.stringify({ 
       success: true, 
       documentId,
       message: 'Procesado exitosamente',
+      userContext: {
+        userId: userContext.user.id,
+        userEmail: userContext.user.email,
+        restauranteId: userContext.restaurante.id,
+        restauranteNombre: userContext.restaurante.nombre
+      },
+      contextAnalysis: {
+        foundCIFs: contextAnalysis.foundCIFs.length,
+        hasRestaurantCIF: contextAnalysis.hasRestaurantCIF,
+        recomendacion: contextAnalysis.recomendacion
+      },
       formParserData: extractedResult,
       extractedData,
       productosExtraidos: productosExtraidos.length,
@@ -4004,39 +4582,46 @@ Extrae SOLO el proveedor (emisor) que NO sea "${restauranteCheck.nombre}":
 
 // Generar embedding para un texto usando OpenAI
 async function generateProductEmbedding(descripcion: string): Promise<number[]> {
-  console.log('🧠 Generando embedding para:', descripcion.substring(0, 50) + '...')
+  console.log('🧠 === GENERANDO EMBEDDING ===')
+  console.log('📝 Texto a procesar:', descripcion?.substring(0, 100) + '...')
   
+  // ✅ USAR DENO.ENV EN LUGAR DE PROCESS.ENV
   const openaiApiKey = Deno.env.get('OPENAI_API_KEY')
+  console.log('🔑 OPENAI_API_KEY disponible:', !!openaiApiKey)
+  
   if (!openaiApiKey) {
     console.warn('⚠️ OPENAI_API_KEY no encontrada, saltando generación de embedding')
     return []
   }
   
   try {
+    console.log('🌐 Haciendo llamada a OpenAI API...')
     const response = await fetch('https://api.openai.com/v1/embeddings', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${openaiApiKey}`,
-        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${openaiApiKey}`, // ✅ Usar la variable correcta
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({
+        input: descripcion,
         model: 'text-embedding-3-small',
-        input: descripcion
+        encoding_format: 'float'
       })
     })
 
     if (!response.ok) {
       const errorText = await response.text()
-      console.error('❌ Error generando embedding:', errorText)
+      console.error('❌ Error en respuesta de OpenAI:', response.status, errorText)
       return []
     }
 
     const data = await response.json()
     const embedding = data.data[0].embedding
     
-    console.log('✅ Embedding generado correctamente, longitud:', embedding.length)
+    console.log('✅ Embedding generado exitosamente')
+    console.log('📊 Dimensiones del vector:', embedding.length)
+    console.log('🔢 Primeros 5 valores:', embedding.slice(0, 5))
     return embedding
-    
   } catch (error) {
     console.error('❌ Error en generateProductEmbedding:', error)
     return []
@@ -4108,7 +4693,7 @@ async function saveProductEmbedding(
         .update({
           embedding: embedding,
           categoria: categoria,
-          frecuencia_uso: supabaseClient.sql`frecuencia_uso + 1`,
+          frecuencia_uso: 1,  // O usar la lógica correcta de Supabase
           ultima_actualizacion: new Date().toISOString()
         })
         .eq('id', existing.id)
@@ -4152,18 +4737,31 @@ async function processProductEmbeddings(
   supabaseClient: any,
   productos: any[],
   restauranteId: string
-): Promise<void> {
+) {
   console.log('🧠 === PROCESANDO EMBEDDINGS PARA PRODUCTOS ===')
   console.log(`🔄 Generando embeddings para ${productos.length} productos...`)
+  console.log('🏢 Restaurante ID:', restauranteId)
+  console.log('🔧 Supabase client disponible:', !!supabaseClient)
+  
+  if (!productos || productos.length === 0) {
+    console.log('⚠️ No hay productos para procesar embeddings')
+    return
+  }
   
   let processedCount = 0
   
   for (const producto of productos) {
     try {
+      console.log(`🧠 === PROCESANDO EMBEDDING PARA PRODUCTO ${productos.indexOf(producto) + 1}/${productos.length} ===`)
+      console.log('📦 Producto:', producto.descripcion_original)
+      console.log('🆔 ID del producto:', producto.id)
+      
       // Generar embedding
+      console.log('🧠 Generando embedding...')
       const embedding = await generateProductEmbedding(producto.descripcion_original)
       
       if (embedding.length > 0) {
+        console.log('✅ Embedding generado, longitud:', embedding.length)
         // Guardar embedding
         await saveProductEmbedding(
           supabaseClient,
@@ -4173,11 +4771,10 @@ async function processProductEmbeddings(
           embedding
         )
         processedCount++
+        console.log('✅ Embedding guardado correctamente')
+      } else {
+        console.log('⚠️ Embedding vacío, saltando producto')
       }
-      
-      // Pequeña pausa para no sobrecargar la API
-      await new Promise(resolve => setTimeout(resolve, 100))
-      
     } catch (error) {
       console.error('❌ Error procesando embedding para producto:', producto.descripcion_original, error)
     }
@@ -4205,7 +4802,7 @@ async function saveProveedorEmbedding(
       .from('proveedores_embeddings')
       .select('id')
       .eq('restaurante_id', restauranteId)
-      .eq('nombre_original', nombreProveedor)
+      .eq('nombre_proveedor', nombreProveedor)
       .single()
     
     if (checkError && checkError.code !== 'PGRST116') { // PGRST116 = no rows returned
@@ -4219,7 +4816,7 @@ async function saveProveedorEmbedding(
         .from('proveedores_embeddings')
         .update({
           embedding: embedding,
-          frecuencia_uso: supabaseClient.sql`frecuencia_uso + 1`,
+          frecuencia_uso: 1,  // O usar la lógica correcta de Supabase
           ultima_actualizacion: new Date().toISOString()
         })
         .eq('id', existing.id)
@@ -4237,7 +4834,7 @@ async function saveProveedorEmbedding(
         .insert({
           proveedor_id: proveedorId,
           restaurante_id: restauranteId,
-          nombre_original: nombreProveedor,
+          nombre_proveedor: nombreProveedor,
           embedding: embedding,
           sinonimos: [], // Se pueden añadir después
           frecuencia_uso: 1,

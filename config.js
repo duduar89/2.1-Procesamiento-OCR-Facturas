@@ -137,6 +137,13 @@ const CONFIG = {
         LOG_LEVEL: 'info', // 'debug', 'info', 'warn', 'error'
         SHOW_CONFIDENCE: true,
         MOCK_PROCESSING: false
+    },
+    
+    // 📱 CONFIGURACIÓN DE NOTIFICACIONES PUSH (VAPID)
+    VAPID: {
+        PUBLIC_KEY: 'BIldPsM1aeXkrta7DqjwHTEUvdiqmJ1P3qOnX8PAh5-mZgt3Cng6g5Kt1Hd7ouXymeLG_cgrMTxtcKtbkhwr4Cg',
+        PRIVATE_KEY: 'OeWmPe1Z_OEXgp5iFmXyULbNF3tnu1kO2yjm9xas-', // ⚠️ SECRETO - No compartir
+        SUBJECT: 'mailto:admin@brainstormersagency.com' // Email de contacto para VAPID
     }
 };
 

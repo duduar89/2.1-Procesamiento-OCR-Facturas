@@ -19,13 +19,22 @@ function initializeTheme() {
 
 function toggleTheme() {
     const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
-    const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+    const newTheme = currentTheme === 'light' ? 'dark' : 'oscuro';
     
     document.documentElement.setAttribute('data-theme', newTheme);
     localStorage.setItem('dashboard-theme', newTheme);
     updateThemeIcon(newTheme);
     
     showNotification(`Tema ${newTheme === 'light' ? 'claro' : 'oscuro'} activado`, 'info');
+    
+    // Enviar notificación push si están habilitadas
+    if (Notification.permission === 'granted') {
+        sendCustomNotification(
+            'Tema Cambiado 🎨',
+            `Tema ${newTheme === 'light' ? 'claro' : 'oscuro'} activado`,
+            { requireInteraction: false }
+        );
+    }
 }
 
 function updateThemeIcon(theme) {
@@ -33,6 +42,376 @@ function updateThemeIcon(theme) {
     if (themeIcon) {
         themeIcon.textContent = theme === 'light' ? '🌙' : '☀️';
         themeIcon.parentElement.title = `Cambiar a tema ${theme === 'light' ? 'oscuro' : 'claro'}`;
+    }
+}
+
+// ===== SISTEMA DE NOTIFICACIONES =====
+async function handleEnableNotifications() {
+    const notificationBtn = document.getElementById('enableNotificationsBtn');
+    
+    try {
+        // Verificar si el navegador soporta notificaciones push
+        if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+            showNotification('❌ Tu navegador no soporta notificaciones push', 'error');
+            return;
+        }
+
+        // Verificar si ya están habilitadas
+        if (Notification.permission === 'granted') {
+            showNotification('✅ Las notificaciones ya están habilitadas', 'info');
+            updateNotificationButtonState(true);
+            return;
+        }
+
+        // Registrar Service Worker primero
+        const registration = await registerServiceWorker();
+        if (!registration) {
+            throw new Error('No se pudo registrar el Service Worker');
+        }
+
+        // Solicitar permiso y crear suscripción
+        await askForNotificationPermission();
+        
+        // Actualizar estado del botón
+        updateNotificationButtonState(true);
+        
+        // Guardar estado en localStorage
+        localStorage.setItem('notifications-enabled', 'true');
+        
+        // Enviar notificación de prueba
+        sendTestNotification();
+        
+    } catch (error) {
+        console.error('Error al habilitar notificaciones:', error);
+        
+        if (error.message === 'Permiso denegado') {
+            showNotification('❌ Permiso de notificaciones denegado', 'error');
+            updateNotificationButtonState(false);
+            localStorage.setItem('notifications-enabled', 'false');
+        } else {
+            showNotification('❌ Error al habilitar notificaciones: ' + error.message, 'error');
+        }
+    }
+}
+
+function updateNotificationButtonState(enabled) {
+    const notificationBtn = document.getElementById('enableNotificationsBtn');
+    const testButtons = document.querySelector('.notification-test-buttons');
+    
+    if (notificationBtn) {
+        if (enabled) {
+            notificationBtn.classList.add('notifications-enabled');
+            notificationBtn.title = 'Notificaciones habilitadas';
+            
+            // Mostrar botones de prueba
+            if (testButtons) {
+                testButtons.classList.add('show');
+            }
+        } else {
+            notificationBtn.classList.remove('notifications-enabled');
+            notificationBtn.title = 'Activar notificaciones';
+            
+            // Ocultar botones de prueba
+            if (testButtons) {
+                testButtons.classList.remove('show');
+            }
+        }
+    }
+}
+
+function sendTestNotification() {
+    if (Notification.permission === 'granted') {
+        new Notification('FacturasIA - Notificaciones', {
+            body: '¡Las notificaciones están funcionando correctamente!',
+            icon: '/favicon.ico', // Puedes cambiar por tu icono
+            badge: '/favicon.ico',
+            tag: 'test-notification'
+        });
+    }
+}
+
+// Función para enviar notificaciones personalizadas
+function sendCustomNotification(title, body, options = {}) {
+    if (Notification.permission === 'granted') {
+        const defaultOptions = {
+            icon: '/favicon.ico',
+            badge: '/favicon.ico',
+            tag: 'facturas-notification',
+            requireInteraction: false,
+            ...options
+        };
+        
+        new Notification(title, defaultOptions);
+    }
+}
+
+// Función para enviar notificación push al servidor (para otros usuarios)
+async function sendPushNotificationToUser(userId, title, body, options = {}) {
+    try {
+        if (!supabaseClient) {
+            throw new Error('Cliente Supabase no disponible');
+        }
+
+        const { data, error } = await supabaseClient.functions.invoke('send-push-notification', {
+            body: {
+                user_id: userId,
+                title: title,
+                body: body,
+                options: options
+            }
+        });
+
+        if (error) {
+            throw error;
+        }
+
+        console.log('✅ Notificación push enviada al servidor:', data);
+        return data;
+        
+    } catch (error) {
+        console.error('❌ Error enviando notificación push:', error);
+        throw error;
+    }
+}
+
+// Función para enviar notificación push a todos los usuarios de un restaurante
+async function sendPushNotificationToRestaurant(restauranteId, title, body, options = {}) {
+    try {
+        if (!supabaseClient) {
+            throw new Error('Cliente Supabase no disponible');
+        }
+
+        const { data, error } = await supabaseClient.functions.invoke('send-push-notification', {
+            body: {
+                restaurante_id: restauranteId,
+                title: title,
+                body: body,
+                options: options
+            }
+        });
+
+        if (error) {
+            throw error;
+        }
+
+        console.log('✅ Notificación push enviada al restaurante:', data);
+        return data;
+        
+    } catch (error) {
+        console.error('❌ Error enviando notificación push:', error);
+        throw error;
+    }
+}
+
+// Función para obtener suscripciones existentes del usuario
+async function getUserSubscriptions() {
+    try {
+        if (!currentUser || !CONFIG.TENANT.RESTAURANTE_ID) {
+            return [];
+        }
+
+        const { data, error } = await supabaseClient
+            .from('push_subscriptions')
+            .select('*')
+            .eq('user_id', currentUser.id)
+            .eq('restaurante_id', CONFIG.TENANT.RESTAURANTE_ID);
+
+        if (error) {
+            console.error('❌ Error obteniendo suscripciones:', error);
+            return [];
+        }
+
+        return data || [];
+        
+    } catch (error) {
+        console.error('❌ Error obteniendo suscripciones:', error);
+        return [];
+    }
+}
+
+// Función para eliminar suscripción
+async function removeSubscription(subscriptionId) {
+    try {
+        const { error } = await supabaseClient
+            .from('push_subscriptions')
+            .delete()
+            .eq('id', subscriptionId);
+
+        if (error) {
+            throw error;
+        }
+
+        console.log('✅ Suscripción eliminada:', subscriptionId);
+        showNotification('Suscripción eliminada correctamente', 'success');
+        
+        // Actualizar estado del botón
+        updateNotificationButtonState(false);
+        localStorage.removeItem('notifications-enabled');
+        
+    } catch (error) {
+        console.error('❌ Error eliminando suscripción:', error);
+        showNotification('Error al eliminar suscripción', 'error');
+    }
+}
+
+// Función para desactivar todas las notificaciones
+async function disableAllNotifications() {
+    try {
+        // Obtener suscripciones del usuario
+        const subscriptions = await getUserSubscriptions();
+        
+        // Eliminar suscripciones de la base de datos
+        for (const subscription of subscriptions) {
+            await removeSubscription(subscription.id);
+        }
+        
+        // Desuscribir del Service Worker
+        if ('serviceWorker' in navigator) {
+            const registration = await navigator.serviceWorker.getRegistration();
+            if (registration) {
+                const subscription = await registration.pushManager.getSubscription();
+                if (subscription) {
+                    await subscription.unsubscribe();
+                    console.log('✅ Usuario desuscrito del Service Worker');
+                }
+            }
+        }
+        
+        showNotification('Notificaciones desactivadas correctamente', 'success');
+        
+    } catch (error) {
+        console.error('❌ Error desactivando notificaciones:', error);
+        showNotification('Error al desactivar notificaciones', 'error');
+    }
+}
+
+// Verificar si hay una nueva versión del Service Worker
+function checkForServiceWorkerUpdate() {
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistration()
+            .then((registration) => {
+                if (registration) {
+                    registration.addEventListener('updatefound', () => {
+                        console.log('🔄 Nueva versión del Service Worker disponible');
+                        
+                        const newWorker = registration.installing;
+                        newWorker.addEventListener('statechange', () => {
+                            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                // Mostrar notificación de actualización
+                                if (Notification.permission === 'granted') {
+                                    sendCustomNotification(
+                                        'Actualización Disponible 🔄',
+                                        'Hay una nueva versión del dashboard disponible. Recarga la página para actualizar.',
+                                        { requireInteraction: true }
+                                    );
+                                }
+                                
+                                // Opcional: Mostrar banner de actualización en la UI
+                                showUpdateBanner();
+                            }
+                        });
+                    });
+                }
+            });
+    }
+}
+
+// Mostrar banner de actualización
+function showUpdateBanner() {
+    // Crear banner de actualización
+    const banner = document.createElement('div');
+    banner.id = 'updateBanner';
+    banner.innerHTML = `
+        <div style="
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(135deg, #00D4AA, #14B8A6);
+            color: white;
+            padding: 12px 20px;
+            text-align: center;
+            z-index: 9999;
+            font-family: var(--bs-font-family);
+            font-weight: 600;
+            box-shadow: 0 4px 20px rgba(0, 212, 170, 0.3);
+        ">
+            🔄 Nueva versión disponible
+            <button onclick="updateServiceWorker()" style="
+                background: white;
+                color: #00D4AA;
+                border: none;
+                padding: 6px 16px;
+                border-radius: 20px;
+                margin-left: 16px;
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.3s ease;
+            " onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                Actualizar Ahora
+            </button>
+        </div>
+    `;
+    
+    document.body.appendChild(banner);
+    
+    // Auto-ocultar después de 10 segundos
+    setTimeout(() => {
+        if (banner.parentNode) {
+            banner.parentNode.removeChild(banner);
+        }
+    }, 10000);
+}
+
+// Función para actualizar el Service Worker
+function updateServiceWorker() {
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistration()
+            .then((registration) => {
+                if (registration && registration.waiting) {
+                    // Enviar mensaje al Service Worker para activar la nueva versión
+                    registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+                    
+                    // Recargar la página después de un breve delay
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1000);
+                }
+            });
+    }
+}
+
+// Verificar estado de notificaciones al cargar
+async function checkNotificationStatus() {
+    try {
+        const notificationsEnabled = localStorage.getItem('notifications-enabled') === 'true';
+        const permission = Notification.permission;
+        
+        // Verificar si hay soporte para notificaciones push
+        if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+            updateNotificationButtonState(false);
+            const btn = document.getElementById('enableNotificationsBtn');
+            if (btn) btn.style.display = 'none';
+            return;
+        }
+        
+        // Verificar si el Service Worker está registrado
+        if ('serviceWorker' in navigator) {
+            const registration = await navigator.serviceWorker.getRegistration();
+            if (registration) {
+                console.log('✅ Service Worker ya registrado:', registration);
+            }
+        }
+        
+        if (permission === 'granted' || (permission === 'default' && notificationsEnabled)) {
+            updateNotificationButtonState(true);
+        } else {
+            updateNotificationButtonState(false);
+        }
+        
+    } catch (error) {
+        console.error('Error verificando estado de notificaciones:', error);
+        updateNotificationButtonState(false);
     }
 }
 
@@ -47,6 +426,15 @@ async function initializeDashboard() {
     try {
         // Inicializar tema
         initializeTheme();
+        
+        // Verificar estado de notificaciones
+        await checkNotificationStatus();
+        
+        // Registrar Service Worker para notificaciones push
+        await registerServiceWorker();
+        
+        // Verificar actualizaciones del Service Worker
+        checkForServiceWorkerUpdate();
         
         // Verificar que existe config.js
         if (!window.CONFIG) {
@@ -236,6 +624,17 @@ async function loadInitialData() {
         // Cargar datos reales de Supabase
         await loadRealDataFromSupabase();
         
+        // Enviar notificación de bienvenida si están habilitadas
+        if (Notification.permission === 'granted') {
+            setTimeout(() => {
+                sendCustomNotification(
+                    'FacturasIA - Dashboard Cargado',
+                    'Tu dashboard está listo para gestionar facturas',
+                    { requireInteraction: false }
+                );
+            }, 2000);
+        }
+        
     } catch (error) {
         console.error('Error cargando datos iniciales:', error);
         // NO más mock data - solo datos reales
@@ -322,6 +721,41 @@ function setupEventListeners() {
     const logoutBtn = document.getElementById('logoutBtn');
     if (logoutBtn) {
         logoutBtn.addEventListener('click', handleLogout);
+    }
+
+    // Botón de notificaciones
+    const enableNotificationsBtn = document.getElementById('enableNotificationsBtn');
+    if (enableNotificationsBtn) {
+        enableNotificationsBtn.addEventListener('click', handleEnableNotifications);
+        
+        // Clique derecho para desactivar notificaciones
+        enableNotificationsBtn.addEventListener('contextmenu', async (e) => {
+            e.preventDefault();
+            
+            if (Notification.permission === 'granted') {
+                const confirmar = confirm('¿Deseas desactivar todas las notificaciones?');
+                if (confirmar) {
+                    await disableAllNotifications();
+                }
+            } else {
+                showNotification('Las notificaciones no están habilitadas', 'info');
+            }
+        });
+        
+        // Tooltip para clic derecho
+        enableNotificationsBtn.title = 'Clic izquierdo: Activar notificaciones | Clic derecho: Desactivar notificaciones';
+    }
+    
+    // Escuchar mensajes del Service Worker
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.addEventListener('message', (event) => {
+            console.log('💬 Mensaje del Service Worker:', event.data);
+            
+            if (event.data && event.data.type === 'refresh_data') {
+                // Recargar datos del dashboard
+                refreshData();
+            }
+        });
     }
 
     // Botón de upload
@@ -428,6 +862,70 @@ function setupEventListeners() {
         if (testAgenteBtn) {
             testAgenteBtn.addEventListener('click', testAgente);
         }
+}
+
+// ===== SISTEMA DE NOTIFICACIONES PUSH =====
+
+// Función para registrar el Service Worker
+async function registerServiceWorker() {
+    if ('serviceWorker' in navigator && 'PushManager' in window) {
+        try {
+            const registration = await navigator.serviceWorker.register('/service-worker.js');
+            console.log('✅ Service Worker registrado con éxito:', registration);
+            return registration;
+        } catch (error) {
+            console.error('❌ Error registrando Service Worker:', error);
+        }
+    } else {
+        console.warn('⚠️ Notificaciones Push no soportadas en este navegador.');
+        // Opcional: Ocultar el botón si no hay soporte
+        const btn = document.getElementById('enableNotificationsBtn');
+        if (btn) btn.style.display = 'none';
+    }
+}
+
+// Función para pedir permiso y suscribir al usuario
+async function askForNotificationPermission() {
+    const permission = await Notification.requestPermission();
+    if (permission !== 'granted') {
+        showNotification('Permiso de notificaciones denegado', 'warning');
+        throw new Error('Permiso denegado');
+    }
+    
+    console.log('✅ Permiso de notificaciones concedido');
+    
+    const registration = await navigator.serviceWorker.ready;
+    const subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: CONFIG.VAPID.PUBLIC_KEY // ¡IMPORTANTE! Necesitas estas claves
+    });
+
+    console.log('✅ Suscripción Push creada:', subscription);
+    
+    await saveSubscriptionToSupabase(subscription);
+}
+
+// Función para guardar la suscripción en tu tabla de Supabase
+async function saveSubscriptionToSupabase(subscription) {
+    if (!currentUser || !CONFIG.TENANT.RESTAURANTE_ID) {
+        throw new Error('Usuario o restaurante no identificado');
+    }
+
+    const { error } = await supabaseClient
+        .from('push_subscriptions')
+        .insert({
+            user_id: currentUser.id,
+            restaurante_id: CONFIG.TENANT.RESTAURANTE_ID,
+            subscription_data: subscription
+        });
+
+    if (error) {
+        console.error('❌ Error guardando suscripción:', error);
+        showNotification('Error al guardar la suscripción', 'error');
+    } else {
+        console.log('✅ Suscripción guardada en Supabase');
+        showNotification('¡Notificaciones activadas!', 'success');
+    }
 }
 
 // ===== MANEJO DE ARCHIVOS =====
@@ -580,6 +1078,15 @@ async function processDocument(file) {
         console.log('✅ Respuesta exitosa de Edge Function:', processData)
         showUploadStatus('¡Archivo procesado exitosamente!', 'success');
         
+        // Enviar notificación push si están habilitadas
+        if (Notification.permission === 'granted') {
+            sendCustomNotification(
+                'Factura Procesada ✅',
+                `La factura "${file.name}" se ha procesado correctamente`,
+                { requireInteraction: true }
+            );
+        }
+        
         // Recargar datos del dashboard
         setTimeout(async () => {
             await loadRealDataFromSupabase();
@@ -589,6 +1096,16 @@ async function processDocument(file) {
     } catch (error) {
         console.error('Error en procesamiento:', error);
         showUploadStatus('Error: ' + error.message, 'error');
+        
+        // Enviar notificación push de error si están habilitadas
+        if (Notification.permission === 'granted') {
+            sendCustomNotification(
+                'Error en Procesamiento ❌',
+                `Error al procesar "${file.name}": ${error.message}`,
+                { requireInteraction: true }
+            );
+        }
+        
         setTimeout(() => {
             hideUploadStatus();
         }, 5000);
@@ -1294,10 +1811,28 @@ async function openFacturaModal(facturaId, mode = 'view') {
         await loadProductsInModal(facturaId);
 
         console.log('Modal abierto para factura:', facturaId, 'Modo:', mode);
+        
+        // Enviar notificación push si están habilitadas
+        if (Notification.permission === 'granted') {
+            sendCustomNotification(
+                'Factura Abierta 📄',
+                `Modal abierto para factura ${factura.numero_factura || facturaId}`,
+                { requireInteraction: false }
+            );
+        }
 
     } catch (error) {
         console.error('Error abriendo modal:', error);
         showNotification('Error abriendo la factura', 'error');
+        
+        // Enviar notificación push de error si están habilitadas
+        if (Notification.permission === 'granted') {
+            sendCustomNotification(
+                'Error Abriendo Factura ❌',
+                `Error al abrir la factura: ${error.message}`,
+                { requireInteraction: true }
+            );
+        }
     }
 }
 
@@ -1644,6 +2179,16 @@ function closeFacturaModal() {
         cleanupPdfResources();
         
         console.log('Modal cerrado');
+        
+        // Enviar notificación push si están habilitadas
+        if (Notification.permission === 'granted') {
+            sendCustomNotification(
+                'Modal Cerrado 📄',
+                'El modal de factura se ha cerrado',
+                { requireInteraction: false }
+            );
+        }
+        
     } catch (error) {
         console.error('Error cerrando modal:', error);
     }
@@ -2020,6 +2565,15 @@ async function refreshData() {
     console.log('Actualizando datos...');
     await loadInitialData();
     showNotification('Datos actualizados', 'success');
+    
+    // Enviar notificación push si están habilitadas
+    if (Notification.permission === 'granted') {
+        sendCustomNotification(
+            'Dashboard Actualizado 🔄',
+            'Los datos del dashboard se han actualizado correctamente',
+            { requireInteraction: false }
+        );
+    }
 }
 
 function exportData() {
@@ -2041,12 +2595,30 @@ function exportData() {
     URL.revokeObjectURL(url);
     
     showNotification('Datos exportados correctamente', 'success');
+    
+    // Enviar notificación push si están habilitadas
+    if (Notification.permission === 'granted') {
+        sendCustomNotification(
+            'Exportación Completada 📊',
+            'Los datos se han exportado correctamente',
+            { requireInteraction: false }
+        );
+    }
 }
 
 // ===== FUNCIÓN DE LOGOUT =====
 async function handleLogout() {
     try {
         console.log('Cerrando sesión...');
+        
+        // Enviar notificación push de cierre de sesión si están habilitadas
+        if (Notification.permission === 'granted') {
+            sendCustomNotification(
+                'Sesión Cerrada 🔒',
+                'Has cerrado sesión correctamente',
+                { requireInteraction: false }
+            );
+        }
         
         // Limpiar datos locales
         localStorage.removeItem('user_info');
@@ -4064,6 +4636,15 @@ async function testAgente() {
         // Mostrar resultado
         showNotification(`🤖 Agente IA: ${data.respuesta}`, 'success');
         
+        // Enviar notificación push si están habilitadas
+        if (Notification.permission === 'granted') {
+            sendCustomNotification(
+                'Agente IA Respondió 🤖',
+                `Respuesta: ${data.respuesta.substring(0, 100)}...`,
+                { requireInteraction: true }
+            );
+        }
+        
         // Mostrar detalles en consola
         console.log('📊 SQL generado:', data.sql);
         console.log('📊 Datos obtenidos:', data.datos);
@@ -4110,6 +4691,15 @@ async function testAgenteConPregunta(pregunta) {
         // Mostrar resultado
         showNotification(`🤖 Agente IA: ${data.respuesta}`, 'success');
         
+        // Enviar notificación push si están habilitadas
+        if (Notification.permission === 'granted') {
+            sendCustomNotification(
+                'Agente IA Respondió 🤖',
+                `Respuesta: ${data.respuesta.substring(0, 100)}...`,
+                { requireInteraction: true }
+            );
+        }
+        
         // Mostrar detalles en consola
         console.log('📊 SQL generado:', data.sql);
         console.log('📊 Datos obtenidos:', data.datos);
@@ -4141,10 +4731,28 @@ function initChat() {
     chatButton.addEventListener('click', () => {
         chatPanel.classList.add('active');
         chatInput.focus();
+        
+        // Enviar notificación push si están habilitadas
+        if (Notification.permission === 'granted') {
+            sendCustomNotification(
+                'Chat IA Abierto 💬',
+                'El chat del agente IA está listo para ayudarte',
+                { requireInteraction: false }
+            );
+        }
     });
     
     chatClose.addEventListener('click', () => {
         chatPanel.classList.remove('active');
+        
+        // Enviar notificación push si están habilitadas
+        if (Notification.permission === 'granted') {
+            sendCustomNotification(
+                'Chat IA Cerrado 💬',
+                'El chat del agente IA se ha cerrado',
+                { requireInteraction: false }
+            );
+        }
     });
     
     // Enviar mensaje con Enter
@@ -4278,6 +4886,15 @@ async function sendMessage() {
     // Añadir mensaje del usuario
     addUserMessage(message);
     
+    // Enviar notificación push si están habilitadas
+    if (Notification.permission === 'granted') {
+        sendCustomNotification(
+            'Mensaje Enviado 💬',
+            `Mensaje enviado al agente IA: ${message.substring(0, 50)}...`,
+            { requireInteraction: false }
+        );
+    }
+    
     // Procesar mensaje
     await processMessage(message);
 }
@@ -4311,6 +4928,15 @@ async function processMessage(message) {
         // Añadir respuesta del agente
         addAgentMessage(data.respuesta);
         
+        // Enviar notificación push si están habilitadas
+        if (Notification.permission === 'granted') {
+            sendCustomNotification(
+                'Agente IA Respondió 🤖',
+                `Respuesta: ${data.respuesta.substring(0, 100)}...`,
+                { requireInteraction: true }
+            );
+        }
+        
     } catch (error) {
         console.error('❌ Error en chat:', error);
         removeLoadingMessage();
@@ -4340,6 +4966,16 @@ async function reloadCharts() {
         await initializeCharts(facturas);
         
         showNotification('Gráficos recargados correctamente', 'success');
+        
+        // Enviar notificación push si están habilitadas
+        if (Notification.permission === 'granted') {
+            sendCustomNotification(
+                'Gráficos Recargados 📊',
+                'Los gráficos del dashboard se han actualizado',
+                { requireInteraction: false }
+            );
+        }
+        
         console.log('✅ Gráficos recargados exitosamente');
         
     } catch (error) {
@@ -4404,3 +5040,189 @@ async function forceReloadChartJS() {
         showNotification('Error al recargar Chart.js: ' + error.message, 'error');
     }
 }
+
+// ===== FUNCIONES DE PRUEBA DE NOTIFICACIONES PUSH =====
+
+// Función para probar notificación push desde el servidor
+async function testServerPushNotification() {
+    try {
+        if (!Notification.permission === 'granted') {
+            showNotification('❌ Las notificaciones no están habilitadas', 'error');
+            return;
+        }
+
+        showNotification('🔄 Enviando notificación de prueba desde el servidor...', 'info');
+        
+        // Enviar notificación de prueba al servidor
+        const result = await sendPushNotificationToUser(
+            currentUser?.id,
+            'Prueba de Notificación Push 🧪',
+            'Esta es una notificación de prueba enviada desde el servidor',
+            {
+                requireInteraction: true,
+                data: {
+                    test: true,
+                    timestamp: Date.now(),
+                    source: 'dashboard-test'
+                }
+            }
+        );
+        
+        showNotification('✅ Notificación de prueba enviada al servidor', 'success');
+        console.log('📱 Resultado de prueba de notificación:', result);
+        
+    } catch (error) {
+        console.error('❌ Error en prueba de notificación push:', error);
+        showNotification('❌ Error en prueba: ' + error.message, 'error');
+    }
+}
+
+// Función para probar notificación push a todo el restaurante
+async function testRestaurantPushNotification() {
+    try {
+        if (!Notification.permission === 'granted') {
+            showNotification('❌ Las notificaciones no están habilitadas', 'error');
+            return;
+        }
+
+        if (!CONFIG.TENANT.RESTAURANTE_ID) {
+            showNotification('❌ ID de restaurante no disponible', 'error');
+            return;
+        }
+
+        showNotification('🔄 Enviando notificación de prueba al restaurante...', 'info');
+        
+        // Enviar notificación de prueba al restaurante
+        const result = await sendPushNotificationToRestaurant(
+            CONFIG.TENANT.RESTAURANTE_ID,
+            'Notificación del Restaurante 🏢',
+            'Esta es una notificación de prueba para todo el restaurante',
+            {
+                requireInteraction: false,
+                data: {
+                    test: true,
+                    timestamp: Date.now(),
+                    source: 'restaurant-test',
+                    restaurante_id: CONFIG.TENANT.RESTAURANTE_ID
+                }
+            }
+        );
+        
+        showNotification('✅ Notificación de prueba enviada al restaurante', 'success');
+        console.log('🏢 Resultado de prueba de notificación al restaurante:', result);
+        
+    } catch (error) {
+        console.error('❌ Error en prueba de notificación al restaurante:', error);
+        showNotification('❌ Error en prueba: ' + error.message, 'error');
+    }
+}
+
+// Función para obtener estadísticas de notificaciones
+async function getNotificationStats() {
+    try {
+        const subscriptions = await getUserSubscriptions();
+        
+        const stats = {
+            totalSubscriptions: subscriptions.length,
+            activeSubscriptions: subscriptions.filter(sub => sub.active !== false).length,
+            lastSubscription: subscriptions.length > 0 ? subscriptions[0].created_at : null,
+            browserSupport: {
+                serviceWorker: 'serviceWorker' in navigator,
+                pushManager: 'PushManager' in window,
+                notifications: 'Notification' in window
+            },
+            permission: Notification.permission
+        };
+        
+        console.log('📊 Estadísticas de notificaciones:', stats);
+        
+        // Mostrar estadísticas en una notificación
+        if (Notification.permission === 'granted') {
+            sendCustomNotification(
+                '📊 Estadísticas de Notificaciones',
+                `Suscripciones activas: ${stats.activeSubscriptions}/${stats.totalSubscriptions}`,
+                { requireInteraction: true }
+            );
+        }
+        
+        return stats;
+        
+    } catch (error) {
+        console.error('❌ Error obteniendo estadísticas:', error);
+        throw error;
+    }
+}
+
+// Función para limpiar todas las suscripciones de prueba
+async function cleanupTestSubscriptions() {
+    try {
+        const subscriptions = await getUserSubscriptions();
+        const testSubscriptions = subscriptions.filter(sub => 
+            sub.subscription_data && 
+            sub.subscription_data.data && 
+            sub.subscription_data.data.test
+        );
+        
+        if (testSubscriptions.length === 0) {
+            showNotification('✅ No hay suscripciones de prueba para limpiar', 'info');
+            return;
+        }
+        
+        showNotification(`🔄 Limpiando ${testSubscriptions.length} suscripciones de prueba...`, 'info');
+        
+        for (const subscription of testSubscriptions) {
+            await removeSubscription(subscription.id);
+        }
+        
+        showNotification('✅ Suscripciones de prueba limpiadas correctamente', 'success');
+        
+    } catch (error) {
+        console.error('❌ Error limpiando suscripciones de prueba:', error);
+        showNotification('❌ Error limpiando suscripciones: ' + error.message, 'error');
+    }
+}
+
+console.log('🚀 Sistema de notificaciones push completamente implementado');
+
+// ===== MODO DESARROLLO =====
+// Función para habilitar modo desarrollo (mostrar botones de prueba)
+function enableDevelopmentMode() {
+    const testButtons = document.querySelector('.notification-test-buttons');
+    if (testButtons) {
+        testButtons.style.display = 'flex';
+        console.log('🔧 Modo desarrollo habilitado - Botones de prueba visibles');
+    }
+}
+
+// Función para deshabilitar modo desarrollo
+function disableDevelopmentMode() {
+    const testButtons = document.querySelector('.notification-test-buttons');
+    if (testButtons) {
+        testButtons.style.display = 'none';
+        console.log('🔧 Modo desarrollo deshabilitado - Botones de prueba ocultos');
+    }
+}
+
+// Habilitar modo desarrollo en desarrollo (comentar en producción)
+if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    // Habilitar modo desarrollo automáticamente en localhost
+    setTimeout(() => {
+        enableDevelopmentMode();
+    }, 2000);
+}
+
+// Función global para alternar modo desarrollo (útil para debugging)
+window.toggleDevelopmentMode = function() {
+    const testButtons = document.querySelector('.notification-test-buttons');
+    if (testButtons && testButtons.style.display === 'none') {
+        enableDevelopmentMode();
+    } else {
+        disableDevelopmentMode();
+    }
+};
+
+// Función global para limpiar suscripciones de prueba
+window.cleanupTestSubscriptions = cleanupTestSubscriptions;
+
+// Función global para obtener estadísticas
+window.getNotificationStats = getNotificationStats;

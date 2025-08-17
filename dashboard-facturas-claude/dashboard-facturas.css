@@ -362,6 +362,88 @@ body {
     box-shadow: var(--bs-shadow-md);
 }
 
+/* ===== BOTÓN DE NOTIFICACIONES ===== */
+.btn-icon {
+    background: var(--bs-white);
+    border: 1px solid var(--bs-gray-200);
+    color: var(--bs-gray-600);
+    padding: var(--bs-spacing-sm);
+    border-radius: var(--bs-radius-lg);
+    cursor: pointer;
+    transition: all var(--bs-transition-normal);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: var(--bs-shadow-sm);
+    min-width: 44px;
+    height: 44px;
+}
+
+.btn-icon:hover {
+    background: var(--bs-gray-50);
+    border-color: var(--bs-gray-300);
+    transform: scale(1.05);
+    box-shadow: var(--bs-shadow-md);
+    color: var(--bs-turquoise);
+}
+
+.btn-icon:active {
+    transform: scale(0.95);
+}
+
+.btn-icon svg {
+    width: 20px;
+    height: 20px;
+    stroke: currentColor;
+    fill: none;
+}
+
+/* Estado activo para notificaciones */
+.btn-icon.notifications-enabled {
+    background: var(--bs-gradient-primary);
+    color: white;
+    border-color: var(--bs-turquoise);
+    box-shadow: var(--bs-shadow-brand-sm);
+}
+
+.btn-icon.notifications-enabled:hover {
+    background: var(--bs-turquoise-dark);
+    transform: translateY(-2px);
+    box-shadow: var(--bs-shadow-brand-md);
+}
+
+/* ===== BOTONES DE PRUEBA DE NOTIFICACIONES ===== */
+.notification-test-buttons {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.test-btn {
+    background: rgba(139, 92, 246, 0.1) !important;
+    border-color: rgba(139, 92, 246, 0.2) !important;
+    color: #8b5cf6 !important;
+    min-width: 36px !important;
+    height: 36px !important;
+    padding: 8px !important;
+}
+
+.test-btn:hover {
+    background: rgba(139, 92, 246, 0.2) !important;
+    border-color: rgba(139, 92, 246, 0.3) !important;
+    transform: scale(1.05) !important;
+}
+
+.test-btn svg {
+    width: 16px !important;
+    height: 16px !important;
+}
+
+/* Mostrar botones de prueba solo cuando las notificaciones estén habilitadas */
+.notification-test-buttons.show {
+    display: flex !important;
+}
+
 /* ===== 💳 TARJETAS DE MÉTRICAS ULTRA COMPACTAS Y ELEGANTES ===== */
 .metrics-grid {
     display: grid;
