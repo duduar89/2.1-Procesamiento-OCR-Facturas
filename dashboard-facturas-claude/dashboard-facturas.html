@@ -1953,6 +1953,585 @@
     padding: 20px;
 }
 
+/* ===== 🆕 ESTILOS PARA SECCIÓN DE ENLACES DE ALBARANES ===== */
+
+/* ===== COLUMNA DE ALBARANES EN LA TABLA ===== */
+.albaranes-column {
+    text-align: center;
+}
+
+.albaranes-status {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+
+.albaranes-count {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--bs-gray-600);
+    background: var(--bs-gray-100);
+    padding: 2px 8px;
+    border-radius: 12px;
+    min-width: 20px;
+    text-align: center;
+}
+
+.albaranes-count.has-albaranes {
+    background: var(--bs-primary);
+    color: white;
+}
+
+.btn-albaranes {
+    background: none;
+    border: 2px solid var(--bs-gray-300);
+    border-radius: 8px;
+    width: 32px;
+    height: 32px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+}
+
+.btn-albaranes:hover {
+    border-color: var(--bs-primary);
+    background: var(--bs-primary);
+    color: white;
+}
+
+.btn-albaranes.expanded {
+    border-color: var(--bs-primary);
+    background: var(--bs-primary);
+    color: white;
+}
+
+/* ===== FILA EXPANDIBLE DE ALBARANES ===== */
+.albaranes-row {
+    background: var(--bs-gray-50);
+    border-left: 4px solid var(--bs-primary);
+}
+
+.albaranes-row.expanding {
+    animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.albaranes-container {
+    padding: 20px;
+}
+
+.albaranes-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid var(--bs-gray-200);
+}
+
+.albaranes-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--bs-gray-800);
+}
+
+.albaranes-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.btn-albaranes-action {
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: none;
+    font-family: var(--bs-font-family);
+    font-weight: 600;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    text-decoration: none;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    background: var(--bs-primary);
+    color: white;
+}
+
+.btn-albaranes-action:hover {
+    background: var(--bs-primary-dark);
+    transform: translateY(-1px);
+}
+
+.btn-albaranes-action.secondary {
+    background: var(--bs-gray-600);
+}
+
+.btn-albaranes-action.secondary:hover {
+    background: var(--bs-gray-700);
+}
+
+/* ===== GRID DE ALBARANES ===== */
+.albaranes-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+}
+
+.enlace-card-table {
+    background: white;
+    border: 1px solid var(--bs-gray-200);
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    transition: all 0.3s ease;
+}
+
+.enlace-card-table:hover {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    transform: translateY(-2px);
+}
+
+.enlace-header-table {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.enlace-title-table {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--bs-gray-800);
+}
+
+.enlace-badge {
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.enlace-badge.confirmado {
+    background: var(--bs-success);
+    color: white;
+}
+
+.enlace-badge.sugerencia {
+    background: var(--bs-warning);
+    color: white;
+}
+
+.enlace-badge.detectado {
+    background: var(--bs-info);
+    color: white;
+}
+
+.enlace-badge.rechazado {
+    background: var(--bs-danger);
+    color: white;
+}
+
+.enlace-details-table {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.enlace-detail-table {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.enlace-detail-table span {
+    font-size: 11px;
+    color: var(--bs-gray-600);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.enlace-detail-table .value {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--bs-gray-800);
+}
+
+.enlace-actions-table {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+}
+
+.btn-enlace-action {
+    padding: 6px 12px;
+    border-radius: 6px;
+    border: none;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.btn-enlace-action.confirmar {
+    background: var(--bs-success);
+    color: white;
+}
+
+.btn-enlace-action.confirmar:hover {
+    background: var(--bs-success-dark);
+}
+
+.btn-enlace-action.rechazar {
+    background: var(--bs-danger);
+    color: white;
+}
+
+.btn-enlace-action.rechazar:hover {
+    background: var(--bs-danger-dark);
+}
+
+/* ===== ESTILOS PARA BOTÓN DE COTEJO EN TABLA ===== */
+.btn-cotejo {
+    background: var(--bs-primary);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 6px 12px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-right: 8px;
+}
+
+.btn-cotejo:hover {
+    background: var(--bs-primary-dark);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+.btn-cotejo:active {
+    transform: translateY(0);
+}
+
+/* ===== ESTILOS PARA SECCIÓN DE ENLACES EN MODAL ===== */
+.enlaces-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.btn-enlace {
+    padding: 8px 16px;
+    border-radius: 12px;
+    border: none;
+    font-family: var(--bs-font-family);
+    font-weight: 600;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    text-decoration: none;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.btn-enlace-primary {
+    background: var(--bs-gradient-primary);
+    color: white;
+    box-shadow: var(--bs-shadow-sm);
+}
+
+.btn-enlace-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--bs-shadow-md);
+    background: linear-gradient(135deg, var(--bs-turquoise-dark), var(--bs-teal));
+}
+
+.btn-enlace-secondary {
+    background: rgba(0, 212, 170, 0.1);
+    color: var(--bs-turquoise);
+    border: 1px solid rgba(0, 212, 170, 0.2);
+}
+
+.btn-enlace-secondary:hover {
+    background: rgba(0, 212, 170, 0.2);
+    transform: translateY(-1px);
+    border-color: rgba(0, 212, 170, 0.3);
+}
+
+.enlaces-section-modal {
+    background: rgba(0, 212, 170, 0.02);
+    border-radius: 12px;
+    padding: 16px;
+    border: 1px solid rgba(0, 212, 170, 0.1);
+}
+
+.enlaces-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 20px;
+    color: var(--bs-medium-gray);
+    font-size: 14px;
+}
+
+.enlaces-container-modal {
+    margin: 16px 0;
+}
+
+.enlace-card {
+    background: white;
+    border: 1px solid rgba(0, 212, 170, 0.08);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 12px;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(0, 212, 170, 0.05);
+}
+
+.enlace-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--bs-shadow-sm);
+    border-color: rgba(0, 212, 170, 0.15);
+}
+
+.enlace-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 12px;
+}
+
+.enlace-title {
+    font-family: var(--bs-font-family);
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--bs-dark);
+    margin: 0;
+}
+
+.enlace-badge {
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.enlace-badge.confirmado {
+    background: linear-gradient(135deg, var(--bs-success), var(--bs-emerald));
+    color: white;
+    box-shadow: 0 2px 6px rgba(16, 185, 129, 0.3);
+}
+
+.enlace-badge.sugerencia {
+    background: linear-gradient(135deg, var(--bs-warning), #fbbf24);
+    color: white;
+    box-shadow: 0 2px 6px rgba(245, 158, 11, 0.3);
+}
+
+.enlace-badge.detectado {
+    background: linear-gradient(135deg, var(--bs-info), #0ea5e9);
+    color: white;
+    box-shadow: 0 2px 6px rgba(14, 165, 233, 0.3);
+}
+
+.enlace-badge.rechazado {
+    background: linear-gradient(135deg, var(--bs-error), #dc2626);
+    color: white;
+    box-shadow: 0 2px 6px rgba(239, 68, 68, 0.3);
+}
+
+.enlace-details {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.enlace-detail {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 8px 10px;
+    background: rgba(0, 212, 170, 0.03);
+    border-radius: 8px;
+    border: 1px solid rgba(0, 212, 170, 0.08);
+}
+
+.enlace-detail span:first-child {
+    font-family: var(--bs-font-family);
+    font-size: 9px;
+    font-weight: 700;
+    color: var(--bs-turquoise);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    line-height: 1.2;
+}
+
+.enlace-detail .value {
+    font-family: var(--bs-font-family);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--bs-dark);
+    line-height: 1.3;
+}
+
+.enlace-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+}
+
+.btn-enlace-action {
+    padding: 6px 12px;
+    border-radius: 8px;
+    border: none;
+    font-family: var(--bs-font-family);
+    font-weight: 600;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.btn-enlace-action.confirmar {
+    background: linear-gradient(135deg, var(--bs-success), var(--bs-emerald));
+    color: white;
+    box-shadow: 0 2px 4px rgba(16, 185, 129, 0.3);
+}
+
+.btn-enlace-action.confirmar:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(16, 185, 129, 0.4);
+}
+
+.btn-enlace-action.rechazar {
+    background: linear-gradient(135deg, var(--bs-error), #dc2626);
+    color: white;
+    box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3);
+}
+
+.btn-enlace-action.rechazar:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(239, 68, 68, 0.4);
+}
+
+.enlaces-info {
+    margin-top: 16px;
+    padding: 12px;
+    background: rgba(0, 212, 170, 0.05);
+    border-radius: 8px;
+    border: 1px solid rgba(0, 212, 170, 0.1);
+}
+
+.info-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+    font-size: 12px;
+    color: var(--bs-medium-gray);
+}
+
+.info-item:last-child {
+    margin-bottom: 0;
+}
+
+.info-icon {
+    font-size: 14px;
+    opacity: 0.8;
+}
+
+.info-text {
+    line-height: 1.4;
+}
+
+/* Responsive para enlaces */
+@media (max-width: 768px) {
+    .enlaces-actions {
+        flex-direction: column;
+        gap: 6px;
+        align-items: stretch;
+    }
+    
+    .btn-enlace {
+        justify-content: center;
+        padding: 10px 16px;
+    }
+    
+    .enlace-details {
+        grid-template-columns: 1fr 1fr;
+        gap: 6px;
+    }
+    
+    .enlace-actions {
+        justify-content: center;
+    }
+}
+
+@media (max-width: 480px) {
+    .enlace-details {
+        grid-template-columns: 1fr;
+        gap: 6px;
+    }
+    
+    .enlace-card {
+        padding: 12px;
+    }
+    
+    .enlace-header {
+        flex-direction: column;
+        gap: 8px;
+        align-items: flex-start;
+    }
+}
+
 /* Responsive para productos compactos */
 @media (max-width: 768px) {
     .product-data-horizontal {
@@ -2128,8 +2707,8 @@
         <section class="upload-section">
             <div class="upload-container">
                 <div class="upload-header">
-                    <h3>📁 Subir Facturas (PDF)</h3>
-                    <p class="upload-subtitle">Formato: PDF • Máximo 10MB • Sin cabecera</p>
+                    <h3>📁 Subir Facturas (PDF, JPG, PNG)</h3>
+                                            <p class="upload-subtitle">Formatos: PDF, JPG, PNG, TIFF, BMP • Máximo 10MB • Sin cabecera</p>
                 </div>
                 
                 <div class="upload-zone-compact" id="uploadZone">
@@ -2144,7 +2723,7 @@
                         <div class="upload-format-text">PDF • Máx 10MB</div>
                     </div>
                     
-                    <input type="file" id="fileInput" accept=".pdf" hidden>
+                    <input type="file" id="fileInput" accept=".pdf,.jpg,.jpeg,.png,.tiff,.bmp" hidden>
                 </div>
                 
                 <div class="upload-status" id="uploadStatus" style="display: none;">
@@ -2360,6 +2939,7 @@
                                 <th class="sortable" data-field="total_factura">Importe total</th>
                                 <th class="sortable" data-field="confianza_global">Confianza</th>
                                 <th class="sortable" data-field="proveedor_nuevo">Proveedor</th>
+                                <th class="sortable" data-field="albaranes">🔗 Albaranes</th>
                                 <th>Acciones</th>
                             </tr>
                         </thead>
@@ -2598,6 +3178,52 @@
                                             <div class="empty-icon">📦</div>
                                             <h4>No hay productos</h4>
                                             <p>No se encontraron productos extraídos en esta factura</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 🆕 SECCIÓN DE ENLACES DE ALBARANES -->
+                            <div class="form-section">
+                                <div class="section-header">
+                                    <h4>🔗 Enlaces de Albaranes</h4>
+                                    <div class="enlaces-actions">
+                                        <button class="btn-enlace btn-enlace-primary" onclick="ejecutarCotejoAutomatico(window.currentFacturaId)" title="Ejecutar cotejo automático">
+                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                <path d="M21 12a9 9 0 11-6.219-8.56"/>
+                                            </svg>
+                                            Cotejo Automático
+                                        </button>
+                                        <button class="btn-enlace btn-enlace-secondary" onclick="marcarFacturaDirecta(window.currentFacturaId)" title="Marcar como factura directa">
+                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                <path d="M9 12l2 2 4-4"/>
+                                            </svg>
+                                            Factura Directa
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <div class="enlaces-section-modal">
+                                    <div class="enlaces-loading" id="enlacesLoading" style="display: none;">
+                                        <div class="loading-spinner-small"></div>
+                                        <span>Buscando albaranes...</span>
+                                    </div>
+                                    
+                                    <div class="enlaces-container-modal" id="enlaces-factura-modal">
+                                        <!-- Los enlaces se cargarán dinámicamente -->
+                                        <div class="text-center text-muted py-3">
+                                            <i class="fas fa-info-circle"></i> Ejecuta el cotejo automático para buscar albaranes
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="enlaces-info">
+                                        <div class="info-item">
+                                            <span class="info-icon">ℹ️</span>
+                                            <span class="info-text">El sistema buscará automáticamente albaranes relacionados con esta factura</span>
+                                        </div>
+                                        <div class="info-item">
+                                            <span class="info-icon">✅</span>
+                                            <span class="info-text">Confirma o rechaza las sugerencias para mejorar futuras búsquedas</span>
                                         </div>
                                     </div>
                                 </div>

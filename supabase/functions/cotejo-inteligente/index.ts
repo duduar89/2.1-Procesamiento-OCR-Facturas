@@ -1,5 +1,15 @@
 // supabase/functions/cotejo-inteligente/index.ts
 
+// ===== SISTEMA DE IDENTIFICADORES =====
+// IMPORTANTE: Este sistema funciona con dos tipos de identificadores:
+// 1. documento_id: Identificador lógico del negocio (envía el dashboard)
+// 2. id: ID primario de la base de datos (usado internamente)
+//
+// FLUJO:
+// Dashboard envía documento_id → Sistema busca factura por documento_id → 
+// Sistema usa ID primario para todas las operaciones de BD (enlaces, actualizaciones)
+// ======================================
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
@@ -24,8 +34,9 @@ interface ResultadoCotejo {
   enlaces_automaticos: number
   sugerencias: number
   requiere_revision: number
+  message?: string
   notificacion: {
-    tipo: 'alta_confianza' | 'media_confianza' | 'baja_confianza' | 'sin_albaran'
+    tipo: 'alta_confianza' | 'media_confianza' | 'baja_confianza' | 'sin_albaran' | 'error'
     mensaje: string
     acciones_disponibles: string[]
   }
@@ -81,7 +92,7 @@ serve(async (req) => {
         sugerencias: 0,
         requiere_revision: 0,
         notificacion: {
-          tipo: 'baja_confianza',
+          tipo: 'error',
           mensaje: `Error en cotejo: ${error.message}`,
           acciones_disponibles: ['revisar_logs', 'contactar_soporte']
         }
@@ -97,11 +108,28 @@ serve(async (req) => {
 // FUNCIÓN PRINCIPAL DE COTEJO
 async function ejecutarCotejoInteligente(facturaId: string, forceReprocess: boolean): Promise<ResultadoCotejo> {
   
+  // NOTA IMPORTANTE: facturaId aquí es el documento_id que envía el dashboard
+  // Internamente, el sistema obtiene la factura por documento_id y luego usa su ID primario
+  // para todas las operaciones de base de datos (enlaces, actualizaciones, etc.)
+  
   // 1. VALIDACIONES INICIALES
   console.log('🔍 Validando factura...')
-  const factura = await obtenerFactura(facturaId)
+  const factura = await obtenerFactura(facturaId)  // facturaId = documento_id
   if (!factura) {
-    throw new Error(`Factura ${facturaId} no encontrada`)
+    // En lugar de lanzar error, devolver resultado con estado de error
+    return {
+      success: false,
+      error: `Factura con documento_id ${facturaId} no encontrada`,
+      message: `La factura con documento_id ${facturaId} no existe en la base de datos`,
+      enlaces_automaticos: 0,
+      sugerencias: 0,
+      requiere_revision: 0,
+      notificacion: {
+        tipo: 'error',
+        mensaje: `Factura no encontrada: ${facturaId}`,
+        acciones_disponibles: ['verificar_id', 'contactar_soporte']
+      }
+    }
   }
 
   const enlacesExistentes = await verificarEnlacesExistentes(facturaId)
@@ -167,15 +195,17 @@ async function ejecutarCotejoInteligente(facturaId: string, forceReprocess: bool
 
 // FUNCIONES AUXILIARES PRINCIPALES
 
+// FUNCIÓN AUXILIAR PARA OBTENER FACTURA
 async function obtenerFactura(facturaId: string) {
   try {
-    console.log(`🔍 Buscando factura: ${facturaId}`)
+    console.log(`🔍 Buscando factura por documento_id: ${facturaId}`)
     
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     )
     
+    // IMPORTANTE: Buscar por documento_id, no por id primario
     const { data: factura, error } = await supabase
       .from('datos_extraidos_facturas')
       .select(`
@@ -188,8 +218,8 @@ async function obtenerFactura(facturaId: string) {
           codigo_producto
         )
       `)
-      .eq('id', facturaId)
-      .single()
+      .eq('documento_id', facturaId)  // ← CAMBIADO: de 'id' a 'documento_id'
+      .maybeSingle()
     
     if (error) {
       console.error('❌ Error obteniendo factura:', error)
@@ -197,11 +227,12 @@ async function obtenerFactura(facturaId: string) {
     }
     
     if (!factura) {
-      console.log(`❌ Factura ${facturaId} no encontrada`)
+      console.log(`❌ Factura con documento_id ${facturaId} no encontrada`)
       return null
     }
     
     console.log(`✅ Factura encontrada: ${factura.numero_factura} - ${factura.proveedor_nombre}`)
+    console.log(`📋 ID primario: ${factura.id}, Documento ID: ${factura.documento_id}`)
     return factura
     
   } catch (error) {
@@ -212,17 +243,25 @@ async function obtenerFactura(facturaId: string) {
 
 async function verificarEnlacesExistentes(facturaId: string) {
   try {
-    console.log(`🔍 Verificando enlaces existentes para factura: ${facturaId}`)
+    console.log(`🔍 Verificando enlaces existentes para factura con documento_id: ${facturaId}`)
     
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     )
     
+    // Primero obtener la factura para obtener su ID primario
+    const factura = await obtenerFactura(facturaId)
+    if (!factura) {
+      console.log('⚠️ No se pudo obtener la factura para verificar enlaces')
+      return []
+    }
+    
+    // Buscar enlaces usando el ID primario de la factura
     const { data: enlaces, error } = await supabase
       .from('facturas_albaranes_enlaces')
       .select('*')
-      .eq('factura_id', facturaId)
+      .eq('factura_id', factura.id)  // ← Usar ID primario para la búsqueda de enlaces
       .eq('estado', 'confirmado')
     
     if (error) {
@@ -252,7 +291,7 @@ async function buscarAlbaranPorNumero(numeroAlbaran: string, restauranteId: stri
       .select('*')
       .eq('restaurante_id', restauranteId)
       .eq('numero_albaran', numeroAlbaran)
-      .single()
+      .maybeSingle()
     
     if (error || !albaran) {
       return null
@@ -950,6 +989,13 @@ async function procesarEnlacesAutomaticos(candidatos: any[], facturaId: string) 
       return
     }
     
+    // Obtener la factura para obtener su ID primario
+    const factura = await obtenerFactura(facturaId)
+    if (!factura) {
+      console.error('❌ No se pudo obtener la factura para procesar enlaces')
+      return
+    }
+    
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
@@ -957,11 +1003,11 @@ async function procesarEnlacesAutomaticos(candidatos: any[], facturaId: string) 
     
     for (const candidato of candidatos) {
       try {
-        // Crear enlace automático
+        // Crear enlace automático usando el ID primario de la factura
         const { error: errorEnlace } = await supabase
           .from('facturas_albaranes_enlaces')
           .insert({
-            factura_id: facturaId,
+            factura_id: factura.id,  // ← Usar ID primario de la factura
             albaran_id: candidato.albaran_id,
             restaurante_id: candidato.restaurante_id || 'sistema',
             metodo_deteccion: candidato.metodo,
@@ -975,7 +1021,7 @@ async function procesarEnlacesAutomaticos(candidatos: any[], facturaId: string) 
         if (errorEnlace) {
           console.error(`❌ Error creando enlace automático:`, errorEnlace)
         } else {
-          console.log(`✅ Enlace automático creado: Factura ${facturaId} ↔ Albarán ${candidato.albaran_id}`)
+          console.log(`✅ Enlace automático creado: Factura ${factura.id} ↔ Albarán ${candidato.albaran_id}`)
         }
         
         // Marcar albarán como no huérfano
@@ -1002,6 +1048,13 @@ async function crearSugerencias(candidatos: any[], facturaId: string) {
       return
     }
     
+    // Obtener la factura para obtener su ID primario
+    const factura = await obtenerFactura(facturaId)
+    if (!factura) {
+      console.error('❌ No se pudo obtener la factura para crear sugerencias')
+      return
+    }
+    
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
@@ -1009,11 +1062,11 @@ async function crearSugerencias(candidatos: any[], facturaId: string) {
     
     for (const candidato of candidatos) {
       try {
-        // Crear enlace como sugerencia
+        // Crear enlace como sugerencia usando el ID primario de la factura
         const { error: errorEnlace } = await supabase
           .from('facturas_albaranes_enlaces')
           .insert({
-            factura_id: facturaId,
+            factura_id: factura.id,  // ← Usar ID primario de la factura
             albaran_id: candidato.albaran_id,
             restaurante_id: candidato.restaurante_id || 'sistema',
             metodo_deteccion: candidato.metodo,
@@ -1027,7 +1080,7 @@ async function crearSugerencias(candidatos: any[], facturaId: string) {
         if (errorEnlace) {
           console.error(`❌ Error creando sugerencia:`, errorEnlace)
         } else {
-          console.log(`✅ Sugerencia creada: Factura ${facturaId} ↔ Albarán ${candidato.albaran_id} (${Math.round(candidato.score * 100)}%)`)
+          console.log(`✅ Sugerencia creada: Factura ${factura.id} ↔ Albarán ${candidato.albaran_id} (${Math.round(candidato.score * 100)}%)`)
         }
         
       } catch (error) {
@@ -1051,24 +1104,31 @@ async function marcarParaRevisionManual(candidatos: any[], facturaId: string) {
       return
     }
     
+    // Obtener la factura para obtener su ID primario
+    const factura = await obtenerFactura(facturaId)
+    if (!factura) {
+      console.error('❌ No se pudo obtener la factura para marcar revisión')
+      return
+    }
+    
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     )
     
-    // Marcar factura como requiere revisión manual
+    // Marcar factura como requiere revisión manual usando el ID primario
     const { error: errorFactura } = await supabase
       .from('datos_extraidos_facturas')
       .update({
         requiere_revision: true,
         fecha_ultima_modificacion: new Date().toISOString()
       })
-      .eq('id', facturaId)
+      .eq('id', factura.id)  // ← Usar ID primario de la factura
     
     if (errorFactura) {
       console.error('❌ Error marcando factura para revisión:', errorFactura)
     } else {
-      console.log(`✅ Factura ${facturaId} marcada para revisión manual`)
+      console.log(`✅ Factura ${factura.id} marcada para revisión manual`)
     }
     
     // Crear entrada en documentos_huerfanos si no hay candidatos
@@ -1076,9 +1136,9 @@ async function marcarParaRevisionManual(candidatos: any[], facturaId: string) {
       const { error: errorHuerfano } = await supabase
         .from('documentos_huerfanos')
         .insert({
-          documento_id: facturaId,
+          documento_id: factura.documento_id,  // ← Usar documento_id para documentos_huerfanos
           tipo_documento: 'factura',
-          restaurante_id: 'sistema', // Se actualizará con el valor real
+          restaurante_id: factura.restaurante_id || 'sistema',
           estado: 'pendiente',
           prioridad: 'alta',
           fecha_limite: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 días
@@ -1087,7 +1147,7 @@ async function marcarParaRevisionManual(candidatos: any[], facturaId: string) {
       if (errorHuerfano) {
         console.error('❌ Error creando entrada de huérfano:', errorHuerfano)
       } else {
-        console.log(`✅ Entrada de huérfano creada para factura ${facturaId}`)
+        console.log(`✅ Entrada de huérfano creada para factura ${factura.documento_id}`)
       }
     }
     
@@ -1162,7 +1222,7 @@ async function generarNotificacion(categorizacion: any, factura: any) {
   try {
     console.log(`🔔 Generando notificación inteligente...`)
     
-    let tipo: string
+    let tipo: 'alta_confianza' | 'media_confianza' | 'baja_confianza' | 'sin_albaran'
     let mensaje: string
     let acciones: string[] = []
     
@@ -1190,7 +1250,7 @@ async function generarNotificacion(categorizacion: any, factura: any) {
     console.log(`✅ Notificación generada: ${tipo}`)
     
     return {
-      tipo: tipo,
+      tipo: tipo,  // ← Ya está tipado correctamente
       mensaje: mensaje,
       acciones_disponibles: acciones
     }
@@ -1198,7 +1258,7 @@ async function generarNotificacion(categorizacion: any, factura: any) {
   } catch (error) {
     console.error('❌ Error en generarNotificacion:', error)
     return {
-      tipo: 'baja_confianza',
+      tipo: 'baja_confianza' as const,  // ← Usar 'as const' para asegurar el tipo
       mensaje: 'Error generando notificación',
       acciones_disponibles: ['revisar_logs', 'contactar_soporte']
     }
@@ -1209,16 +1269,23 @@ async function actualizarEstadoHuerfanos(facturaId: string) {
   try {
     console.log(`📋 Actualizando estado de huérfanos...`)
     
+    // Obtener la factura para obtener su ID primario
+    const factura = await obtenerFactura(facturaId)
+    if (!factura) {
+      console.error('❌ No se pudo obtener la factura para actualizar estado de huérfanos')
+      return
+    }
+    
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     )
     
-    // Verificar si la factura ya no es huérfana
+    // Verificar si la factura ya no es huérfana usando el ID primario
     const { data: enlaces, error: errorEnlaces } = await supabase
       .from('facturas_albaranes_enlaces')
       .select('id')
-      .eq('factura_id', facturaId)
+      .eq('factura_id', factura.id)  // ← Usar ID primario de la factura
       .in('estado', ['detectado', 'confirmado', 'sugerido'])
     
     if (errorEnlaces) {
@@ -1235,13 +1302,13 @@ async function actualizarEstadoHuerfanos(facturaId: string) {
           fecha_resolucion: new Date().toISOString(),
           resuelto_por: 'sistema'
         })
-        .eq('documento_id', facturaId)
+        .eq('documento_id', factura.documento_id)  // ← Usar documento_id para documentos_huerfanos
         .eq('tipo_documento', 'factura')
       
       if (errorUpdate && errorUpdate.code !== 'PGRST116') {
         console.error('⚠️ Error actualizando estado de huérfano:', errorUpdate)
       } else {
-        console.log(`✅ Estado de huérfano actualizado para factura ${facturaId}`)
+        console.log(`✅ Estado de huérfano actualizado para factura ${factura.documento_id}`)
       }
     }
     

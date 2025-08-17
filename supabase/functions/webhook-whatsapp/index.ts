@@ -43,6 +43,8 @@ Deno.serve(async (req) => {
     const telefono = message.from
     const mediaId = message.image?.id || message.document?.id
     const texto = message.text?.body || ""
+    // 🆕 NUEVO: Extraer respuesta de botón
+    const buttonResponse = message.interactive?.button_reply?.id || ""
 
     console.log(`📱 Mensaje de ${telefono}:`, { mediaId, texto })
 
@@ -53,6 +55,13 @@ Deno.serve(async (req) => {
 
     // 3. Validar que hay archivo
     if (!mediaId) {
+      // 🆕 NUEVO: Verificar si es respuesta de botón
+      if (buttonResponse) {
+        console.log('🔘 Respuesta de botón detectada:', buttonResponse)
+        await procesarRespuestaBoton(telefono, buttonResponse)
+        return new Response("Botón procesado", { status: 200 })
+      }
+      
       await enviarMensajeWhatsApp(telefono, "Por favor, envía una imagen o PDF de la factura.")
       return new Response("Sin archivo", { status: 200 })
     }
@@ -90,7 +99,7 @@ Deno.serve(async (req) => {
         .select(`
           restaurante_id,
           telefono,
-          restaurantes!inner(id, nombre)
+          restaurantes(id, nombre)
         `)
         .eq("telefono", variacion)
         .eq("activo", true)
@@ -115,7 +124,10 @@ Deno.serve(async (req) => {
     }
 
     // 5. ✅ ¡IDENTIFICACIÓN EXITOSA!
-    const restaurante = vinculacion.restaurantes
+    const restaurante = { 
+      id: vinculacion.restaurante_id, 
+      nombre: vinculacion.restaurantes.nombre 
+    }
     console.log(`✅ Factura para: ${restaurante.nombre}`)
 
     // 🚨 VERIFICACIÓN DE IDEMPOTENCIA - DESPUÉS DE IDENTIFICAR RESTAURANTE
@@ -498,6 +510,161 @@ async function descargarArchivoWhatsApp(mediaId: string): Promise<File | null> {
     console.error('❌ Error crítico descargando archivo WhatsApp:', error)
     console.error('❌ Stack trace:', error.stack)
     return null
+  }
+}
+
+// 🆕 FUNCIÓN PARA PROCESAR RESPUESTAS DE BOTONES
+async function procesarRespuestaBoton(telefono: string, buttonId: string) {
+  try {
+    console.log('🔘 === PROCESANDO RESPUESTA DE BOTÓN ===')
+    console.log('📱 Teléfono:', telefono)
+    console.log('🔘 Botón presionado:', buttonId)
+    
+    // Buscar documento pendiente de revisión
+    const supabaseClient = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    )
+    
+    // Buscar vinculación del usuario - USAR LA MISMA LÓGICA QUE FUNCIONA
+    console.log(`🔍 Buscando número: "${telefono}"`)
+
+    // Crear variaciones del número (MISMA LÓGICA QUE FUNCIONA)
+    const telefonoLimpio = telefono.replace(/[\s\-\(\)]/g, '')
+    const variaciones = [
+      telefonoLimpio,                    // 34622902777
+      `+${telefonoLimpio}`,             // +34622902777
+      telefonoLimpio.startsWith('34') ? telefonoLimpio.substring(2) : telefonoLimpio, // 622902777
+      telefonoLimpio.startsWith('34') ? `+34${telefonoLimpio.substring(2)}` : `+34${telefonoLimpio}` // +34622902777
+    ]
+
+    // Eliminar duplicados
+    const variacionesUnicas = [...new Set(variaciones)]
+    console.log(`🔄 Variaciones a buscar:`, variacionesUnicas)
+
+    let vinculacion = null
+    let error = null
+
+    // Buscar con cada variación (MISMA LÓGICA QUE FUNCIONA)
+    for (const variacion of variacionesUnicas) {
+      console.log(`🔍 Probando variación: "${variacion}"`)
+      
+      const { data: resultado, error: errorBusqueda } = await supabaseClient
+        .from("whatsapp_vinculaciones")
+        .select(`
+          restaurante_id,
+          telefono,
+          restaurantes(id, nombre)
+        `)
+        .eq("telefono", variacion)
+        .eq("activo", true)
+        .single()
+      
+      if (resultado && !errorBusqueda) {
+        console.log(`✅ Vinculación encontrada con "${variacion}":`, {
+          restaurante: resultado.restaurantes.nombre,
+          telefono_guardado: resultado.telefono
+        })
+        vinculacion = resultado
+        break
+      }
+    }
+
+    if (error || !vinculacion) {
+      console.log(`❌ Número ${telefono} no vinculado después de probar todas las variaciones`)
+      return
+    }
+    
+    // Buscar documento que necesita revisión
+    const { data: documento } = await supabaseClient
+      .from("documentos")
+      .select("id, nombre_archivo, tipo_documento")
+      .eq("restaurante_id", vinculacion.restaurante_id)
+      .eq("requiere_revision_tipo", true)
+      .eq("estado", "pending")
+      .order("fecha_subida", { ascending: false })
+      .limit(1)
+      .single()
+    
+    if (!documento) {
+      console.log('❌ No hay documentos pendientes de revisión')
+      await enviarMensajeWhatsApp(telefono, "No hay documentos pendientes de revisión.")
+      return
+    }
+    
+    // Determinar tipo según botón
+    let nuevoTipo = ""
+    if (buttonId === "btn_factura") {
+      nuevoTipo = "factura"
+    } else if (buttonId === "btn_albaran") {
+      nuevoTipo = "albaran"
+    } else {
+      console.log('❌ Botón no reconocido:', buttonId)
+      return
+    }
+    
+    console.log('✅ Actualizando documento:', {
+      id: documento.id,
+      tipo_anterior: documento.tipo_documento,
+      tipo_nuevo: nuevoTipo
+    })
+    
+    // Actualizar documento
+    const { error: updateError } = await supabaseClient
+      .from("documentos")
+      .update({
+        tipo_documento: nuevoTipo,
+        requiere_revision_tipo: false,
+        estado: "processing"
+      })
+      .eq("id", documento.id)
+    
+    if (updateError) {
+      console.error('❌ Error actualizando documento:', updateError)
+      await enviarMensajeWhatsApp(telefono, "Error actualizando el documento. Inténtalo de nuevo.")
+      return
+    }
+    
+    console.log('✅ Documento actualizado exitosamente')
+    
+    // Reanudar procesamiento
+    await enviarMensajeWhatsApp(telefono, 
+      `✅ Documento clasificado como ${nuevoTipo.toUpperCase()}
+      
+📄 ${documento.nombre_archivo}
+🤖 El procesamiento se reanudará automáticamente.
+
+Te avisaremos cuando termine.`
+    )
+    
+    // Llamar a process-invoice para reanudar
+    try {
+      const procesarResponse = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/process-invoice`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`
+        },
+        body: JSON.stringify({
+          documentId: documento.id,
+          telefono: telefono,
+          tipoConfirmado: nuevoTipo
+        })
+      })
+      
+      if (procesarResponse.ok) {
+        console.log('✅ Procesamiento reanudado correctamente')
+      } else {
+        console.error('❌ Error reanudando procesamiento:', procesarResponse.status)
+      }
+      
+    } catch (error) {
+      console.error('❌ Error llamando a process-invoice:', error)
+    }
+    
+  } catch (error) {
+    console.error('❌ Error procesando respuesta de botón:', error)
+    await enviarMensajeWhatsApp(telefono, "Error procesando tu respuesta. Inténtalo de nuevo.")
   }
 }
 

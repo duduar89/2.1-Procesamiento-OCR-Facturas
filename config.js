@@ -24,8 +24,15 @@ const CONFIG = {
     APP: {
         // Validación de archivos
         MAX_FILE_SIZE: 10 * 1024 * 1024,         // 10MB en bytes
-        ALLOWED_TYPES: ['application/pdf'],       // Solo PDFs por ahora
-        ALLOWED_EXTENSIONS: ['.pdf'],
+        ALLOWED_TYPES: [
+            'application/pdf',                    // PDFs
+            'image/jpeg',                         // JPG/JPEG
+            'image/jpg',                          // JPG
+            'image/png',                          // PNG
+            'image/tiff',                         // TIFF
+            'image/bmp'                           // BMP
+        ],
+        ALLOWED_EXTENSIONS: ['.pdf', '.jpg', '.jpeg', '.png', '.tiff', '.bmp'],
         
         // Procesamiento
         PROCESSING_TIMEOUT: 60000,               // 60 segundos timeout

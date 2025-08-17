@@ -45,6 +45,586 @@ function updateThemeIcon(theme) {
     }
 }
 
+// ===== FUNCIONES DE COTEJO INTELIGENTE =====
+
+// Función para ejecutar cotejo automático después de procesar factura
+async function ejecutarCotejoAutomatico(facturaId) {
+  try {
+    console.log('🔄 Ejecutando cotejo automático...')
+    
+    // Mostrar loading
+    const enlacesLoading = document.getElementById('enlacesLoading')
+    const enlacesContainer = document.getElementById('enlaces-factura-modal')
+    
+    if (enlacesLoading) enlacesLoading.style.display = 'flex'
+    if (enlacesContainer) enlacesContainer.style.display = 'none'
+    
+    const response = await fetch('https://yurqgcpgwsgdnxnpyxes.supabase.co/functions/v1/cotejo-inteligente', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${CONFIG.SUPABASE.ANON_KEY}`
+      },
+      body: JSON.stringify({
+        facturaId: facturaId,
+        background: false,
+        forceReprocess: false
+      })
+    })
+    
+    const resultado = await response.json()
+    
+    // Ocultar loading
+    if (enlacesLoading) enlacesLoading.style.display = 'none'
+    if (enlacesContainer) enlacesContainer.style.display = 'block'
+    
+    if (resultado.success) {
+      console.log('✅ Cotejo completado:', resultado)
+      
+      // Mostrar notificación del resultado
+      mostrarNotificacionCotejo(resultado)
+      
+      // Actualizar la interfaz con los enlaces
+      await actualizarEnlacesFactura(facturaId)
+      
+      return resultado
+    } else {
+      console.error('❌ Error en cotejo:', resultado.error)
+      showNotification('Error en cotejo automático', 'error')
+    }
+    
+  } catch (error) {
+    console.error('❌ Error ejecutando cotejo:', error)
+    showNotification('Error ejecutando cotejo', 'error')
+    
+    // Ocultar loading en caso de error
+    const enlacesLoading = document.getElementById('enlacesLoading')
+    const enlacesContainer = document.getElementById('enlaces-factura-modal')
+    
+    if (enlacesLoading) enlacesLoading.style.display = 'none'
+    if (enlacesContainer) enlacesContainer.style.display = 'block'
+  }
+}
+  
+  // Función para mostrar notificación del resultado del cotejo
+  function mostrarNotificacionCotejo(resultado) {
+    const { notificacion } = resultado
+    
+    let tipo = 'info'
+    if (notificacion.tipo === 'alta_confianza') tipo = 'success'
+    else if (notificacion.tipo === 'media_confianza') tipo = 'warning'
+    else if (notificacion.tipo === 'baja_confianza') tipo = 'error'
+    
+    showNotification(notificacion.mensaje, tipo)
+    
+    // Si hay enlaces automáticos, mostrar mensaje especial
+    if (resultado.enlaces_automaticos > 0) {
+      setTimeout(() => {
+        showNotification(`🎉 ¡${resultado.enlaces_automaticos} albarán(es) enlazado(s) automáticamente!`, 'success')
+      }, 2000)
+    }
+  }
+  
+  // Función para actualizar la interfaz con los enlaces de una factura
+async function actualizarEnlacesFactura(facturaId) {
+  try {
+    // Obtener enlaces de la factura
+    const { data: enlaces, error } = await supabaseClient
+      .from('facturas_albaranes_enlaces')
+      .select(`
+        *,
+        datos_extraidos_albaranes(
+          numero_albaran,
+          fecha_albaran,
+          total_albaran,
+          proveedor_nombre
+        )
+      `)
+      .eq('factura_id', facturaId)
+      .order('fecha_cotejo', { ascending: false })
+    
+    if (error) {
+      console.error('❌ Error obteniendo enlaces:', error)
+      return
+    }
+    
+    // Actualizar contadores en la tabla
+    actualizarContadoresAlbaranes(facturaId, enlaces || [])
+    
+    // Actualizar la interfaz
+    actualizarInterfazEnlaces(facturaId, enlaces || [])
+    
+  } catch (error) {
+    console.error('❌ Error actualizando enlaces:', error)
+  }
+}
+
+// Función para actualizar contadores de albaranes en la tabla
+function actualizarContadoresAlbaranes(facturaId, enlaces) {
+  const contadorTabla = document.getElementById(`albaranes-count-${facturaId}`)
+  const contadorExpandido = document.getElementById(`albaranes-count-expanded-${facturaId}`)
+  
+  if (contadorTabla) {
+    contadorTabla.textContent = enlaces.length
+    contadorTabla.className = enlaces.length > 0 ? 'albaranes-count has-albaranes' : 'albaranes-count'
+  }
+  
+  if (contadorExpandido) {
+    contadorExpandido.textContent = enlaces.length
+  }
+}
+
+// Función para alternar la fila de albaranes
+async function toggleAlbaranesRow(facturaId, buttonElement) {
+  const albaranesRow = document.getElementById(`albaranes-row-${facturaId}`)
+  const isExpanded = buttonElement.classList.contains('expanded')
+  
+  if (!isExpanded) {
+    // Expandir
+    buttonElement.classList.add('expanded')
+    albaranesRow.style.display = 'table-row'
+    albaranesRow.classList.add('expanding')
+    
+    // Cargar albaranes si no están cargados
+    await cargarAlbaranesParaFactura(facturaId)
+  } else {
+    // Contraer
+    buttonElement.classList.remove('expanded')
+    albaranesRow.style.display = 'none'
+    albaranesRow.classList.remove('expanding')
+  }
+}
+
+// Función para cargar albaranes de una factura
+async function cargarAlbaranesParaFactura(facturaId) {
+  try {
+    console.log('🔗 Cargando albaranes para factura:', facturaId)
+    
+    // Obtener enlaces existentes
+    const { data: enlaces, error } = await supabaseClient
+      .from('facturas_albaranes_enlaces')
+      .select(`
+        *,
+        datos_extraidos_albaranes(
+          numero_albaran,
+          fecha_albaran,
+          total_albaran,
+          proveedor_nombre
+        )
+      `)
+      .eq('factura_id', facturaId)
+      .order('fecha_cotejo', { ascending: false })
+      
+    if (error) {
+      console.error('❌ Error cargando albaranes:', error)
+      showNotification('Error cargando albaranes', 'error')
+      return
+    }
+    
+    console.log(`✅ ${enlaces?.length || 0} albaranes cargados para factura ${facturaId}`)
+    
+    renderizarAlbaranesEnTabla(facturaId, enlaces || [])
+    
+  } catch (error) {
+    console.error('❌ Error en cargarAlbaranesParaFactura:', error)
+    showNotification('Error cargando albaranes', 'error')
+  }
+}
+
+// Función para renderizar albaranes en la tabla
+function renderizarAlbaranesEnTabla(facturaId, enlaces) {
+  const albaranesGrid = document.getElementById(`albaranes-grid-${facturaId}`)
+  
+  if (!albaranesGrid) {
+    console.error('❌ No se encontró el contenedor de albaranes')
+    return
+  }
+  
+  if (enlaces.length === 0) {
+    albaranesGrid.innerHTML = `
+      <div class="text-center text-muted py-3">
+        <i class="fas fa-info-circle"></i> No hay albaranes enlazados
+      </div>
+    `
+    return
+  }
+  
+  // Renderizar albaranes
+  albaranesGrid.innerHTML = enlaces.map(enlace => {
+    const albaran = enlace.datos_extraidos_albaranes
+    const estado = enlace.estado
+    const confianza = Math.round(enlace.confianza_match * 100)
+    
+    let badgeEstado = ''
+    let acciones = ''
+    
+    switch (estado) {
+      case 'confirmado':
+        badgeEstado = `<span class="enlace-badge confirmado">✅ Confirmado</span>`
+        break
+      case 'sugerido':
+        badgeEstado = `<span class="enlace-badge sugerencia">⚠️ Sugerencia (${confianza}%)</span>`
+        acciones = `
+          <button class="btn-enlace-action confirmar" onclick="confirmarSugerencia('${enlace.id}')">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M9 12l2 2 4-4"/>
+            </svg>
+            Confirmar
+          </button>
+          <button class="btn-enlace-action rechazar" onclick="rechazarSugerencia('${enlace.id}')">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M18 6L6 18M6 6l12 12"/>
+            </svg>
+            Rechazar
+          </button>
+        `
+        break
+      case 'detectado':
+        badgeEstado = `<span class="enlace-badge detectado">🔍 Detectado (${confianza}%)</span>`
+        break
+      case 'rechazado':
+        badgeEstado = `<span class="enlace-badge rechazado">❌ Rechazado</span>`
+        break
+    }
+    
+    return `
+      <div class="enlace-card-table">
+        <div class="enlace-header-table">
+          <h6 class="enlace-title-table">
+            📦 ${albaran.numero_albaran || 'Sin número'}
+          </h6>
+          ${badgeEstado}
+        </div>
+        
+        <div class="enlace-details-table">
+          <div class="enlace-detail-table">
+            <span>Proveedor</span>
+            <div class="value">${albaran.proveedor_nombre || 'N/A'}</div>
+          </div>
+          <div class="enlace-detail-table">
+            <span>Fecha</span>
+            <div class="value">${albaran.fecha_albaran || 'N/A'}</div>
+          </div>
+          <div class="enlace-detail-table">
+            <span>Total</span>
+            <div class="value">€${albaran.total_albaran || '0.00'}</div>
+          </div>
+          <div class="enlace-detail-table">
+            <span>Método</span>
+            <div class="value">${enlace.metodo_deteccion || 'N/A'}</div>
+          </div>
+        </div>
+        
+        ${acciones ? `<div class="enlace-actions-table">${acciones}</div>` : ''}
+      </div>
+    `
+  }).join('')
+}
+
+// ===== FUNCIONES PARA GESTIONAR SUGERENCIAS =====
+
+// Función para confirmar una sugerencia
+async function confirmarSugerencia(enlaceId) {
+  try {
+    console.log('✅ Confirmando sugerencia:', enlaceId)
+    
+    const response = await fetch('https://yurqgcpgwsgdnxnpyxes.supabase.co/functions/v1/gestionar-sugerencias-cotejo', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${CONFIG.SUPABASE.ANON_KEY}`
+      },
+      body: JSON.stringify({
+        action: 'confirmar',
+        enlaceId: enlaceId,
+        usuarioId: CONFIG.USUARIO_ID || '00000000-0000-0000-0000-000000000000'
+      })
+    })
+    
+    const resultado = await response.json()
+    
+    if (resultado.success) {
+      showNotification('✅ Sugerencia confirmada exitosamente', 'success')
+      
+      // Recargar albaranes en todas las filas expandidas
+      await recargarAlbaranesExpandidos()
+      
+    } else {
+      showNotification(`❌ Error: ${resultado.message}`, 'error')
+    }
+    
+  } catch (error) {
+    console.error('❌ Error confirmando sugerencia:', error)
+    showNotification('Error confirmando sugerencia', 'error')
+  }
+}
+
+// Función para rechazar una sugerencia
+async function rechazarSugerencia(enlaceId) {
+  try {
+    console.log('❌ Rechazando sugerencia:', enlaceId)
+    
+    const response = await fetch('https://yurqgcpgwsgdnxnpyxes.supabase.co/functions/v1/gestionar-sugerencias-cotejo', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${CONFIG.SUPABASE.ANON_KEY}`
+      },
+      body: JSON.stringify({
+        action: 'rechazar',
+        enlaceId: enlaceId,
+        usuarioId: CONFIG.USUARIO_ID || '00000000-0000-0000-0000-000000000000'
+      })
+    })
+    
+    const resultado = await response.json()
+    
+    if (resultado.success) {
+      showNotification('❌ Sugerencia rechazada exitosamente', 'success')
+      
+      // Recargar albaranes en todas las filas expandidas
+      await recargarAlbaranesExpandidos()
+      
+    } else {
+      showNotification(`❌ Error: ${resultado.message}`, 'error')
+    }
+    
+  } catch (error) {
+    console.error('❌ Error rechazando sugerencia:', error)
+    showNotification('Error rechazando sugerencia', 'error')
+  }
+}
+
+// Función para recargar albaranes en todas las filas expandidas
+async function recargarAlbaranesExpandidos() {
+  const filasExpandidas = document.querySelectorAll('.albaranes-row.expanding')
+  
+  for (const fila of filasExpandidas) {
+    const facturaId = fila.id.replace('albaranes-row-', '')
+    await cargarAlbaranesParaFactura(facturaId)
+  }
+}
+  
+  // Función para actualizar la interfaz de enlaces
+function actualizarInterfazEnlaces(facturaId, enlaces) {
+  // Buscar tanto en la tabla como en el modal
+  const contenedorEnlaces = document.getElementById(`enlaces-factura-${facturaId}`) || 
+                           document.getElementById('enlaces-factura-modal')
+  
+  if (!contenedorEnlaces) return
+  
+  // Limpiar contenedor
+  contenedorEnlaces.innerHTML = ''
+  
+  if (enlaces.length === 0) {
+    contenedorEnlaces.innerHTML = `
+      <div class="text-center text-muted py-3">
+        <i class="fas fa-info-circle"></i> No hay albaranes enlazados
+      </div>
+    `
+    return
+  }
+  
+  // Crear lista de enlaces
+  enlaces.forEach(enlace => {
+    const albaran = enlace.datos_extraidos_albaranes
+    const estado = enlace.estado
+    const confianza = Math.round(enlace.confianza_match * 100)
+    
+    let badgeEstado = ''
+    let acciones = ''
+    
+    switch (estado) {
+      case 'confirmado':
+        badgeEstado = `<span class="enlace-badge confirmado">✅ Confirmado</span>`
+        break
+      case 'sugerido':
+        badgeEstado = `<span class="enlace-badge sugerencia">⚠️ Sugerencia (${confianza}%)</span>`
+        acciones = `
+          <button class="btn-enlace-action confirmar" onclick="confirmarSugerencia('${enlace.id}')">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M9 12l2 2 4-4"/>
+            </svg>
+            Confirmar
+          </button>
+          <button class="btn-enlace-action rechazar" onclick="rechazarSugerencia('${enlace.id}')">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M18 6L6 18M6 6l12 12"/>
+            </svg>
+            Rechazar
+          </button>
+        `
+        break
+      case 'detectado':
+        badgeEstado = `<span class="enlace-badge detectado">🔍 Detectado (${confianza}%)</span>`
+        break
+      case 'rechazado':
+        badgeEstado = `<span class="enlace-badge rechazado">❌ Rechazado</span>`
+        break
+    }
+    
+    const enlaceHTML = `
+      <div class="enlace-card">
+        <div class="enlace-header">
+          <h6 class="enlace-title">
+            📦 ${albaran.numero_albaran || 'Sin número'}
+          </h6>
+          ${badgeEstado}
+        </div>
+        
+        <div class="enlace-details">
+          <div class="enlace-detail">
+            <span>Proveedor</span>
+            <div class="value">${albaran.proveedor_nombre || 'N/A'}</div>
+          </div>
+          <div class="enlace-detail">
+            <span>Fecha</span>
+            <div class="value">${albaran.fecha_albaran || 'N/A'}</div>
+          </div>
+          <div class="enlace-detail">
+            <span>Total</span>
+            <div class="value">€${albaran.total_albaran || '0.00'}</div>
+          </div>
+          <div class="enlace-detail">
+            <span>Método</span>
+            <div class="value">${enlace.metodo_deteccion || 'N/A'}</div>
+          </div>
+        </div>
+        
+        ${acciones ? `<div class="enlace-actions">${acciones}</div>` : ''}
+      </div>
+    `
+    
+    contenedorEnlaces.innerHTML += enlaceHTML
+  })
+}
+  
+  // Función para confirmar una sugerencia
+  async function confirmarSugerencia(enlaceId) {
+    try {
+      const response = await fetch('https://yurqgcpgwsgdnxnpyxes.supabase.co/functions/v1/gestionar-sugerencias-cotejo', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${CONFIG.SUPABASE.ANON_KEY}`
+        },
+        body: JSON.stringify({
+          accion: 'confirmar_sugerencia',
+          enlace_id: enlaceId,
+          usuario_id: '9d32f558-ffdf-49a4-b0c9-67025d44f9f2', // Tu usuario
+          observaciones: 'Confirmado desde dashboard'
+        })
+      })
+      
+      const resultado = await response.json()
+      
+      if (resultado.success) {
+        showNotification('✅ Sugerencia confirmada exitosamente', 'success')
+        // Recargar enlaces de la factura
+        const facturaId = await obtenerFacturaIdDelEnlace(enlaceId)
+        if (facturaId) {
+          await actualizarEnlacesFactura(facturaId)
+        }
+      } else {
+        showNotification('❌ Error confirmando sugerencia', 'error')
+      }
+      
+    } catch (error) {
+      console.error('❌ Error confirmando sugerencia:', error)
+      showNotification('Error confirmando sugerencia', 'error')
+    }
+  }
+  
+  // Función para rechazar una sugerencia
+  async function rechazarSugerencia(enlaceId) {
+    const razon = prompt('¿Por qué rechazas esta sugerencia? (opcional)')
+    
+    try {
+      const response = await fetch('https://yurqgcpgwsgdnxnpyxes.supabase.co/functions/v1/gestionar-sugerencias-cotejo', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${CONFIG.SUPABASE.ANON_KEY}`
+        },
+        body: JSON.stringify({
+          accion: 'rechazar_sugerencia',
+          enlace_id: enlaceId,
+          usuario_id: '9d32f558-ffdf-49a4-b0c9-67025d44f9f2', // Tu usuario
+          razon_rechazo: razon || 'Rechazo por usuario',
+          observaciones: 'Rechazado desde dashboard'
+        })
+      })
+      
+      const resultado = await response.json()
+      
+      if (resultado.success) {
+        showNotification('❌ Sugerencia rechazada exitosamente', 'info')
+        // Recargar enlaces de la factura
+        const facturaId = await obtenerFacturaIdDelEnlace(enlaceId)
+        if (facturaId) {
+          await actualizarEnlacesFactura(facturaId)
+        }
+      } else {
+        showNotification('❌ Error rechazando sugerencia', 'error')
+      }
+      
+    } catch (error) {
+      console.error('❌ Error rechazando sugerencia:', error)
+      showNotification('Error rechazando sugerencia', 'error')
+    }
+  }
+  
+  // Función auxiliar para obtener factura_id de un enlace
+  async function obtenerFacturaIdDelEnlace(enlaceId) {
+    try {
+      const { data: enlace, error } = await supabaseClient
+        .from('facturas_albaranes_enlaces')
+        .select('factura_id')
+        .eq('id', enlaceId)
+        .single()
+      
+      if (error || !enlace) return null
+      return enlace.factura_id
+      
+    } catch (error) {
+      console.error('❌ Error obteniendo factura_id:', error)
+      return null
+    }
+  }
+  
+  // Función para marcar factura como directa
+  async function marcarFacturaDirecta(facturaId) {
+    try {
+      const response = await fetch('https://yurqgcpgwsgdnxnpyxes.supabase.co/functions/v1/gestionar-sugerencias-cotejo', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${CONFIG.SUPABASE.ANON_KEY}`
+        },
+        body: JSON.stringify({
+          accion: 'marcar_factura_directa',
+          factura_id: facturaId,
+          usuario_id: '9d32f558-ffdf-49a4-b0c9-67025d44f9f2', // Tu usuario
+          observaciones: 'Marcada como factura directa desde dashboard'
+        })
+      })
+      
+      const resultado = await response.json()
+      
+      if (resultado.success) {
+        showNotification('📄 Factura marcada como directa', 'success')
+        // Recargar enlaces de la factura
+        await actualizarEnlacesFactura(facturaId)
+      } else {
+        showNotification('❌ Error marcando factura directa', 'error')
+      }
+      
+    } catch (error) {
+      console.error('❌ Error marcando factura directa:', error)
+      showNotification('Error marcando factura directa', 'error')
+    }
+  }
+
 // ===== SISTEMA DE NOTIFICACIONES =====
 async function handleEnableNotifications() {
     const notificationBtn = document.getElementById('enableNotificationsBtn');
@@ -469,7 +1049,7 @@ async function initializeDashboard() {
     } catch (error) {
         console.error('Error inicializando dashboard:', error);
         
-        if (error.message.includes('Configuración')) {
+        if (error?.message && error.message.includes('Configuración')) {
             setTimeout(() => {
                 window.location.href = '../login.html';
             }, 2000);
@@ -988,7 +1568,7 @@ async function handleFiles(files) {
 // ===== VALIDAR ARCHIVO =====
 function validateFile(file) {
     // Verificar tipo
-    if (!CONFIG.APP.ALLOWED_TYPES.includes(file.type)) {
+            if (!CONFIG?.APP?.ALLOWED_TYPES || !CONFIG.APP.ALLOWED_TYPES.includes(file.type)) {
         showUploadStatus('Solo se permiten archivos PDF', 'error');
         return false;
     }
@@ -1034,7 +1614,7 @@ async function processDocument(file) {
                 id: documentId,
                 restaurante_id: CONFIG.TENANT.RESTAURANTE_ID,
                 nombre_archivo: file.name,
-                tipo_documento: 'factura',
+                tipo_archivo: 'factura',
                 url_storage: filePath,
                 tamaño_bytes: file.size,
                 numero_paginas: 1,
@@ -1325,9 +1905,9 @@ function applyFilters() {
         if (searchTerm) {
             const searchLower = searchTerm.toLowerCase();
             matches = matches && (
-                factura.proveedor_nombre?.toLowerCase().includes(searchLower) ||
-                factura.numero_factura?.toLowerCase().includes(searchLower) ||
-                factura.proveedor_cif?.toLowerCase().includes(searchLower)
+                (factura.proveedor_nombre && factura.proveedor_nombre.toLowerCase().includes(searchLower)) ||
+                (factura.numero_factura && factura.numero_factura.toLowerCase().includes(searchLower)) ||
+                (factura.proveedor_cif && factura.proveedor_cif.toLowerCase().includes(searchLower))
             );
         }
 
@@ -1438,7 +2018,7 @@ function renderFacturasTable(data = window.facturasData || []) {
     console.log('🔍 Primera factura para renderizar:', facturasPage[0]);
     
     const htmlContent = facturasPage.map((factura, index) => `
-        <tr data-factura-id="${factura.id}">
+        <tr data-factura-id="${factura.documento_id || factura.id}" data-documento-id="${factura.documento_id || factura.id}">
             <td class="expand-column">
                 <button class="expand-btn" onclick="toggleProductsRow('${factura.documento_id || factura.id}', this)" title="Ver productos">
                     ➤
@@ -1469,7 +2049,20 @@ function renderFacturasTable(data = window.facturasData || []) {
                 </div>
             </td>
             <td>
+                <div class="albaranes-column">
+                    <div class="albaranes-status" id="albaranes-status-${factura.documento_id || factura.id}">
+                        <span class="albaranes-count" id="albaranes-count-${factura.documento_id || factura.id}">0</span>
+                        <button class="btn-albaranes" onclick="toggleAlbaranesRow('${factura.documento_id || factura.id}', this)" title="Ver albaranes enlazados">
+                            🔗
+                        </button>
+                    </div>
+                </div>
+            </td>
+            <td>
                 <div class="action-buttons">
+                    <button class="btn btn-cotejo" onclick="ejecutarCotejoParaFactura('${factura.id}')" title="Ejecutar cotejo automático para esta factura">
+                        🔄 Cotejo
+                    </button>
                     <button class="btn btn-avanzado" onclick="openInvoiceAdvanced('${factura.id}')" title="Ver factura con coordenadas y análisis">
                         🎓 Enseñale
                     </button>
@@ -1477,7 +2070,7 @@ function renderFacturasTable(data = window.facturasData || []) {
             </td>
         </tr>
         <tr class="products-row" id="products-row-${factura.documento_id || factura.id}" style="display: none;">
-            <td colspan="11">
+            <td colspan="12">
                 <div class="products-container">
                     <div class="products-header">
                         <div class="products-title">
@@ -1487,6 +2080,40 @@ function renderFacturasTable(data = window.facturasData || []) {
                     </div>
                     <div class="products-grid" id="products-grid-${factura.documento_id || factura.id}">
                         <!-- Los productos se cargarán dinámicamente -->
+                    </div>
+                </div>
+            </td>
+        </tr>
+        
+        <!-- 🆕 FILA EXPANDIBLE PARA ALBARANES -->
+        <tr class="albaranes-row" id="albaranes-row-${factura.documento_id || factura.id}" style="display: none;">
+            <td colspan="12">
+                <div class="albaranes-container">
+                    <div class="albaranes-header">
+                        <div class="albaranes-title">
+                            🔗 Albaranes Enlazados
+                            <span class="albaranes-count" id="albaranes-count-expanded-${factura.documento_id || factura.id}">0</span>
+                        </div>
+                        <div class="albaranes-actions">
+                            <button class="btn-albaranes-action" onclick="ejecutarCotejoAutomatico('${factura.documento_id || factura.id}')" title="Ejecutar cotejo automático">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M21 12a9 9 0 11-6.219-8.56"/>
+                                </svg>
+                                Cotejo Automático
+                            </button>
+                            <button class="btn-albaranes-action secondary" onclick="marcarFacturaDirecta('${factura.documento_id || factura.id}')" title="Marcar como factura directa">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M9 12l2 2 4-4"/>
+                                </svg>
+                                Factura Directa
+                            </button>
+                        </div>
+                    </div>
+                    <div class="albaranes-grid" id="albaranes-grid-${factura.documento_id || factura.id}">
+                        <!-- Los albaranes se cargarán dinámicamente -->
+                        <div class="text-center text-muted py-3">
+                            <i class="fas fa-info-circle"></i> Ejecuta el cotejo automático para buscar albaranes
+                        </div>
                     </div>
                 </div>
             </td>
@@ -1502,7 +2129,7 @@ function renderFacturasTable(data = window.facturasData || []) {
         console.log('🔍 PRIMERA FILA COMPLETA:', firstRow);
         
         // Verificar si contiene el botón avanzado
-        if (firstRow.includes('btn-advanced')) {
+        if (firstRow && firstRow.includes('btn-advanced')) {
             console.log('✅ El botón avanzado SÍ está en el HTML generado');
         } else {
             console.log('❌ El botón avanzado NO está en el HTML generado');
@@ -1809,6 +2436,10 @@ async function openFacturaModal(facturaId, mode = 'view') {
         // Cargar productos en el modal
         console.log('🛒 Cargando productos para el modal...');
         await loadProductsInModal(facturaId);
+
+        // 🆕 CARGAR ENLACES DE ALBARANES AUTOMÁTICAMENTE
+        console.log('🔗 Cargando enlaces de albaranes para el modal...');
+        await actualizarEnlacesFactura(facturaId);
 
         console.log('Modal abierto para factura:', facturaId, 'Modo:', mode);
         
@@ -3190,7 +3821,7 @@ async function testSupabaseStorage() {
             .download('test-file.pdf');
             
         if (testError) {
-            if (testError.message.includes('not found')) {
+            if (testError?.message && testError.message.includes('not found')) {
                 console.log('✅ Permisos de lectura verificados (archivo no encontrado, pero acceso permitido)');
             } else {
                 console.warn('⚠️ Posible problema de permisos:', testError.message);
@@ -5226,3 +5857,414 @@ window.cleanupTestSubscriptions = cleanupTestSubscriptions;
 
 // Función global para obtener estadísticas
 window.getNotificationStats = getNotificationStats;
+
+// ===== 🆕 FUNCIÓN DE DIAGNÓSTICO DE ALBARANES =====
+function diagnosticarAlbaranes() {
+    console.log('🔍 ===== DIAGNÓSTICO COMPLETO DE ALBARANES =====');
+    
+    // 1. Verificar si las funciones están definidas
+    console.log('✅ Función ejecutarCotejoAutomatico:', typeof ejecutarCotejoAutomatico);
+    console.log('✅ Función toggleAlbaranesRow:', typeof toggleAlbaranesRow);
+    console.log('✅ Función cargarAlbaranesParaFactura:', typeof cargarAlbaranesParaFactura);
+    console.log('✅ Función renderizarAlbaranesEnTabla:', typeof renderizarAlbaranesEnTabla);
+    
+    // 2. Verificar si la columna de albaranes existe en la tabla
+    const columnaAlbaranes = document.querySelector('[data-field="albaranes"]');
+    console.log('✅ Columna de albaranes en HTML:', columnaAlbaranes ? 'SÍ existe' : 'NO existe');
+    
+    // 3. Verificar si hay botones de albaranes en la tabla
+    const botonesAlbaranes = document.querySelectorAll('.btn-albaranes');
+    console.log(`✅ Botones de albaranes en tabla: ${botonesAlbaranes.length} encontrados`);
+    
+    // 4. Verificar si hay filas expandibles de albaranes
+    const filasAlbaranes = document.querySelectorAll('.albaranes-row');
+    console.log(`✅ Filas expandibles de albaranes: ${filasAlbaranes.length} encontradas`);
+    
+    // 5. Verificar si hay botones de cotejo automático
+    const botonesCotejo = document.querySelectorAll('.btn-albaranes-action');
+    console.log(`✅ Botones de cotejo automático: ${botonesCotejo.length} encontrados`);
+    
+    // 6. Verificar si la tabla tiene el número correcto de columnas
+    const headers = document.querySelectorAll('.facturas-table th');
+    console.log(`✅ Número de columnas en la tabla: ${headers.length}`);
+    headers.forEach((header, index) => {
+        console.log(`   Columna ${index + 1}: ${header.textContent.trim()}`);
+    });
+    
+    // 7. Verificar si hay datos de facturas
+    const filasFacturas = document.querySelectorAll('.facturas-table tbody tr:not(.albaranes-row)');
+    console.log(`✅ Filas de facturas en la tabla: ${filasFacturas.length} encontradas`);
+    
+    // 8. Verificar si hay errores en la consola
+    console.log('✅ Verifica la consola para errores de JavaScript');
+    
+    console.log('🔍 ===== FIN DIAGNÓSTICO =====');
+    
+    // Mostrar resumen en pantalla
+    const resumen = `
+        🔍 DIAGNÓSTICO DE ALBARANES:
+        
+        ✅ Funciones definidas: ${typeof ejecutarCotejoAutomatico !== 'undefined' ? 'SÍ' : 'NO'}
+        ✅ Columna en HTML: ${columnaAlbaranes ? 'SÍ' : 'NO'}
+        ✅ Botones en tabla: ${botonesAlbaranes.length}
+        ✅ Filas expandibles: ${filasAlbaranes.length}
+        ✅ Botones de cotejo: ${botonesCotejo.length}
+        ✅ Columnas totales: ${headers.length}
+        ✅ Filas de facturas: ${filasFacturas.length}
+        
+        📋 Si algún valor es 0 o NO, hay un problema.
+        🔄 Recarga la página (Ctrl+F5) y ejecuta de nuevo.
+    `;
+    
+    alert(resumen);
+}
+
+// Función para probar la funcionalidad de albaranes
+function probarAlbaranes() {
+    console.log('🧪 ===== PROBANDO FUNCIONALIDAD DE ALBARANES =====');
+    
+    // 1. Buscar la primera factura en la tabla
+    const primeraFactura = document.querySelector('.facturas-table tbody tr:not(.albaranes-row)');
+    if (!primeraFactura) {
+        console.error('❌ No se encontraron facturas en la tabla');
+        return;
+    }
+    
+    // 2. Obtener el ID de la factura
+    const facturaId = primeraFactura.getAttribute('data-factura-id');
+    console.log('✅ Factura encontrada con ID:', facturaId);
+    
+    // 3. Buscar el botón de albaranes de esta factura
+    const botonAlbaranes = primeraFactura.querySelector('.btn-albaranes');
+    if (!botonAlbaranes) {
+        console.error('❌ No se encontró botón de albaranes en la primera factura');
+        return;
+    }
+    
+    console.log('✅ Botón de albaranes encontrado:', botonAlbaranes.outerHTML);
+    
+    // 4. Simular click en el botón
+    console.log('🔄 Simulando click en botón de albaranes...');
+    botonAlbaranes.click();
+    
+    // 5. Verificar si se expandió la fila
+    setTimeout(() => {
+        const filaExpandida = document.getElementById(`albaranes-row-${facturaId}`);
+        if (filaExpandida && filaExpandida.style.display !== 'none') {
+            console.log('✅ Fila de albaranes expandida correctamente');
+            
+            // 6. Buscar botón de cotejo automático
+            const botonCotejo = filaExpandida.querySelector('.btn-albaranes-action');
+            if (botonCotejo) {
+                console.log('✅ Botón de cotejo automático encontrado:', botonCotejo.outerHTML);
+            } else {
+                console.error('❌ No se encontró botón de cotejo automático');
+            }
+        } else {
+            console.error('❌ La fila de albaranes no se expandió');
+        }
+    }, 100);
+    
+    console.log('🧪 ===== FIN PRUEBA =====');
+}
+
+// Hacer las funciones disponibles globalmente
+window.diagnosticarAlbaranes = diagnosticarAlbaranes;
+window.probarAlbaranes = probarAlbaranes;
+
+// Mostrar instrucciones en la consola
+console.log('🔧 FUNCIONES DE DIAGNÓSTICO DISPONIBLES:');
+console.log('🔧 diagnosticarAlbaranes() - Diagnóstico completo');
+console.log('🔧 probarAlbaranes() - Prueba funcionalidad');
+console.log('🔧 Ejecuta estas funciones en la consola para verificar el estado');
+
+// ===== 🆕 BOTÓN FLOTANTE DE COTEJO AUTOMÁTICO =====
+function crearBotonCotejoFloante() {
+    // Crear botón flotante si no existe
+    if (document.getElementById('boton-cotejo-flotante')) {
+        return;
+    }
+    
+    const botonFloante = document.createElement('div');
+    botonFloante.id = 'boton-cotejo-flotante';
+    botonFloante.innerHTML = `
+        <button onclick="ejecutarCotejoManual()" title="Ejecutar Cotejo Automático">
+            🔄 Cotejo Automático
+        </button>
+    `;
+    
+    // Estilos del botón flotante
+    botonFloante.style.cssText = `
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        z-index: 1000;
+        background: var(--bs-primary);
+        color: white;
+        border: none;
+        border-radius: 50px;
+        padding: 15px 25px;
+        font-weight: 600;
+        font-size: 14px;
+        cursor: pointer;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        transition: all 0.3s ease;
+    `;
+    
+    botonFloante.onmouseover = function() {
+        this.style.transform = 'translateY(-2px)';
+        this.style.boxShadow = '0 6px 25px rgba(0,0,0,0.4)';
+    };
+    
+    botonFloante.onmouseout = function() {
+        this.style.transform = 'translateY(0)';
+        this.style.boxShadow = '0 4px 20px rgba(0,0,0,0.3)';
+    };
+    
+    document.body.appendChild(botonFloante);
+    console.log('✅ Botón flotante de cotejo creado');
+}
+
+// Función para ejecutar cotejo para una factura específica
+async function ejecutarCotejoParaFactura(facturaId) {
+    try {
+        console.log('🔄 Ejecutando cotejo para factura específica:', facturaId);
+        
+        // Mostrar notificación
+        showNotification(`🔄 Ejecutando cotejo para factura ${facturaId}...`, 'info');
+        
+        // Verificar que tenemos un ID válido
+        if (!facturaId) {
+            showNotification('❌ ID de factura inválido', 'error');
+            return;
+        }
+        
+        // IMPORTANTE: Verificar si la factura existe en la base de datos
+        console.log('🔍 Verificando si la factura existe en la base de datos...');
+        
+        // Llamar a la Edge Function
+        const response = await fetch('https://yurqgcpgwsgdnxnpyxes.supabase.co/functions/v1/cotejo-inteligente', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${CONFIG.SUPABASE.ANON_KEY}`
+            },
+            body: JSON.stringify({
+                facturaId: facturaId,
+                background: false,
+                forceReprocess: true
+            })
+        });
+        
+        const resultado = await response.json();
+        console.log('✅ Respuesta del cotejo:', resultado);
+        
+        if (resultado.success) {
+            const enlaces = resultado.enlaces_automaticos || 0;
+            const sugerencias = resultado.sugerencias || 0;
+            
+            showNotification(`✅ Cotejo completado para factura ${facturaId}: ${enlaces} enlaces, ${sugerencias} sugerencias`, 'success');
+            
+            // Recargar albaranes para esta factura específica
+            await actualizarEnlacesFactura(facturaId);
+            
+            // Actualizar contador en la tabla
+            const contador = document.getElementById(`albaranes-count-${facturaId}`);
+            if (contador) {
+                contador.textContent = enlaces + sugerencias;
+                contador.className = (enlaces + sugerencias) > 0 ? 'albaranes-count has-albaranes' : 'albaranes-count';
+            }
+            
+        } else {
+            showNotification(`❌ Error en cotejo: ${resultado.message}`, 'error');
+            
+            // Si la factura no se encuentra, mostrar ayuda
+            if (resultado?.message && resultado.message.includes('no encontrada')) {
+                showNotification('💡 Consejo: La factura puede no estar procesada completamente. Intenta recargar la página.', 'info');
+            }
+        }
+        
+    } catch (error) {
+        console.error('❌ Error ejecutando cotejo para factura:', facturaId, error);
+        showNotification(`❌ Error ejecutando cotejo para factura ${facturaId}`, 'error');
+    }
+}
+
+// Función para ejecutar cotejo manual (mantenida para compatibilidad)
+async function ejecutarCotejoManual() {
+    try {
+        console.log('🔄 Ejecutando cotejo manual...');
+        
+        // Mostrar notificación
+        showNotification('🔄 Ejecutando cotejo automático...', 'info');
+        
+        // Obtener la primera factura disponible
+        const primeraFactura = document.querySelector('.facturas-table tbody tr:not(.albaranes-row)');
+        if (!primeraFactura) {
+            showNotification('❌ No se encontraron facturas para procesar', 'error');
+            return;
+        }
+        
+        // Obtener el ID correcto de la factura (documento_id)
+        let facturaId = primeraFactura.getAttribute('data-factura-id');
+        
+        // Si no hay data-factura-id, intentar obtener el ID de la fila
+        if (!facturaId) {
+            const facturaRow = primeraFactura.querySelector('td:last-child .btn-avanzado');
+            if (facturaRow) {
+                const onclick = facturaRow.getAttribute('onclick');
+                const match = onclick.match(/openInvoiceAdvanced\('([^']+)'\)/);
+                if (match) {
+                    facturaId = match[1];
+                }
+            }
+        }
+        
+        // Verificar que tenemos un ID válido
+        if (!facturaId) {
+            showNotification('❌ No se pudo obtener el ID de la factura', 'error');
+            return;
+        }
+        
+        console.log('✅ Ejecutando cotejo para factura (documento_id):', facturaId);
+        
+        // Llamar a la Edge Function
+        const response = await fetch('https://yurqgcpgwsgdnxnpyxes.supabase.co/functions/v1/cotejo-inteligente', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${CONFIG.SUPABASE.ANON_KEY}`
+            },
+            body: JSON.stringify({
+                facturaId: facturaId,
+                background: false,
+                forceReprocess: true
+            })
+        });
+        
+        const resultado = await response.json();
+        console.log('✅ Respuesta del cotejo:', resultado);
+        
+        if (resultado.success) {
+            showNotification(`✅ Cotejo completado: ${resultado.enlaces_automaticos || 0} enlaces creados`, 'success');
+            
+            // Recargar albaranes para todas las facturas
+            await recargarAlbaranesTodasFacturas();
+            
+        } else {
+            showNotification(`❌ Error en cotejo: ${resultado.message}`, 'error');
+        }
+        
+    } catch (error) {
+        console.error('❌ Error ejecutando cotejo manual:', error);
+        showNotification('❌ Error ejecutando cotejo automático', 'error');
+    }
+}
+
+// Función para verificar facturas disponibles en la base de datos
+async function verificarFacturasDisponibles() {
+    try {
+        console.log('🔍 Verificando facturas disponibles en la base de datos...');
+        
+        const { data: facturas, error } = await supabaseClient
+            .from('datos_extraidos_facturas')
+            .select('id, numero_factura, proveedor_nombre, fecha_factura, total_factura')
+            .limit(5);
+            
+        if (error) {
+            console.error('❌ Error obteniendo facturas:', error);
+            return;
+        }
+        
+        console.log(`✅ ${facturas?.length || 0} facturas encontradas en la base de datos:`);
+        facturas?.forEach((factura, index) => {
+            console.log(`   ${index + 1}. ID: ${factura.id}, Número: ${factura.numero_factura}, Proveedor: ${factura.proveedor_nombre}`);
+        });
+        
+        // Mostrar en pantalla
+        if (facturas && facturas.length > 0) {
+            showNotification(`✅ ${facturas.length} facturas disponibles en la base de datos`, 'success');
+        } else {
+            showNotification('❌ No hay facturas en la base de datos', 'error');
+        }
+        
+    } catch (error) {
+        console.error('❌ Error verificando facturas:', error);
+    }
+}
+
+// Función para recargar albaranes de todas las facturas
+async function recargarAlbaranesTodasFacturas() {
+    try {
+        console.log('🔄 Recargando albaranes de todas las facturas...');
+        
+        const facturas = document.querySelectorAll('.facturas-table tbody tr:not(.albaranes-row)');
+        
+        for (const factura of facturas) {
+            const facturaId = factura.getAttribute('data-factura-id');
+            if (facturaId) {
+                await actualizarEnlacesFactura(facturaId);
+            }
+        }
+        
+        console.log('✅ Albaranes recargados para todas las facturas');
+        
+    } catch (error) {
+        console.error('❌ Error recargando albaranes:', error);
+    }
+}
+
+// Función para forzar mostrar botones de cotejo
+function forzarMostrarBotonesCotejo() {
+    console.log('🔧 Forzando mostrar botones de cotejo...');
+    
+    // Buscar todas las filas expandibles de albaranes
+    const filasAlbaranes = document.querySelectorAll('.albaranes-row');
+    
+    filasAlbaranes.forEach((fila, index) => {
+        // Mostrar la fila
+        fila.style.display = 'table-row';
+        
+        // Buscar y verificar botones
+        const botonCotejo = fila.querySelector('.btn-albaranes-action');
+        const botonFacturaDirecta = fila.querySelector('.btn-albaranes-action.secondary');
+        
+        if (botonCotejo) {
+            console.log(`✅ Botón cotejo encontrado en fila ${index + 1}`);
+            botonCotejo.style.display = 'inline-flex';
+        } else {
+            console.log(`❌ Botón cotejo NO encontrado en fila ${index + 1}`);
+        }
+        
+        if (botonFacturaDirecta) {
+            console.log(`✅ Botón factura directa encontrado en fila ${index + 1}`);
+            botonFacturaDirecta.style.display = 'inline-flex';
+        } else {
+            console.log(`❌ Botón factura directa NO encontrado en fila ${index + 1}`);
+        }
+    });
+    
+    console.log(`🔧 ${filasAlbaranes.length} filas de albaranes procesadas`);
+}
+
+// Crear botón flotante cuando se carga la página
+document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(() => {
+        crearBotonCotejoFloante();
+        console.log('✅ Botón flotante de cotejo habilitado');
+    }, 2000);
+});
+
+// Hacer las funciones disponibles globalmente
+window.ejecutarCotejoManual = ejecutarCotejoManual;
+window.ejecutarCotejoParaFactura = ejecutarCotejoParaFactura;
+window.forzarMostrarBotonesCotejo = forzarMostrarBotonesCotejo;
+window.recargarAlbaranesTodasFacturas = recargarAlbaranesTodasFacturas;
+window.verificarFacturasDisponibles = verificarFacturasDisponibles;
+
+// Mostrar instrucciones en la consola
+console.log('🔧 FUNCIONES DE COTEJO HABILITADAS:');
+console.log('🔧 ejecutarCotejoManual() - Ejecuta cotejo automático');
+console.log('🔧 forzarMostrarBotonesCotejo() - Muestra botones ocultos');
+console.log('🔧 recargarAlbaranesTodasFacturas() - Recarga todos los albaranes');
+console.log('🔧 Botón flotante creado en la esquina inferior derecha');

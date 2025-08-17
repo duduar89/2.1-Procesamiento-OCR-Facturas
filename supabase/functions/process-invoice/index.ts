@@ -3693,6 +3693,196 @@ function extractCoordinatesFromOCR(extractedResult: any): any {
   }
 }
 
+// 🔍 FUNCIÓN DE CLASIFICACIÓN DE DOCUMENTOS
+function classifyDocument(fullText: string): {
+  tipo: 'factura' | 'albaran' | 'incierto',
+  confianza: number,
+  patrones: any,
+  razonamiento: string
+} {
+  console.log('🔍 === INICIANDO CLASIFICACIÓN DE DOCUMENTO ===')
+  
+  if (!fullText || fullText.length < 10) {
+    console.log('⚠️ Texto insuficiente para clasificar')
+    return {
+      tipo: 'factura', // Default seguro
+      confianza: 0.3,
+      patrones: { error: 'texto_insuficiente' },
+      razonamiento: 'Texto muy corto, defaulteando a factura'
+    }
+  }
+  
+  const texto = fullText.toLowerCase()
+  const patrones = {
+    albaran_encontrado: false,
+    factura_encontrada: false,
+    palabras_albaran: [],
+    palabras_factura: [],
+    precios_encontrados: 0,
+    indicadores_entrega: []
+  }
+  
+  // 📦 DETECTAR ALBARÁN
+  const palabrasAlbaran = [
+    'albarán', 'albaran', 'delivery note', 'nota de entrega',
+    'entrega', 'entregado', 'recepción', 'recibido'
+  ]
+  
+  palabrasAlbaran.forEach(palabra => {
+    if (texto.includes(palabra)) {
+      patrones.albaran_encontrado = true
+      patrones.palabras_albaran.push(palabra)
+    }
+  })
+  
+  // 📄 DETECTAR FACTURA
+  const palabrasFactura = [
+    'factura', 'invoice', 'total factura', 'base imponible',
+    'cuota iva', 'vencimiento', 'pagar'
+  ]
+  
+  palabrasFactura.forEach(palabra => {
+    if (texto.includes(palabra)) {
+      patrones.factura_encontrada = true
+      patrones.palabras_factura.push(palabra)
+    }
+  })
+  
+  // 💰 DETECTAR PRECIOS (indicador fuerte de factura)
+  const preciosEncontrados = texto.match(/\d+[,\.]\d{2}\s*€/g) || []
+  patrones.precios_encontrados = preciosEncontrados.length
+  
+  // 🚚 DETECTAR INDICADORES DE ENTREGA
+  const indicadoresEntrega = [
+    'transportista', 'conductor', 'matrícula', 'conformidad',
+    'firma', 'estado entrega'
+  ]
+  
+  indicadoresEntrega.forEach(indicador => {
+    if (texto.includes(indicador)) {
+      patrones.indicadores_entrega.push(indicador)
+    }
+  })
+  
+  // 🎯 LÓGICA DE CLASIFICACIÓN
+  let tipo: 'factura' | 'albaran' | 'incierto' = 'incierto'
+  let confianza = 0.5
+  let razonamiento = ''
+  
+  // REGLA 1: Si dice "albarán" y NO dice "factura" → ALBARÁN
+  if (patrones.albaran_encontrado && !patrones.factura_encontrada) {
+    tipo = 'albaran'
+    confianza = 0.95
+    razonamiento = 'Contiene "albarán" y no contiene "factura"'
+  }
+  // REGLA 2: Si dice "factura" y NO dice "albarán" → FACTURA
+  else if (patrones.factura_encontrada && !patrones.albaran_encontrado) {
+    tipo = 'factura'
+    confianza = 0.95
+    razonamiento = 'Contiene "factura" y no contiene "albarán"'
+  }
+  // REGLA 3: Si dice AMBOS → REVISAR (conflicto)
+  else if (patrones.albaran_encontrado && patrones.factura_encontrada) {
+    tipo = 'incierto'
+    confianza = 0.4
+    razonamiento = 'Contiene tanto "factura" como "albarán" - requiere revisión'
+  }
+  // REGLA 4: Si NO dice ninguno, usar indicadores secundarios
+  else {
+    // Muchos precios → probablemente factura
+    if (patrones.precios_encontrados > 3) {
+      tipo = 'factura'
+      confianza = 0.7
+      razonamiento = `No contiene palabras clave, pero ${patrones.precios_encontrados} precios encontrados`
+    }
+    // Indicadores de entrega → probablemente albarán
+    else if (patrones.indicadores_entrega.length > 1) {
+      tipo = 'albaran'
+      confianza = 0.6
+      razonamiento = `No contiene palabras clave, pero ${patrones.indicadores_entrega.length} indicadores de entrega`
+    }
+    // Default: factura (comportamiento actual)
+    else {
+      tipo = 'factura'
+      confianza = 0.5
+      razonamiento = 'Sin indicadores claros, defaulteando a factura'
+    }
+  }
+  
+  const resultado = {
+    tipo,
+    confianza: Math.round(confianza * 100) / 100,
+    patrones,
+    razonamiento
+  }
+  
+  console.log('🎯 Clasificación completada:', resultado)
+  return resultado
+}
+
+// 📱 FUNCIÓN PARA NOTIFICAR REVISIÓN NECESARIA VÍA WHATSAPP
+async function notifyReviewNeeded(telefono: string, classification: any, nombreArchivo: string) {
+  try {
+    const accessToken = Deno.env.get("WHATSAPP_ACCESS_TOKEN")
+    const phoneNumberId = Deno.env.get("WHATSAPP_PHONE_NUMBER_ID")
+    
+    if (!accessToken || !phoneNumberId) {
+      console.log('⚠️ Variables de WhatsApp no configuradas para notificación')
+      return
+    }
+
+    const response = await fetch(`https://graph.facebook.com/v18.0/${phoneNumberId}/messages`, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${accessToken}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        messaging_product: "whatsapp",
+        to: telefono,
+        type: "interactive",
+        interactive: {
+          type: "button",
+          header: {
+            type: "text",
+            text: "🤔 Clasificación de Documento"
+          },
+          body: {
+            text: `📄 ${nombreArchivo}\n🎯 Detecté: ${classification.tipo}\n📊 Confianza: ${Math.round(classification.confianza * 100)}%\n💭 ${classification.razonamiento}\n\n¿Puedes confirmar el tipo?`
+          },
+          action: {
+            buttons: [
+              {
+                type: "reply",
+                reply: {
+                  id: "btn_factura",
+                  title: "🔘 FACTURA"
+                }
+              },
+              {
+                type: "reply",
+                reply: {
+                  id: "btn_albaran",
+                  title: "🔘 ALBARÁN"
+                }
+              }
+            ]
+          }
+        }
+      })
+    })
+
+    if (response.ok) {
+      console.log('✅ Notificación de revisión enviada por WhatsApp')
+    } else {
+      console.error('❌ Error enviando notificación WhatsApp:', response.status)
+    }
+
+  } catch (error) {
+    console.error('❌ Error en notifyReviewNeeded:', error)
+  }
+}
+
 Deno.serve(async (req) => {
   // MANEJAR PREFLIGHT OPTIONS REQUEST (CORS)
   if (req.method === 'OPTIONS') {
@@ -3734,9 +3924,10 @@ Deno.serve(async (req) => {
         const requestBody = await req.json()
         console.log('📄 Request body recibido:', JSON.stringify(requestBody, null, 2))
         
-        const { documentId, telefono } = requestBody
+        const { documentId, telefono, tipoConfirmado } = requestBody
         console.log('🆔 DocumentId extraído:', documentId)
         console.log('📞 Teléfono:', telefono)
+        console.log('🎯 Tipo confirmado:', tipoConfirmado || 'No especificado')
         
         if (!documentId) {
           throw new Error('No se encontró documentId en el request')
@@ -3766,7 +3957,8 @@ Deno.serve(async (req) => {
           restaurante: documentInfo.restaurantes,
           isServiceCall: true,
           documentId: documentId,
-          telefono: telefono  // 👈 NUEVO
+          telefono: telefono,  // 👈 NUEVO
+          tipoConfirmado: tipoConfirmado // ✅ Agregar al contexto
         }
         
         console.log('✅ Contexto de servicio creado para restaurante:', userContext.restaurante.nombre)
@@ -3776,49 +3968,52 @@ Deno.serve(async (req) => {
     }
 
     // Para llamadas de servicio, ya tenemos el requestBody y documentId
-    let requestBody, documentId
+    let requestBodyFinal, documentIdFinal, tipoConfirmado
     
     if (userContext.isServiceCall) {
       // Ya se parseó en la autenticación de servicio
-      requestBody = { documentId: userContext.documentId }
-      documentId = userContext.documentId
+      requestBodyFinal = { documentId: userContext.documentId }
+      documentIdFinal = userContext.documentId
+      tipoConfirmado = userContext.tipoConfirmado // ✅ Asignar desde el contexto
       console.log('✅ Usando datos de llamada de servicio')
     } else {
       // Parsear request JSON para llamadas de usuario
       console.log('📨 Parseando request JSON...')
       try {
-        requestBody = await req.json()
+        requestBodyFinal = await req.json()
         console.log('✅ Request JSON parseado correctamente')
-        console.log('📄 Request body:', requestBody)
+        console.log('📄 Request body:', requestBodyFinal)
       } catch (jsonError) {
         console.error('❌ Error parseando request JSON:', jsonError)
         throw new Error('Request JSON inválido')
       }
 
       // ADAPTADO PARA TU FORMATO DE app.js
-      const { record: newFile } = requestBody
+      const { record: newFile, tipoConfirmado: tipoConfirmadoRequest } = requestBodyFinal
       console.log('📄 Datos del archivo:', newFile)
+      console.log('🎯 Tipo confirmado del request:', tipoConfirmadoRequest || 'No especificado')
       
       if (!newFile || !newFile.name) {
         throw new Error('No se encontró información del archivo en el request')
       }
 
-      documentId = newFile.name
+      documentIdFinal = newFile.name
+      tipoConfirmado = tipoConfirmadoRequest || null // ✅ Extraer del request o usar null
     }
     
-    console.log('🆔 Document ID:', documentId)
+    console.log('🆔 Document ID:', documentIdFinal)
 
     // OBTENER LA RUTA REAL DEL ARCHIVO DESDE LA BD
     console.log('🔍 Buscando información del archivo en BD...')
     const { data: documentInfo, error: docError } = await supabaseClient
       .from('documentos')
       .select('url_storage, nombre_archivo, restaurante_id')
-      .eq('id', documentId)
+      .eq('id', documentIdFinal)
       .single()
 
     if (docError || !documentInfo) {
       console.error('❌ Error obteniendo info del documento:', docError)
-      throw new Error(`Documento no encontrado: ${documentId}`)
+      throw new Error(`Documento no encontrado: ${documentIdFinal}`)
     }
 
     // ✅ VERIFICACIÓN ADICIONAL: El documento pertenece al restaurante del usuario
@@ -3844,7 +4039,7 @@ Deno.serve(async (req) => {
     await supabaseClient
       .from('documentos')
       .update({ estado: 'processing', fecha_procesamiento: new Date().toISOString() })
-      .eq('id', documentId)
+      .eq('id', documentIdFinal)
 
     // 3. Descargar el contenido del archivo desde Supabase Storage
     console.log('⬇️ Descargando archivo desde storage...')
@@ -4068,6 +4263,160 @@ Deno.serve(async (req) => {
     const fullText = extractedResult?.document?.text || ''
     console.log('📝 Texto extraído del OCR (primeros 500 chars):', fullText.substring(0, 500))
 
+    // 🔍 === CLASIFICAR DOCUMENTO ===
+    let documentClassification
+    
+    if (tipoConfirmado) {
+      // 🆕 TIPO YA CONFIRMADO POR EL USUARIO
+      console.log('✅ === TIPO YA CONFIRMADO POR USUARIO ===')
+      console.log('🎯 Tipo confirmado:', tipoConfirmado)
+      
+      documentClassification = {
+        tipo: tipoConfirmado,
+        confianza: 1.0, // Confianza máxima porque el usuario lo confirmó
+        razonamiento: `Tipo confirmado por usuario: ${tipoConfirmado}`,
+        patrones: {
+          albaran_encontrado: tipoConfirmado === 'albaran',
+          factura_encontrada: tipoConfirmado === 'factura',
+          palabras_albaran: [],
+          palabras_factura: [],
+          precios_encontrados: 0
+        }
+      }
+      console.log('🎯 Clasificación basada en confirmación del usuario:', {
+        tipo: documentClassification.tipo,
+        confianza: documentClassification.confianza,
+        razonamiento: documentClassification.razonamiento
+      })
+    } else {
+      // 🔍 CLASIFICACIÓN AUTOMÁTICA
+      console.log('🔍 === INICIANDO CLASIFICACIÓN AUTOMÁTICA ===')
+      documentClassification = classifyDocument(fullText)
+      
+      console.log('🎯 Resultado de clasificación automática:', {
+        tipo: documentClassification.tipo,
+        confianza: documentClassification.confianza,
+        razonamiento: documentClassification.razonamiento
+      })
+      
+      // Log para debugging
+      console.log('📊 Patrones detectados:', {
+        albaran_encontrado: documentClassification.patrones.albaran_encontrado,
+        factura_encontrada: documentClassification.patrones.factura_encontrada,
+        palabras_albaran: documentClassification.patrones.palabras_albaran,
+        palabras_factura: documentClassification.patrones.palabras_factura,
+        precios_encontrados: documentClassification.patrones.precios_encontrados
+      })
+    }
+    
+    console.log('✅ === CLASIFICACIÓN COMPLETADA ===')
+    
+    // 2.5 [NUEVO] Actualizar BD con clasificación
+    console.log('📄 Actualizando documento con clasificación...')
+    
+    const updateData = {
+      confianza_clasificacion: documentClassification.confianza,
+      patrones_detectados: documentClassification.patrones
+    }
+    
+    // Solo actualizar tipo_documento si NO es 'incierto' (para evitar error de BD)
+    if (documentClassification.tipo !== 'incierto') {
+      updateData.tipo_documento = documentClassification.tipo
+    }
+    
+    console.log('📊 Datos a actualizar en documento:', {
+      tipo_documento: updateData.tipo_documento,
+      confianza_clasificacion: updateData.confianza_clasificacion,
+      patrones_count: Object.keys(updateData.patrones_detectados).length
+    })
+    
+    const { error: classificationUpdateError } = await supabaseClient
+      .from('documentos')
+      .update(updateData)
+      .eq('id', documentIdFinal)
+    
+    if (classificationUpdateError) {
+      console.error('❌ Error actualizando documento con clasificación:', classificationUpdateError)
+      throw new Error(`Error actualizando documento: ${classificationUpdateError.message}`)
+    }
+    
+    console.log('✅ Documento actualizado con clasificación exitosamente')
+    
+    // 🔍 === PASO 4: VERIFICAR SI NECESITA REVISIÓN ===
+    console.log('🔍 === VERIFICANDO SI NECESITA REVISIÓN HUMANA ===')
+    
+    // 🆕 SI EL TIPO YA ESTÁ CONFIRMADO, NO NECESITA REVISIÓN
+    if (tipoConfirmado) {
+      console.log('✅ Tipo ya confirmado por usuario - No necesita revisión')
+      console.log('🎯 Continuando procesamiento automático con tipo confirmado')
+    } else {
+      // 🔍 VERIFICAR CONFIANZA SOLO PARA CLASIFICACIÓN AUTOMÁTICA
+      const CONFIDENCE_THRESHOLD = 0.8 // Umbral de confianza
+      
+      if (documentClassification.confianza < CONFIDENCE_THRESHOLD) {
+        console.log('⚠️ Confianza baja detectada:', {
+        confianza: documentClassification.confianza,
+        umbral: CONFIDENCE_THRESHOLD,
+        tipo_detectado: documentClassification.tipo,
+        razonamiento: documentClassification.razonamiento
+      })
+      
+      // Marcar documento como necesita revisión
+      console.log('📝 Marcando documento como necesita revisión...')
+      
+      const { error: revisionUpdateError } = await supabaseClient
+        .from('documentos')
+        .update({ 
+          requiere_revision_tipo: true,
+          estado: 'pending' // Usar estado permitido
+        })
+        .eq('id', documentIdFinal)
+      
+      if (revisionUpdateError) {
+        console.error('❌ Error marcando documento para revisión:', revisionUpdateError)
+      } else {
+        console.log('✅ Documento marcado para revisión exitosamente')
+      }
+      
+      // Notificar que necesita revisión
+      console.log('📱 Enviando notificación de revisión...')
+      
+      if (userContext.isServiceCall && userContext.telefono) {
+        // Notificar por WhatsApp
+        await notifyReviewNeeded(userContext.telefono, documentClassification, documentInfo.nombre_archivo)
+      }
+      
+      // Pausar procesamiento y retornar
+      console.log('⏸️ PAUSANDO procesamiento - Esperando revisión humana')
+      
+      return new Response(JSON.stringify({
+        success: true,
+        message: 'Documento necesita revisión de clasificación',
+        needsReview: true,
+        classification: {
+          tipo: documentClassification.tipo,
+          confianza: documentClassification.confianza,
+          razonamiento: documentClassification.razonamiento
+        },
+        documentId: documentIdFinal
+      }), {
+        headers: { 
+          'Content-Type': 'application/json',
+          ...corsHeaders
+        }
+      })
+      
+    } else {
+      console.log('✅ Confianza alta - Continuando procesamiento automático:', {
+        confianza: documentClassification.confianza,
+        umbral: CONFIDENCE_THRESHOLD,
+        tipo: documentClassification.tipo
+      })
+    }
+    } // 🆕 CERRAR EL ELSE DE tipoConfirmado
+    
+    console.log('✅ === VERIFICACIÓN DE REVISIÓN COMPLETADA ===')
+    
     // ✅ NUEVO: Aplicar filtro inteligente PRE-OpenAI
     console.log('🔍 === APLICANDO FILTRO INTELIGENTE ===')
     const contextAnalysis = await smartRestaurantFilter(
@@ -4243,7 +4592,7 @@ Extrae SOLO el proveedor (emisor) que NO sea "${restauranteCheck.nombre}":
     } : 'No hay productos')
     console.log('🏢 Restaurante ID:', documentInfo.restaurante_id)
     console.log('🏭 Proveedor ID:', proveedorResult?.id || 'null')
-    console.log('📄 Documento ID:', documentId)
+    console.log('📄 Documento ID:', documentIdFinal)
     
     // Llamada a processProductsUpsert
     console.log('🔄 === LLAMANDO A PROCESS PRODUCTS UPSERT ===')
@@ -4255,7 +4604,7 @@ Extrae SOLO el proveedor (emisor) que NO sea "${restauranteCheck.nombre}":
       productosExtraidos,
       documentInfo.restaurante_id,
       proveedorResult?.id || null,
-      documentId,
+      documentIdFinal,
       supabaseClient,
       extractedData.proveedor_nombre,
       extractedData.numero_factura,
@@ -4267,46 +4616,54 @@ Extrae SOLO el proveedor (emisor) que NO sea "${restauranteCheck.nombre}":
     console.log('📊 Productos procesados exitosamente:', productosConMaestroId.length)
     console.log('🆔 Primer producto maestro ID:', productosConMaestroId[0]?.producto_maestro_id || 'No hay productos')
     
-    // 9. Verificar estructura de la tabla y guardar en BD
-    console.log('🔍 Verificando estructura de la tabla datos_extraidos_facturas...')
+    // 9. Verificar estructura de las tablas y guardar en BD
+    console.log('🔍 Verificando estructura de las tablas...')
     
-    // Intentar obtener información de la tabla
-    const { data: tableInfo, error: tableError } = await supabaseClient
+    // Verificar tabla de facturas
+    console.log('🔍 Verificando tabla datos_extraidos_facturas...')
+    const { data: tableInfoFacturas, error: tableErrorFacturas } = await supabaseClient
       .from('datos_extraidos_facturas')
       .select('*')
       .limit(1)
     
-    if (tableError) {
-      console.error('❌ Error accediendo a la tabla datos_extraidos_facturas:', tableError)
-      console.error('🔍 Código de error:', tableError.code)
-      console.error('🔍 Detalles del error:', tableError.details)
-      throw new Error(`Error accediendo a la tabla: ${tableError.message}`)
+    if (tableErrorFacturas) {
+      console.error('❌ Error accediendo a la tabla datos_extraidos_facturas:', tableErrorFacturas)
+      console.error('🔍 Código de error:', tableErrorFacturas.code)
+      console.error('🔍 Detalles del error:', tableErrorFacturas.details)
+      throw new Error(`Error accediendo a la tabla facturas: ${tableErrorFacturas.message}`)
     } else {
       console.log('✅ Tabla datos_extraidos_facturas accesible')
-      if (tableInfo && tableInfo.length > 0) {
-        console.log('📋 Ejemplo de registro existente:', tableInfo[0])
-      }
+    }
+    
+    // Verificar tabla de albaranes
+    console.log('🔍 Verificando tabla datos_extraidos_albaranes...')
+    const { data: tableInfoAlbaranes, error: tableErrorAlbaranes } = await supabaseClient
+      .from('datos_extraidos_albaranes')
+      .select('*')
+      .limit(1)
+    
+    if (tableErrorAlbaranes) {
+      console.error('❌ Error accediendo a la tabla datos_extraidos_albaranes:', tableErrorAlbaranes)
+      console.error('🔍 Código de error:', tableErrorAlbaranes.code)
+      console.error('🔍 Detalles del error:', tableErrorAlbaranes.details)
+      console.warn('⚠️ Tabla de albaranes no accesible, solo se podrán procesar facturas')
+    } else {
+      console.log('✅ Tabla datos_extraidos_albaranes accesible')
     }
     
     console.log('💾 Guardando en base de datos con confianza individual...')
     console.log('📄 Datos a insertar:', {
-      documento_id: documentId,
+      documento_id: documentIdFinal,
       restaurante_id: documentInfo.restaurante_id,
       ...extractedData,
     })
     
-    // Preparar datos para inserción con todos los campos de confianza
-    const datosParaInsertar = {
-      documento_id: documentId,
+    // Preparar datos para inserción según el tipo de documento
+    let datosParaInsertar: any = {
+      documento_id: documentIdFinal,
       restaurante_id: documentInfo.restaurante_id,
       proveedor_nombre: extractedData.proveedor_nombre,
       proveedor_cif: extractedData.proveedor_cif,
-      numero_factura: extractedData.numero_factura,
-      fecha_factura: extractedData.fecha_factura,
-      total_factura: extractedData.total_factura,
-      base_imponible: extractedData.base_imponible,
-      cuota_iva: extractedData.cuota_iva,
-      tipo_iva: extractedData.tipo_iva,
       confianza_global: extractedData.confianza_global,
       confianza_proveedor: extractedData.confianza_proveedor,
       confianza_datos_fiscales: extractedData.confianza_datos_fiscales,
@@ -4316,27 +4673,86 @@ Extrae SOLO el proveedor (emisor) que NO sea "${restauranteCheck.nombre}":
       fecha_extraccion: new Date().toISOString(),
       proveedor_nuevo: proveedorResult?.esNuevo || false
     }
+
+    // ✅ CAMPOS ESPECÍFICOS SEGÚN TIPO DE DOCUMENTO
+    if (documentClassification.tipo === 'factura') {
+      // Campos específicos para facturas
+      datosParaInsertar = {
+        ...datosParaInsertar,
+        numero_factura: extractedData.numero_factura,
+        fecha_factura: extractedData.fecha_factura,
+        total_factura: extractedData.total_factura,
+        base_imponible: extractedData.base_imponible,
+        cuota_iva: extractedData.cuota_iva,
+        tipo_iva: extractedData.tipo_iva
+      }
+    } else if (documentClassification.tipo === 'albaran') {
+      // Campos específicos para albaranes
+      datosParaInsertar = {
+        ...datosParaInsertar,
+        numero_albaran: extractedData.numero_factura, // Mapear numero_factura a numero_albaran
+        fecha_albaran: extractedData.fecha_factura,   // Mapear fecha_factura a fecha_albaran
+        total_albaran: extractedData.total_factura,   // Mapear total_factura a total_albaran
+        base_imponible: extractedData.base_imponible,
+        cuota_iva: extractedData.cuota_iva,
+        tipo_iva: extractedData.tipo_iva
+      }
+    } else {
+      // Fallback: usar campos de factura por defecto
+      datosParaInsertar = {
+        ...datosParaInsertar,
+        numero_factura: extractedData.numero_factura,
+        fecha_factura: extractedData.fecha_factura,
+        total_factura: extractedData.total_factura,
+        base_imponible: extractedData.base_imponible,
+        cuota_iva: extractedData.cuota_iva,
+        tipo_iva: extractedData.tipo_iva
+      }
+    }
     
     console.log('📋 Datos estructurados para inserción:', datosParaInsertar)
     
+    // 🆕 INSERTAR EN TABLA CORRECTA SEGÚN TIPO DE DOCUMENTO
+    let tablaDestino = ''
+    if (documentClassification.tipo === 'factura') {
+      tablaDestino = 'datos_extraidos_facturas'
+    } else if (documentClassification.tipo === 'albaran' && !tableErrorAlbaranes) {
+      // Solo usar tabla de albaranes si existe y no hay error
+      tablaDestino = 'datos_extraidos_albaranes'
+    } else if (documentClassification.tipo === 'albaran' && tableErrorAlbaranes) {
+      // Si es albarán pero la tabla no existe, usar facturas
+      tablaDestino = 'datos_extraidos_facturas'
+      console.log('⚠️ Tabla de albaranes no disponible, usando tabla de facturas para albarán')
+    } else {
+      // Fallback a facturas si no se puede determinar
+      tablaDestino = 'datos_extraidos_facturas'
+      console.log('⚠️ Tipo no determinado, usando tabla de facturas por defecto')
+    }
+    
+    console.log(`📊 Insertando en tabla: ${tablaDestino}`)
+    console.log(`🎯 Tipo de documento: ${documentClassification.tipo}`)
+    if (documentClassification.tipo === 'albaran' && tableErrorAlbaranes) {
+      console.log('⚠️ Nota: Albarán se guardará en tabla de facturas por limitación de BD')
+    }
+    
     const { data: insertResult, error: insertError } = await supabaseClient
-      .from('datos_extraidos_facturas')
+      .from(tablaDestino)
       .insert(datosParaInsertar)
       .select()
 
     if (insertError) {
-      console.error('❌ Error insertando datos:', insertError)
+      console.error(`❌ Error insertando datos en ${tablaDestino}:`, insertError)
       console.error('📄 Datos que se intentaron insertar:', {
-        documento_id: documentId,
+        documento_id: documentIdFinal,
         restaurante_id: documentInfo.restaurante_id,
         ...extractedData,
       })
       console.error('🔍 Código de error:', insertError.code)
       console.error('🔍 Detalles del error:', insertError.details)
       console.error('🔍 Hint:', insertError.hint)
-      throw new Error(`Error guardando datos: ${insertError.message}`)
+      throw new Error(`Error guardando datos en ${tablaDestino}: ${insertError.message}`)
     } else {
-      console.log('✅ Datos guardados correctamente:', insertResult)
+      console.log(`✅ Datos guardados correctamente en ${tablaDestino}:`, insertResult)
     }
 
     // 10. Guardar productos extraídos en la tabla productos_extraidos
@@ -4347,7 +4763,7 @@ Extrae SOLO el proveedor (emisor) que NO sea "${restauranteCheck.nombre}":
       try {
         const productosParaInsertar = productosConMaestroId.map(producto => ({
           id: crypto.randomUUID(),
-          documento_id: documentId,
+          documento_id: documentIdFinal,
           restaurante_id: documentInfo.restaurante_id,
           producto_maestro_id: producto.producto_maestro_id,
           descripcion_original: producto.descripcion_original,
@@ -4397,7 +4813,7 @@ Extrae SOLO el proveedor (emisor) que NO sea "${restauranteCheck.nombre}":
       const { data: historialVerificacion, error: historialError } = await supabaseClient
         .from('historial_precios_productos')
         .select('id, producto_maestro_id, documento_id, precio_unitario_sin_iva, fecha_compra')
-        .eq('documento_id', documentId)
+        .eq('documento_id', documentIdFinal)
         .order('fecha_compra', { ascending: false })
       
       if (historialError) {
@@ -4456,7 +4872,7 @@ Extrae SOLO el proveedor (emisor) que NO sea "${restauranteCheck.nombre}":
         estado: 'processed',
         url_storage: storageUrl // Guardar URL completa en lugar del path relativo
       })
-      .eq('id', documentId)
+      .eq('id', documentIdFinal)
       .select()
 
     if (updateError) {
@@ -4468,9 +4884,11 @@ Extrae SOLO el proveedor (emisor) que NO sea "${restauranteCheck.nombre}":
 
     console.log('🎉 === PROCESAMIENTO COMPLETADO ===')
     console.log('📊 Resumen del procesamiento:')
-    console.log('  - Documento ID:', documentId)
+    console.log('  - Documento ID:', documentIdFinal)
     console.log('  - Usuario autenticado:', userContext.user.email)
     console.log('  - Restaurante:', userContext.restaurante.nombre)
+    console.log('  - Tipo de documento:', documentClassification.tipo)
+    console.log('  - Tabla de destino:', tablaDestino)
     console.log('  - Datos extraídos del Form Parser')
     console.log('  - Productos extraídos:', productosExtraidos.length)
     console.log('  - Productos procesados:', productosConMaestroId.length)
@@ -4491,13 +4909,14 @@ Extrae SOLO el proveedor (emisor) que NO sea "${restauranteCheck.nombre}":
         const phoneNumberId = Deno.env.get("WHATSAPP_PHONE_NUMBER_ID")
         
         if (accessToken && phoneNumberId) {
-          const mensaje = `¡Factura procesada exitosamente!
+          const tipoDocumento = documentClassification.tipo === 'factura' ? 'Factura' : 'Albarán'
+          const mensaje = `¡${tipoDocumento} procesado exitosamente!
 
  ${userContext.restaurante.nombre}
 📄 ${documentInfo.nombre_archivo}
 📦 ${productosConMaestroId.length} productos extraídos${extractedData.proveedor_nombre ? `\n🏭 Proveedor: ${extractedData.proveedor_nombre}` : ''}
 
-✅ La factura ya está disponible en tu sistema.
+✅ El ${tipoDocumento.toLowerCase()} ya está disponible en tu sistema.
  Puedes revisar los productos y precios extraídos.`
 
           const response = await fetch(`https://graph.facebook.com/v18.0/${phoneNumberId}/messages`, {
@@ -4529,7 +4948,7 @@ Extrae SOLO el proveedor (emisor) que NO sea "${restauranteCheck.nombre}":
 
     return new Response(JSON.stringify({ 
       success: true, 
-      documentId,
+      documentIdFinal,
       message: 'Procesado exitosamente',
       userContext: {
         userId: userContext.user.id,

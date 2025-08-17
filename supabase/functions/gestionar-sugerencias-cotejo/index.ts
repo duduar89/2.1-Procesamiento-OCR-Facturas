@@ -94,6 +94,8 @@ serve(async (req) => {
   }
 })
 
+
+
 // FUNCIONES DE GESTIÓN
 
 async function confirmarSugerencia(request: GestionRequest): Promise<ResultadoGestion> {
