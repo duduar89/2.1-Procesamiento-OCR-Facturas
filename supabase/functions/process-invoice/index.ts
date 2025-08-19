@@ -4007,10 +4007,12 @@ function classifyDocument(fullText: string): {
     indicadores_entrega: []
   }
   
-  // 📦 DETECTAR ALBARÁN
+  // 📦 DETECTAR ALBARÁN - MEJORADO SEGÚN TUS ESPECIFICACIONES
   const palabrasAlbaran = [
-    'albarán', 'albaran', 'delivery note', 'nota de entrega',
-    'entrega', 'entregado', 'recepción', 'recibido'
+    'albarán', 'albaran', 'albarana', // Variaciones de albarán
+    'entregado', 'entrega', 'delivery', 'nota de entrega',
+    'pedido', 'orden', 'recepción', 'recibido',
+    'suministro', 'envío', 'remito', 'guía'
   ]
   
   console.log('🔍 Buscando palabras de albarán en:', texto.substring(0, 200) + '...')
@@ -4025,10 +4027,13 @@ function classifyDocument(fullText: string): {
     }
   })
   
-  // 📄 DETECTAR FACTURA
+  // 📄 DETECTAR FACTURA - MEJORADO SEGÚN TUS ESPECIFICACIONES
   const palabrasFactura = [
-    'factura', 'invoice', 'total factura', 'base imponible',
-    'cuota iva', 'vencimiento', 'pagar'
+    'factura', 'invoice', 'fact.', 'fac.',
+    'total factura', 'base imponible', 'cuota iva', 
+    'vencimiento', 'pagar', 'cobrar', 'importe',
+    'número factura', 'nº factura', 'fecha factura',
+    'emisor', 'proveedor', 'vendedor'
   ]
   
   console.log('🔍 Buscando palabras de factura...')
@@ -4059,48 +4064,79 @@ function classifyDocument(fullText: string): {
     }
   })
   
-  // 🎯 LÓGICA DE CLASIFICACIÓN
+  // 🎯 LÓGICA DE CLASIFICACIÓN MEJORADA - SEGÚN TUS ESPECIFICACIONES
   let tipo: 'factura' | 'albaran' | 'incierto' = 'incierto'
   let confianza = 0.5
   let razonamiento = ''
   
-  // REGLA 1: Si dice "albarán" y NO dice "factura" → ALBARÁN
-  if (patrones.albaran_encontrado && !patrones.factura_encontrada) {
+  // ✅ REGLA 1 (ALTA PRIORIDAD): Si dice "FACTURA" claramente → FACTURA
+  if (texto.includes('factura') || texto.includes('invoice')) {
+    tipo = 'factura'
+    confianza = 0.98
+    razonamiento = 'Documento contiene la palabra "FACTURA" - Clasificación directa'
+  }
+  
+  // ✅ REGLA 2 (ALTA PRIORIDAD): Si dice "ALBARÁN" claramente → ALBARÁN
+  else if (texto.includes('albarán') || texto.includes('albaran') || texto.includes('albarana')) {
     tipo = 'albaran'
-    confianza = 0.95
-    razonamiento = 'Contiene "albarán" y no contiene "factura"'
+    confianza = 0.98
+    razonamiento = 'Documento contiene la palabra "ALBARÁN" - Clasificación directa'
   }
-  // REGLA 2: Si dice "factura" y NO dice "albarán" → FACTURA
-  else if (patrones.factura_encontrada && !patrones.albaran_encontrado) {
+  
+  // ✅ REGLA 3: Si dice "ENTREGADO" o "PEDIDO" → Probablemente ALBARÁN
+  else if (texto.includes('entregado') || texto.includes('pedido') || texto.includes('orden')) {
+    tipo = 'albaran'
+    confianza = 0.85
+    razonamiento = 'Contiene "ENTREGADO" o "PEDIDO" - Indicadores de albarán'
+  }
+  
+  // ✅ REGLA 4: Indicadores secundarios de FACTURA
+  else if (patrones.factura_encontrada && patrones.precios_encontrados > 2) {
     tipo = 'factura'
-    confianza = 0.95
-    razonamiento = 'Contiene "factura" y no contiene "albarán"'
+    confianza = 0.90
+    razonamiento = `Contiene términos de factura y ${patrones.precios_encontrados} precios`
   }
-  // REGLA 3: Si dice AMBOS → FACTURA (perfecto para cotejación)
+  
+  // ✅ REGLA 5: Indicadores secundarios de ALBARÁN
+  else if (patrones.indicadores_entrega.length > 1) {
+    tipo = 'albaran'
+    confianza = 0.80
+    razonamiento = `${patrones.indicadores_entrega.length} indicadores de entrega detectados`
+  }
+  
+  // ✅ REGLA 6: Análisis de contexto cuando hay ambos
   else if (patrones.albaran_encontrado && patrones.factura_encontrada) {
-    tipo = 'factura'
-    confianza = 0.95
-    razonamiento = 'Contiene "factura" y referencias a albaranes - FACTURA perfecta para cotejación'
-  }
-  // REGLA 4: Si NO dice ninguno, usar indicadores secundarios
-  else {
-    // Muchos precios → probablemente factura
-    if (patrones.precios_encontrados > 3) {
-      tipo = 'factura'
-      confianza = 0.7
-      razonamiento = `No contiene palabras clave, pero ${patrones.precios_encontrados} precios encontrados`
-    }
-    // Indicadores de entrega → probablemente albarán
-    else if (patrones.indicadores_entrega.length > 1) {
+    // Si hay más palabras de albarán que de factura → ALBARÁN
+    if (patrones.palabras_albaran.length > patrones.palabras_factura.length) {
       tipo = 'albaran'
-      confianza = 0.6
-      razonamiento = `No contiene palabras clave, pero ${patrones.indicadores_entrega.length} indicadores de entrega`
+      confianza = 0.85
+      razonamiento = 'Contiene ambos términos, pero predominan indicadores de albarán'
+    } else {
+      tipo = 'factura'
+      confianza = 0.85
+      razonamiento = 'Contiene ambos términos, pero predominan indicadores de factura'
     }
-    // Default: factura (comportamiento actual)
+  }
+  
+  // ✅ REGLA 7: Default mejorado
+  else {
+    // Si hay muchos precios → probablemente factura
+    if (patrones.precios_encontrados > 5) {
+      tipo = 'factura'
+      confianza = 0.70
+      razonamiento = `Muchos precios (${patrones.precios_encontrados}) sugieren factura`
+    }
+    // Si hay pocos precios → podría ser albarán
+    else if (patrones.precios_encontrados <= 2) {
+      tipo = 'albaran'
+      confianza = 0.60
+      razonamiento = `Pocos precios (${patrones.precios_encontrados}) sugieren albarán`
+    }
+    // Default: factura
     else {
       tipo = 'factura'
-      confianza = 0.5
-      razonamiento = 'Sin indicadores claros, defaulteando a factura'
+      confianza = 0.50
+      razonamiento = 'Sin indicadores claros, clasificando como factura por defecto'
     }
   }
   
@@ -4111,7 +4147,18 @@ function classifyDocument(fullText: string): {
     razonamiento
   }
   
-  console.log('🎯 Clasificación completada:', resultado)
+  // ✅ LOGGING DETALLADO PARA DEBUG
+  console.log('🎯 === CLASIFICACIÓN COMPLETADA ===')
+  console.log(`📋 Tipo detectado: ${tipo.toUpperCase()}`)
+  console.log(`📊 Confianza: ${Math.round(confianza * 100)}%`)
+  console.log(`💭 Razonamiento: ${razonamiento}`)
+  console.log('📄 Palabras encontradas:')
+  console.log(`  - Factura: ${patrones.palabras_factura.join(', ') || 'Ninguna'}`)
+  console.log(`  - Albarán: ${patrones.palabras_albaran.join(', ') || 'Ninguna'}`)
+  console.log(`  - Precios: ${patrones.precios_encontrados}`)
+  console.log(`  - Indicadores entrega: ${patrones.indicadores_entrega.join(', ') || 'Ninguno'}`)
+  console.log('🎯 ================================')
+  
   return resultado
 }
 
