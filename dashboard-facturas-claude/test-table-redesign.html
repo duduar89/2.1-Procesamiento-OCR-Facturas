@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Tabla Rediseñada - Dashboard Facturas</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="dashboard-facturas.css">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #f8fafc, #e2e8f0);
+            margin: 0;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0, 212, 170, 0.15);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #0F2027;
+            margin-bottom: 30px;
+            font-size: 28px;
+            font-weight: 700;
+        }
+        
+        .table-section {
+            background: linear-gradient(135deg, #ffffff, #f8fafc);
+            border-radius: 20px;
+            padding: 24px;
+            margin: 24px 0;
+            box-shadow: 0 10px 40px rgba(0, 212, 170, 0.12);
+            border: 1px solid rgba(0, 212, 170, 0.1);
+        }
+        
+        .table-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid rgba(0, 212, 170, 0.1);
+        }
+        
+        .table-title {
+            font-size: 24px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #00D4AA, #14B8A6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Test Tabla Rediseñada</h1>
+        
+        <div class="table-section">
+            <div class="table-header">
+                <h2 class="table-title">Tabla de Facturas Rediseñada</h2>
+            </div>
+            
+            <div class="table-wrapper">
+                <table class="facturas-table" id="facturasTable">
+                    <thead>
+                        <tr>
+                            <th class="expand-column">📦</th>
+                            <th class="sortable estado-column" data-field="estado">Estado</th>
+                            <th class="sortable tipo-column" data-field="tipo_documento">Tipo</th>
+                            <th class="sortable numero-column" data-field="numero_factura">Número</th>
+                            <th class="sortable proveedor-column" data-field="proveedor_nombre">Proveedor</th>
+                            <th class="sortable fecha-column" data-field="fecha_factura">Fecha</th>
+                            <th class="sortable importe-column" data-field="importe_neto">Importe neto</th>
+                            <th class="sortable iva-column" data-field="iva">Iva</th>
+                            <th class="sortable total-column" data-field="total_factura">Importe total</th>
+                            <th class="sortable confianza-column" data-field="confianza_global">Confianza</th>
+                            <th class="sortable albaranes-column" data-field="albaranes">🔗 Albaranes</th>
+                            <th class="acciones-column">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="facturasTableBody">
+                        <!-- Fila de ejemplo 1 -->
+                        <tr class="fila-factura alta-confianza" data-factura-id="test-1">
+                            <td class="expand-column">
+                                <button class="expand-btn" title="Ver productos">➤</button>
+                            </td>
+                            <td class="estado-column">
+                                <div class="estado-compacto">
+                                    <span class="estado-indicator procesado"></span>
+                                    <span class="estado-texto">Procesado</span>
+                                </div>
+                            </td>
+                            <td class="tipo-column">
+                                <div class="tipo-compacto factura">
+                                    📄
+                                    <span>FAC</span>
+                                </div>
+                            </td>
+                            <td class="numero-column">
+                                <span class="numero-factura">F-2025-001</span>
+                            </td>
+                            <td class="proveedor-column">
+                                <span class="proveedor-nombre">Proveedor Ejemplo SL</span>
+                            </td>
+                            <td class="fecha-column">
+                                <span class="fecha-factura">18/08/2025</span>
+                            </td>
+                            <td class="importe-column">
+                                <span class="importe-neto">1.250,00 €</span>
+                            </td>
+                            <td class="iva-column">
+                                <span class="importe-iva">262,50 €</span>
+                            </td>
+                            <td class="total-column">
+                                <span class="total-factura">1.512,50 €</span>
+                            </td>
+                            <td class="confianza-column">
+                                <div class="confidence-compacto alta">
+                                    <div class="confidence-bar">
+                                        <div class="confidence-fill" style="width: 95%"></div>
+                                    </div>
+                                    <span class="confidence-text">95%</span>
+                                </div>
+                            </td>
+                            <td class="albaranes-column">
+                                <div class="albaranes-compact">
+                                    <span class="albaranes-count">3</span>
+                                    <button class="btn-albaranes-compact" title="Ver albaranes">🔗</button>
+                                </div>
+                            </td>
+                            <td class="acciones-column">
+                                <div class="action-buttons-compact">
+                                    <button class="btn-compact btn-cotejo" title="Cotejo automático">🔗</button>
+                                    <button class="btn-compact btn-avanzado" title="Ver factura avanzada">🎓</button>
+                                </div>
+                            </td>
+                        </tr>
+                        
+                        <!-- Fila de ejemplo 2 -->
+                        <tr class="fila-factura media-confianza necesita-revision alerta-media" data-factura-id="test-2">
+                            <td class="expand-column">
+                                <button class="expand-btn" title="Ver productos">➤</button>
+                            </td>
+                            <td class="estado-column">
+                                <div class="estado-compacto">
+                                    <span class="estado-indicator pendiente"></span>
+                                    <span class="estado-texto">Pendiente</span>
+                                </div>
+                            </td>
+                            <td class="tipo-column">
+                                <div class="tipo-compacto albaran">
+                                    📦
+                                    <span>ALB</span>
+                                </div>
+                            </td>
+                            <td class="numero-column">
+                                <span class="numero-factura">A-2025-002</span>
+                            </td>
+                            <td class="proveedor-column">
+                                <span class="proveedor-nombre">Otro Proveedor SA</span>
+                            </td>
+                            <td class="fecha-column">
+                                <span class="fecha-factura">17/08/2025</span>
+                            </td>
+                            <td class="importe-column">
+                                <span class="importe-neto">850,00 €</span>
+                            </td>
+                            <td class="iva-column">
+                                <span class="importe-iva">178,50 €</span>
+                            </td>
+                            <td class="total-column">
+                                <span class="total-factura">1.028,50 €</span>
+                            </td>
+                            <td class="confianza-column">
+                                <div class="confidence-compacto media">
+                                    <div class="confidence-bar">
+                                        <div class="confidence-fill" style="width: 65%"></div>
+                                    </div>
+                                    <span class="confidence-text">65%</span>
+                                    <span class="alerta-dot">⚠️</span>
+                                </div>
+                            </td>
+                            <td class="albaranes-column">
+                                <div class="albaranes-compact">
+                                    <span class="albaranes-count">1</span>
+                                    <button class="btn-albaranes-compact" title="Ver albaranes">🔗</button>
+                                </div>
+                            </td>
+                            <td class="acciones-column">
+                                <div class="action-buttons-compact">
+                                    <button class="btn-compact btn-cotejo" title="Cotejo automático">🔗</button>
+                                    <button class="btn-compact btn-avanzado" title="Ver factura avanzada">🎓</button>
+                                    <button class="btn-compact btn-editar" title="Editar y enseñar">✏️</button>
+                                </div>
+                            </td>
+                        </tr>
+                        
+                        <!-- Fila de ejemplo 3 -->
+                        <tr class="fila-factura baja-confianza necesita-revision alerta-critica" data-factura-id="test-3">
+                            <td class="expand-column">
+                                <button class="expand-btn" title="Ver productos">➤</button>
+                            </td>
+                            <td class="estado-column">
+                                <div class="estado-compacto">
+                                    <span class="estado-indicator error"></span>
+                                    <span class="estado-texto">Error</span>
+                                </div>
+                            </td>
+                            <td class="tipo-column">
+                                <div class="tipo-compacto factura">
+                                    📄
+                                    <span>FAC</span>
+                                </div>
+                            </td>
+                            <td class="numero-column">
+                                <span class="numero-factura">F-2025-003</span>
+                            </td>
+                            <td class="proveedor-column">
+                                <span class="proveedor-nombre">Proveedor Problemático</span>
+                            </td>
+                            <td class="fecha-column">
+                                <span class="fecha-factura">16/08/2025</span>
+                            </td>
+                            <td class="importe-column">
+                                <span class="importe-neto">2.100,00 €</span>
+                            </td>
+                            <td class="iva-column">
+                                <span class="importe-iva">441,00 €</span>
+                            </td>
+                            <td class="total-column">
+                                <span class="total-factura">2.541,00 €</span>
+                            </td>
+                            <td class="confianza-column">
+                                <div class="confidence-compacto baja">
+                                    <div class="confidence-bar">
+                                        <div class="confidence-fill" style="width: 35%"></div>
+                                    </div>
+                                    <span class="confidence-text">35%</span>
+                                    <span class="alerta-dot">⚠️</span>
+                                </div>
+                            </td>
+                            <td class="albaranes-column">
+                                <div class="albaranes-compact">
+                                    <span class="albaranes-count">0</span>
+                                    <button class="btn-albaranes-compact" title="Ver albaranes">🔗</button>
+                                </div>
+                            </td>
+                            <td class="acciones-column">
+                                <div class="action-buttons-compact">
+                                    <button class="btn-compact btn-cotejo" title="Cotejo automático">🔗</button>
+                                    <button class="btn-compact btn-avanzado" title="Ver factura avanzada">🎓</button>
+                                    <button class="btn-compact btn-editar" title="Editar y enseñar">✏️</button>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <div style="text-align: center; margin-top: 30px; color: #64748b;">
+            <p>✅ Tabla rediseñada con éxito - 12 columnas perfectamente alineadas</p>
+            <p>🎨 Diseño profesional y compacto implementado</p>
+            <p>📱 Responsive y optimizado para todas las pantallas</p>
+        </div>
+    </div>
+</body>
+</html>
+
+

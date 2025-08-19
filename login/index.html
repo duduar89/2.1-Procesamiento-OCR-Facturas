@@ -149,6 +149,35 @@
             text-shadow: 0 0 4px var(--brand-turquoise-light), 0 0 10px var(--brand-turquoise-light), 0 0 20px var(--brand-turquoise);
         }
 
+        /* Estilos para el modal de login */
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #ffffff;
+            border-top: 2px solid transparent;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .demo-button {
+            transition: all 0.3s ease;
+        }
+
+        .demo-button:hover {
+            background-color: rgba(0, 212, 170, 0.1) !important;
+            border-color: var(--brand-turquoise) !important;
+            color: var(--brand-turquoise-light) !important;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 212, 170, 0.2);
+        }
+
         /* --- ANIMACIONES --- */
         @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
         .fade-in-start { opacity: 0; animation: fadeIn 0.8s ease-out forwards; }
@@ -340,37 +369,82 @@
         </footer>
     </div>
 
-    <!-- ========= MODALS "EXPERIENCIA" ========= -->
+    <!-- ========= MODAL LOGIN COMPLETO CON BACKEND ========= -->
     <div id="login-modal" class="modal fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 z-50 hidden">
-        <div class="glassmorphism rounded-2xl w-full max-w-md relative overflow-hidden h-96">
+        <div class="glassmorphism rounded-2xl w-full max-w-md relative overflow-hidden">
             <button data-modal-close="login-modal" class="absolute top-4 right-4 text-gray-400 hover:text-white text-2xl z-20" aria-label="Cerrar modal">&times;</button>
             <canvas id="login-canvas"></canvas>
-            <div id="login-content-wrapper" class="p-8 md:p-12 h-full flex flex-col justify-center items-center">
-                <!-- Step 1: Email -->
-                <div id="login-step-1" class="w-full text-center transition-opacity duration-500">
+            <div id="login-content-wrapper" class="p-8 md:p-12 relative z-10">
+                <!-- Logo y título -->
+                <div class="text-center mb-6">
                     <i class="fa-solid fa-brain text-5xl floating-brain" style="color: var(--brand-turquoise);"></i>
-                    <h2 class="text-3xl font-bold text-center mt-4 mb-2 text-white">Acceso Restaurante</h2>
-                    <p class="text-center text-gray-400 mb-6">Introduce tu credencial para sincronizar.</p>
-                    <form id="login-form-step1" class="w-full">
-                        <label for="username" class="text-sm mb-2 block text-left" style="color: var(--brand-turquoise-light);">Introduzca su correo electrónico</label>
-                        <input type="email" id="username" name="username" class="w-full text-center bg-gray-900/50 border border-gray-700 text-white rounded-lg p-3 focus:ring-2 focus:ring-[var(--brand-turquoise)] focus:border-[var(--brand-turquoise)] transition" placeholder="tu@email.com" required>
-                        <button type="submit" class="w-full flex items-center justify-center text-white font-bold py-3 px-6 rounded-full pro-login-button mt-6 text-lg">
-                            <span>Autenticar</span>
-                        </button>
-                    </form>
+                    <h2 class="text-2xl font-bold text-center mt-4 mb-2 text-white">
+                        <span style="background: linear-gradient(135deg, #00D4AA, #26D0CE); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
+                            Brain Stormers
+                        </span>
+                    </h2>
+                    <p class="text-center text-sm text-gray-400">Sistema Inteligente de Gestión Documental con IA</p>
                 </div>
-                <!-- Step 2: Password -->
-                <div id="login-step-2" class="w-full text-center transition-opacity duration-500 opacity-0 hidden">
-                    <i class="fa-solid fa-lock text-5xl floating-brain" style="color: var(--brand-turquoise);"></i>
-                    <h2 class="text-3xl font-bold text-center mt-4 mb-2 text-white">Verificación Segura</h2>
-                    <p id="welcome-user" class="text-center text-gray-400 mb-6"></p>
-                    <form id="login-form-step2" class="w-full">
-                        <label for="password" class="text-sm mb-2 block text-left" style="color: var(--brand-turquoise-light);">Introduzca su contraseña</label>
-                        <input type="password" id="password" name="password" class="w-full text-center bg-gray-900/50 border border-gray-700 text-white rounded-lg p-3 focus:ring-2 focus:ring-[var(--brand-turquoise)] focus:border-[var(--brand-turquoise)] transition" placeholder="••••••••" required>
-                        <button type="submit" class="w-full flex items-center justify-center text-white font-bold py-3 px-6 rounded-full pro-login-button mt-6 text-lg">
-                            <span>Acceder al Sistema</span>
+
+                <!-- Mensajes de error/éxito -->
+                <div id="errorMessage" class="bg-red-600/20 border border-red-500/50 text-red-300 px-4 py-3 rounded-lg mb-4 text-sm" style="display: none;"></div>
+                <div id="successMessage" class="bg-green-600/20 border border-green-500/50 text-green-300 px-4 py-3 rounded-lg mb-4 text-sm" style="display: none;"></div>
+
+                <!-- Formulario de login -->
+                <form id="loginForm" class="w-full">
+                    <div class="mb-4">
+                        <label for="email" class="text-sm mb-2 block text-left font-semibold text-gray-300">Email</label>
+                        <input 
+                            type="email" 
+                            id="email" 
+                            class="w-full rounded-lg p-3 focus:ring-2 focus:ring-[var(--brand-turquoise)] focus:border-[var(--brand-turquoise)] transition bg-gray-900/50 border border-gray-700 text-white" 
+                            placeholder="tu@restaurante.com"
+                            required
+                        >
+                    </div>
+
+                    <div class="mb-6">
+                        <label for="password" class="text-sm mb-2 block text-left font-semibold text-gray-300">Contraseña</label>
+                        <input 
+                            type="password" 
+                            id="password" 
+                            class="w-full rounded-lg p-3 focus:ring-2 focus:ring-[var(--brand-turquoise)] focus:border-[var(--brand-turquoise)] transition bg-gray-900/50 border border-gray-700 text-white" 
+                            placeholder="••••••••"
+                            required
+                        >
+                    </div>
+
+                    <button type="submit" class="w-full flex items-center justify-center text-white font-bold py-3 px-6 rounded-full pro-login-button text-lg" id="loginButton">
+                        <span class="loading-spinner" id="loadingSpinner" style="display: none;"></span>
+                        <span id="buttonText">Iniciar Sesión</span>
+                    </button>
+                </form>
+
+                <!-- Sección demo -->
+                <div class="mt-6 pt-6 border-t border-gray-700/50">
+                    <div class="text-center text-sm font-semibold mb-3 text-gray-400">🧪 Usuarios de Prueba</div>
+                    <div class="space-y-2">
+                        <button class="w-full demo-button text-sm py-2 px-3 rounded-lg border transition-colors border-gray-700 bg-gray-900/50 text-gray-300 hover:bg-gray-800/50" onclick="fillDemo('manolo')">
+                            🍺 Bar Manolo (admin@barmanolo.com)
                         </button>
-                    </form>
+                        <button class="w-full demo-button text-sm py-2 px-3 rounded-lg border transition-colors border-gray-700 bg-gray-900/50 text-gray-300 hover:bg-gray-800/50" onclick="fillDemo('paco')">
+                            🥘 Restaurante Paco (admin@respaco.com)
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Botón de cerrar sesión (solo visible si hay sesión activa) -->
+                <div id="logout-section" class="mt-4 pt-4 border-t border-gray-700/50" style="display: none;">
+                    <button id="logout-btn" class="w-full text-sm py-2 px-3 rounded-lg border transition-colors border-gray-700 bg-gray-900/50 text-gray-300 hover:bg-gray-800/50" onclick="handleLogout()">
+                        🚪 Cerrar Sesión Actual
+                    </button>
+                </div>
+
+                <!-- Info del pie -->
+                <div class="mt-6 text-center text-xs text-gray-500">
+                    <strong>🏢 Sistema Multi-Tenant</strong><br>
+                    Cada restaurante ve solo sus datos<br>
+                    Tecnología: Supabase + Row Level Security
                 </div>
             </div>
         </div>
@@ -444,6 +518,12 @@
         </div>
     </div>
 
+    <!-- Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <!-- Configuración -->
+    <script src="../config.js"></script>
+    
     <!-- JavaScript -->
     <script>
         document.addEventListener('DOMContentLoaded', () => {
@@ -499,6 +579,20 @@
             const carouselButtons = document.querySelectorAll('.button-carousel .neon-button');
             let activeIndex = 0;
 
+            // ===== VARIABLES GLOBALES =====
+            let supabaseClient = null;
+
+            // ===== INICIALIZACIÓN =====
+            console.log('🚀 Página de login cargada');
+            console.log('🔐 Inicializando autenticación...');
+            initializeAuth();
+            console.log('🔍 Verificando sesión existente...');
+            checkIfAlreadyLoggedIn();
+            
+            // Debug: Verificar que la página se cargue correctamente
+            console.log('📄 DOM completamente cargado');
+            console.log('🔗 URL actual:', window.location.href);
+
             function updateCarousel(clickedIndex) {
                 activeIndex = clickedIndex;
                 const totalItems = carouselButtons.length;
@@ -550,28 +644,19 @@
             });
             
             // --- Lógica Login ---
-            const loginStep1 = document.getElementById('login-step-1');
-            const loginStep2 = document.getElementById('login-step-2');
-            const loginFormStep1 = document.getElementById('login-form-step1');
-            const welcomeUser = document.getElementById('welcome-user');
-            const usernameInput = document.getElementById('username');
-
-            loginFormStep1.addEventListener('submit', (e) => {
-                e.preventDefault();
-                welcomeUser.textContent = `Sincronizado con ${usernameInput.value || 'Invitado'}`;
-                loginStep1.classList.add('opacity-0');
-                
-                setTimeout(() => {
-                    loginStep1.classList.add('hidden');
-                    loginStep2.classList.remove('hidden');
-                    setTimeout(() => loginStep2.classList.remove('opacity-0'), 50);
-                }, 500);
-            });
-
+            // Función para resetear el modal de login (simplificada)
             function resetLoginModal() {
-                loginStep2.classList.add('hidden', 'opacity-0');
-                loginStep1.classList.remove('hidden', 'opacity-0');
-                usernameInput.value = '';
+                // Limpiar formulario
+                const emailInput = document.getElementById('email');
+                const passwordInput = document.getElementById('password');
+                if (emailInput) emailInput.value = '';
+                if (passwordInput) passwordInput.value = '';
+                
+                // Ocultar mensajes
+                hideMessages();
+                
+                // Resetear estado del botón
+                setLoadingState(false);
             }
 
             // --- Lógica Banner Piloto ---
@@ -624,6 +709,329 @@
                     updateCounter();
                 });
             }
+
+            // ===== FUNCIONES DE AUTENTICACIÓN =====
+            
+            // Inicializar Supabase
+            async function initializeAuth() {
+                try {
+                    console.log('🔧 Iniciando inicialización de Supabase...');
+                    
+                    // Verificar configuración
+                    if (!CONFIG.SUPABASE.URL || !CONFIG.SUPABASE.ANON_KEY) {
+                        throw new Error('Configuración de Supabase incompleta');
+                    }
+
+                    console.log('✅ Configuración de Supabase encontrada');
+                    console.log('🔗 URL:', CONFIG.SUPABASE.URL ? '✅ Configurada' : '❌ Faltante');
+                    console.log('🔑 ANON_KEY:', CONFIG.SUPABASE.ANON_KEY ? '✅ Configurada' : '❌ Faltante');
+
+                    // Inicializar cliente Supabase
+                    supabaseClient = supabase.createClient(
+                        CONFIG.SUPABASE.URL,
+                        CONFIG.SUPABASE.ANON_KEY
+                    );
+
+                    console.log('✅ Supabase inicializado correctamente');
+                    console.log('🔧 Cliente Supabase creado:', supabaseClient ? '✅' : '❌');
+
+                } catch (error) {
+                    console.error('❌ Error inicializando Supabase:', error);
+                    showError('Error de configuración: ' + error.message);
+                }
+            }
+
+            // Verificar si ya está logueado
+            async function checkIfAlreadyLoggedIn() {
+                try {
+                    console.log('🔍 Verificando sesión existente...');
+                    const { data: { session } } = await supabaseClient.auth.getSession();
+                    
+                    if (session) {
+                        console.log('✅ Sesión activa detectada:', {
+                            user: session.user?.email,
+                            expires: session.expires_at
+                        });
+                        console.log('📝 Mostrando opciones de sesión activa (sin redirección automática)');
+                        
+                        // Mostrar mensaje de sesión activa
+                        const existingMessage = document.getElementById('session-info');
+                        if (!existingMessage) {
+                            const sessionInfo = document.createElement('div');
+                            sessionInfo.id = 'session-info';
+                            sessionInfo.className = 'text-center text-sm mb-4 p-2 rounded-lg';
+                            sessionInfo.style.cssText = 'background: rgba(0, 212, 170, 0.1); border: 1px solid rgba(0, 212, 170, 0.3); color: var(--brand-turquoise-light);';
+                            sessionInfo.innerHTML = '🔐 <strong>Sesión activa detectada</strong><br>Puedes iniciar sesión nuevamente o ir al <a href="../dashboard-facturas-claude/dashboard-facturas.html" class="underline hover:no-underline">dashboard</a>';
+                            const loginForm = document.getElementById('loginForm');
+                            if (loginForm && loginForm.parentNode) {
+                                loginForm.parentNode.insertBefore(sessionInfo, loginForm);
+                            }
+                        }
+                        
+                        // Mostrar botón de logout
+                        const logoutSection = document.getElementById('logout-section');
+                        if (logoutSection) {
+                            logoutSection.style.display = 'block';
+                            console.log('🔘 Botón de logout mostrado');
+                        }
+                    } else {
+                        console.log('❌ No hay sesión activa');
+                        // Ocultar elementos de sesión si no hay sesión
+                        const logoutSection = document.getElementById('logout-section');
+                        if (logoutSection) {
+                            logoutSection.style.display = 'none';
+                        }
+                        const sessionInfo = document.getElementById('session-info');
+                        if (sessionInfo) {
+                            sessionInfo.remove();
+                        }
+                    }
+                } catch (error) {
+                    console.error('❌ Error verificando sesión:', error);
+                    // En caso de error, ocultar elementos de sesión
+                    const logoutSection = document.getElementById('logout-section');
+                    if (logoutSection) {
+                        logoutSection.style.display = 'none';
+                    }
+                    const sessionInfo = document.getElementById('session-info');
+                    if (sessionInfo) {
+                        sessionInfo.remove();
+                    }
+                }
+            }
+
+            // Configurar el formulario de login
+            const loginForm = document.getElementById('loginForm');
+            if (loginForm) {
+                loginForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    await handleLogin();
+                });
+            }
+
+            // Función principal de login
+            async function handleLogin() {
+                const email = document.getElementById('email').value.trim();
+                const password = document.getElementById('password').value;
+
+                // Validaciones básicas
+                if (!email || !password) {
+                    showError('Por favor, completa todos los campos');
+                    return;
+                }
+
+                if (!isValidEmail(email)) {
+                    showError('Por favor, introduce un email válido');
+                    return;
+                }
+
+                // Mostrar estado de carga
+                setLoadingState(true);
+                hideMessages();
+
+                try {
+                    // 1. Intentar login con Supabase
+                    const { data: authData, error: authError } = await supabaseClient.auth.signInWithPassword({
+                        email: email,
+                        password: password
+                    });
+
+                    if (authError) {
+                        throw new Error(getErrorMessage(authError));
+                    }
+
+                    if (!authData.user) {
+                        throw new Error('No se pudo autenticar el usuario');
+                    }
+
+                    // 2. Obtener datos del usuario y restaurante
+                    const { data: userData, error: userError } = await supabaseClient
+                        .from('usuarios')
+                        .select(`
+                            id,
+                            email,
+                            nombre,
+                            apellidos,
+                            rol,
+                            restaurante_id,
+                            restaurantes (
+                                id,
+                                nombre,
+                                cif,
+                                activo
+                            )
+                        `)
+                        .eq('id', authData.user.id)
+                        .single();
+
+                    if (userError || !userData) {
+                        throw new Error('Usuario no encontrado en el sistema');
+                    }
+
+                    if (!userData.restaurantes || !userData.restaurantes.activo) {
+                        throw new Error('Restaurante no activo o no encontrado');
+                    }
+
+                    // 3. Guardar información en localStorage para uso posterior
+                    const userInfo = {
+                        id: userData.id,
+                        email: userData.email,
+                        nombre: userData.nombre,
+                        apellidos: userData.apellidos,
+                        rol: userData.rol,
+                        restaurante: userData.restaurantes
+                    };
+
+                    localStorage.setItem('user_info', JSON.stringify(userInfo));
+                    localStorage.setItem('restaurante_actual', JSON.stringify(userData.restaurantes));
+
+                    // 4. Mostrar éxito y redirigir
+                    showSuccess(`¡Bienvenido ${userData.nombre}! Redirigiendo...`);
+                    
+                    console.log('🚀 Login exitoso, redirigiendo a dashboard de facturas...');
+                    console.log('📍 Ruta de redirección:', '../dashboard-facturas-claude/dashboard-facturas.html');
+                    
+                    setTimeout(() => {
+                        console.log('🔄 Ejecutando redirección...');
+                        window.location.href = '../dashboard-facturas-claude/dashboard-facturas.html';
+                    }, 1500);
+
+                } catch (error) {
+                    console.error('Error en login:', error);
+                    showError(error.message);
+                } finally {
+                    setLoadingState(false);
+                }
+            }
+
+            // Rellenar formulario con datos demo
+            function fillDemo(restaurant) {
+                const demoAccounts = {
+                    'manolo': {
+                        email: 'admin@barmanolo.com',
+                        password: 'barmanolo123'
+                    },
+                    'paco': {
+                        email: 'admin@respaco.com', 
+                        password: 'respaco123'
+                    }
+                };
+
+                const account = demoAccounts[restaurant];
+                if (account) {
+                    document.getElementById('email').value = account.email;
+                    document.getElementById('password').value = account.password;
+                    
+                    showSuccess(`Datos demo cargados para ${restaurant}. ¡Haz clic en "Iniciar Sesión"!`);
+                }
+            }
+
+            // ===== UTILIDADES =====
+            function isValidEmail(email) {
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                return emailRegex.test(email);
+            }
+
+            function getErrorMessage(error) {
+                const errorMessages = {
+                    'Invalid login credentials': 'Email o contraseña incorrectos',
+                    'Email not confirmed': 'Email no confirmado',
+                    'Too many requests': 'Demasiados intentos. Espera unos minutos',
+                    'Invalid email': 'Email no válido',
+                    'signup_disabled': 'Registro deshabilitado'
+                };
+
+                return errorMessages[error.message] || error.message || 'Error desconocido';
+            }
+
+            function setLoadingState(loading) {
+                const button = document.getElementById('loginButton');
+                const spinner = document.getElementById('loadingSpinner');
+                const buttonText = document.getElementById('buttonText');
+
+                if (loading) {
+                    button.disabled = true;
+                    spinner.style.display = 'inline-block';
+                    buttonText.textContent = 'Iniciando sesión...';
+                } else {
+                    button.disabled = false;
+                    spinner.style.display = 'none';
+                    buttonText.textContent = 'Iniciar Sesión';
+                }
+            }
+
+            function showError(message) {
+                const errorDiv = document.getElementById('errorMessage');
+                errorDiv.textContent = message;
+                errorDiv.style.display = 'block';
+                
+                // Auto-ocultar después de 5 segundos
+                setTimeout(() => {
+                    errorDiv.style.display = 'none';
+                }, 5000);
+            }
+
+            function showSuccess(message) {
+                const successDiv = document.getElementById('successMessage');
+                successDiv.textContent = message;
+                successDiv.style.display = 'block';
+            }
+
+            function hideMessages() {
+                document.getElementById('errorMessage').style.display = 'none';
+                document.getElementById('successMessage').style.display = 'none';
+            }
+
+            function resetLoginModal() {
+                // Limpiar formulario
+                const emailInput = document.getElementById('email');
+                const passwordInput = document.getElementById('password');
+                if (emailInput) emailInput.value = '';
+                if (passwordInput) passwordInput.value = '';
+                
+                // Ocultar mensajes
+                hideMessages();
+                
+                // Resetear estado del botón
+                setLoadingState(false);
+            }
+
+            // ===== FUNCIÓN DE LOGOUT =====
+            async function handleLogout() {
+                try {
+                    if (supabaseClient) {
+                        const { error } = await supabaseClient.auth.signOut();
+                        if (error) {
+                            throw error;
+                        }
+                        
+                        // Limpiar localStorage
+                        localStorage.removeItem('user_info');
+                        localStorage.removeItem('restaurante_actual');
+                        
+                        // Mostrar mensaje de éxito
+                        showSuccess('Sesión cerrada correctamente. Redirigiendo...');
+                        
+                        // Redirigir al dashboard principal después de 1.5 segundos
+                        setTimeout(() => {
+                            window.location.href = '../dashboard-principal/index.html';
+                        }, 1500);
+                        
+                        console.log('Logout exitoso, redirigiendo a dashboard principal');
+                    }
+                } catch (error) {
+                    console.error('Error en logout:', error);
+                    showError('Error al cerrar sesión: ' + error.message);
+                }
+            }
+
+            // Manejo de teclas
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' && e.target.tagName !== 'BUTTON') {
+                    e.preventDefault();
+                    handleLogin();
+                }
+            });
         });
     </script>
     

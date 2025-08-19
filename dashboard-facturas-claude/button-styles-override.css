@@ -1,0 +1,260 @@
+/* ===== ESTILOS DE BOTONES CON ALTA PRIORIDAD ===== */
+
+/* Botón de cotejo */
+.btn-cotejo {
+    background: linear-gradient(135deg, #0ea5e9, #0284c7) !important;
+    color: white !important;
+    box-shadow: 0 2px 8px rgba(14, 165, 233, 0.3) !important;
+    position: relative !important;
+    overflow: hidden !important;
+    border: none !important;
+    padding: 8px 16px !important;
+    border-radius: 8px !important;
+    font-size: 0.75rem !important;
+    font-weight: 600 !important;
+    transition: all 0.3s ease !important;
+    cursor: pointer !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 6px !important;
+    text-decoration: none !important;
+    font-family: inherit !important;
+}
+
+.btn-cotejo::before {
+    content: '' !important;
+    position: absolute !important;
+    top: 0 !important;
+    left: -100% !important;
+    width: 100% !important;
+    height: 100% !important;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent) !important;
+    transition: left 0.5s !important;
+}
+
+.btn-cotejo:hover::before {
+    left: 100% !important;
+}
+
+.btn-cotejo:hover {
+    background: linear-gradient(135deg, #0284c7, #0369a1) !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 6px 20px rgba(14, 165, 233, 0.4) !important;
+}
+
+/* Botón avanzado */
+.btn-avanzado {
+    background: linear-gradient(135deg, #00D4AA, #14B8A6) !important;
+    color: white !important;
+    box-shadow: 0 2px 8px rgba(0, 212, 170, 0.3) !important;
+    position: relative !important;
+    overflow: hidden !important;
+    border: none !important;
+    padding: 8px 16px !important;
+    border-radius: 8px !important;
+    font-size: 0.75rem !important;
+    font-weight: 600 !important;
+    transition: all 0.3s ease !important;
+    cursor: pointer !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 6px !important;
+    text-decoration: none !important;
+    font-family: inherit !important;
+}
+
+.btn-avanzado::before {
+    content: '' !important;
+    position: absolute !important;
+    top: 0 !important;
+    left: -100% !important;
+    width: 100% !important;
+    height: 100% !important;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent) !important;
+    transition: left 0.5s !important;
+}
+
+.btn-avanzado:hover::before {
+    left: 100% !important;
+}
+
+.btn-avanzado:hover {
+    background: linear-gradient(135deg, #14B8A6, #10B981) !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 6px 20px rgba(0, 212, 170, 0.4) !important;
+}
+
+/* Botón de editar y enseñar */
+.btn-editar-ensenar {
+    background: linear-gradient(135deg, #10B981, #059669) !important;
+    color: white !important;
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3) !important;
+    position: relative !important;
+    overflow: hidden !important;
+    border: none !important;
+    padding: 8px 16px !important;
+    border-radius: 8px !important;
+    font-size: 0.75rem !important;
+    font-weight: 600 !important;
+    transition: all 0.3s ease !important;
+    cursor: pointer !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 6px !important;
+    text-decoration: none !important;
+    font-family: inherit !important;
+}
+
+.btn-editar-ensenar::before {
+    content: '' !important;
+    position: absolute !important;
+    top: 0 !important;
+    left: -100% !important;
+    width: 100% !important;
+    height: 100% !important;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent) !important;
+    transition: left 0.5s !important;
+}
+
+.btn-editar-ensenar:hover::before {
+    left: 100% !important;
+}
+
+.btn-editar-ensenar:hover {
+    background: linear-gradient(135deg, #059669, #047857) !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4) !important;
+}
+
+/* Contenedor de botones de acción */
+.action-buttons {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+    align-items: center !important;
+    padding: 16px !important;
+    min-height: 120px !important;
+    justify-content: center !important;
+    background: linear-gradient(135deg, #f8fafc, #ffffff) !important;
+    border-radius: 12px !important;
+    border: 2px solid #e2e8f0 !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05) !important;
+    position: relative !important;
+    overflow: hidden !important;
+}
+
+.action-buttons::before {
+    content: '' !important;
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    height: 3px !important;
+    background: linear-gradient(90deg, #00D4AA, #14B8A6, #10B981) !important;
+}
+
+.action-buttons .btn {
+    width: 100% !important;
+    max-width: 150px !important;
+    padding: 8px 16px !important;
+    border-radius: 8px !important;
+    font-size: 0.8rem !important;
+    font-weight: 600 !important;
+    text-align: center !important;
+    transition: all 0.3s ease !important;
+    border: none !important;
+    cursor: pointer !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 6px !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15) !important;
+    position: relative !important;
+    z-index: 1 !important;
+}
+
+.action-buttons .btn:hover {
+    transform: translateY(-3px) !important;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2) !important;
+}
+
+.action-buttons .btn:active {
+    transform: translateY(-1px) !important;
+    transition: transform 0.1s !important;
+}
+
+/* Última columna mejorada */
+.facturas-table td:last-child {
+    background: linear-gradient(135deg, #f8fafc, #ffffff) !important;
+    border-left: 4px solid #00D4AA !important;
+    padding: 20px !important;
+    position: relative !important;
+    box-shadow: inset 2px 0 8px rgba(0, 212, 170, 0.1) !important;
+}
+
+.facturas-table td:last-child::before {
+    content: '' !important;
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    bottom: 0 !important;
+    width: 4px !important;
+    background: linear-gradient(180deg, #00D4AA, #14B8A6, #10B981) !important;
+    border-radius: 0 2px 2px 0 !important;
+}
+
+/* Botón de revisar mejorado */
+.btn-revisar {
+    background: linear-gradient(135deg, #ef4444, #dc2626) !important;
+    color: white !important;
+    border: none !important;
+    padding: 6px 12px !important;
+    border-radius: 8px !important;
+    font-size: 0.7rem !important;
+    font-weight: 600 !important;
+    cursor: pointer !important;
+    transition: all 0.3s ease !important;
+    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3) !important;
+    position: relative !important;
+    overflow: hidden !important;
+    margin-top: 6px !important;
+}
+
+.btn-revisar::before {
+    content: '' !important;
+    position: absolute !important;
+    top: 0 !important;
+    left: -100% !important;
+    width: 100% !important;
+    height: 100% !important;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent) !important;
+    transition: left 0.5s !important;
+}
+
+.btn-revisar:hover::before {
+    left: 100% !important;
+}
+
+.btn-revisar:hover {
+    background: linear-gradient(135deg, #dc2626, #b91c1c) !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4) !important;
+}
+
+.btn-revisar.medium {
+    background: linear-gradient(135deg, #f59e0b, #f59e0b) !important;
+    box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3) !important;
+}
+
+.btn-revisar.medium:hover {
+    background: linear-gradient(135deg, #f59e0b, #d97706) !important;
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4) !important;
+}
+
+

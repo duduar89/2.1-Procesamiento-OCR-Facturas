@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prueba de Navegación - Dashboards</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0F2027, #2C3E50);
+            color: white;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .container {
+            text-align: center;
+            max-width: 600px;
+            padding: 40px;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 20px;
+            background: linear-gradient(135deg, #00D4AA, #14B8A6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .description {
+            font-size: 1.1rem;
+            margin-bottom: 40px;
+            color: #cbd5e1;
+            line-height: 1.6;
+        }
+
+        .nav-buttons {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .nav-btn {
+            padding: 16px 32px;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+            min-width: 200px;
+        }
+
+        .btn-facturas {
+            background: linear-gradient(135deg, #00D4AA, #14B8A6);
+            color: white;
+        }
+
+        .btn-facturas:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 40px rgba(0, 212, 170, 0.3);
+        }
+
+        .btn-ventas {
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+            color: white;
+        }
+
+        .btn-ventas:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 40px rgba(59, 130, 246, 0.3);
+        }
+
+        .btn-principal {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: white;
+        }
+
+        .btn-principal:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 40px rgba(245, 158, 11, 0.3);
+        }
+
+        .status-info {
+            margin-top: 40px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+        }
+
+        .status-item {
+            margin: 10px 0;
+            padding: 8px;
+            background: rgba(0, 212, 170, 0.1);
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 0.9rem;
+        }
+
+        .success { color: #10b981; }
+        .warning { color: #f59e0b; }
+        .error { color: #ef4444; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧠 Brain Stormers</h1>
+        <p class="description">
+            Sistema de navegación entre dashboards para pruebas de integración.<br>
+            Selecciona el dashboard al que deseas navegar:
+        </p>
+
+        <div class="nav-buttons">
+            <a href="../dashboard-facturas-claude/dashboard-facturas.html" class="nav-btn btn-facturas">
+                📊 Dashboard Facturas
+            </a>
+            
+            <a href="complete_sales_dashboard.html" class="nav-btn btn-ventas">
+                💰 Dashboard Ventas
+            </a>
+            
+            <a href="../index.html" class="nav-btn btn-principal">
+                🏠 Sistema Principal
+            </a>
+        </div>
+
+        <div class="status-info">
+            <h3>📋 Estado de la Integración</h3>
+            <div class="status-item success">✅ Dashboard de Facturas: Funcionando</div>
+            <div class="status-item success">✅ Dashboard de Ventas: Funcionando</div>
+            <div class="status-item success">✅ Navegación bidireccional: Implementada</div>
+            <div class="status-item warning">⚠️ Autenticación: Compartida entre dashboards</div>
+            <div class="status-item success">✅ Estilos Brain Stormers: Aplicados</div>
+        </div>
+
+        <div class="status-info" style="margin-top: 20px;">
+            <h3>🔧 Instrucciones de Prueba</h3>
+            <div class="status-item">
+                1. Haz clic en "Dashboard Facturas" para ir al sistema principal
+            </div>
+            <div class="status-item">
+                2. Usa el botón "📊 Dashboard Ventas" en el header para navegar
+            </div>
+            <div class="status-item">
+                3. Usa el botón "🔙 Volver a Facturas" para regresar
+            </div>
+            <div class="status-item">
+                4. Verifica que la autenticación se mantenga entre navegaciones
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Verificar estado de autenticación compartida
+        function checkSharedAuth() {
+            const sharedAuth = localStorage.getItem('sales_dashboard_auth');
+            const userInfo = localStorage.getItem('user_info');
+            const restauranteInfo = localStorage.getItem('restaurante_actual');
+            
+            console.log('🔍 Estado de autenticación compartida:');
+            console.log('- Datos compartidos:', !!sharedAuth);
+            console.log('- Info usuario:', !!userInfo);
+            console.log('- Info restaurante:', !!restauranteInfo);
+            
+            if (sharedAuth) {
+                try {
+                    const authData = JSON.parse(sharedAuth);
+                    console.log('✅ Usuario autenticado:', authData.user_nombre);
+                    console.log('✅ Restaurante:', authData.restaurante_nombre);
+                } catch (error) {
+                    console.error('❌ Error parseando datos compartidos:', error);
+                }
+            }
+        }
+
+        // Ejecutar verificación al cargar
+        document.addEventListener('DOMContentLoaded', checkSharedAuth);
+    </script>
+</body>
+</html>

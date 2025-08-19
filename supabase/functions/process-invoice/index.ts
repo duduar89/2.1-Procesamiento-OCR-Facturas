@@ -16,6 +16,51 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, GET, OPTIONS, PUT, DELETE',
 }
 
+// 🚀 === FUNCIÓN DE COTEJO AUTOMÁTICO ===
+async function ejecutarCotejoAutomatico(documentoId: string) {
+  try {
+    console.log(`🤖 Ejecutando cotejo automático para documento: ${documentoId}`)
+    
+    // Llamar a la función de cotejo inteligente
+    const response = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/cotejo-inteligente`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        documentoId: documentoId,
+        background: true,
+        forceReprocess: false
+      })
+    })
+    
+    if (!response.ok) {
+      throw new Error(`Error en cotejo automático: ${response.status} ${response.statusText}`)
+    }
+    
+    const resultado = await response.json()
+    console.log(`✅ Cotejo automático completado para ${documentoId}`)
+    
+    return resultado
+    
+  } catch (error) {
+    console.error(`❌ Error en cotejo automático para ${documentoId}:`, error)
+    return {
+      success: false,
+      error: error.message,
+      enlaces_automaticos: 0,
+      sugerencias: 0,
+      requiere_revision: 0,
+      notificacion: {
+        tipo: 'error',
+        mensaje: `Error en cotejo automático: ${error.message}`,
+        acciones_disponibles: ['revisar_logs', 'contactar_soporte']
+      }
+    }
+  }
+}
+
 function getServiceAccount() {
   console.log('🔧 Obteniendo Service Account...')
   
@@ -2875,33 +2920,50 @@ function parseSpanishDate(dateStr: string): string | null {
 
 // ===== FUNCIONES DE CÁLCULO DE PRODUCTOS =====
 
-// 📏 FUNCIÓN PARA EXTRAER FORMATO COMERCIAL
+// 🔍 FUNCIÓN AVANZADA PARA EXTRAER FORMATO COMERCIAL
 function extractProductFormat(description: string): { formato_comercial: string | null, peso_neto: number | null, volumen: number | null } {
   if (!description) return { formato_comercial: null, peso_neto: null, volumen: null }
+  
+  console.log(`🔍 === ANÁLISIS AVANZADO DE FORMATO: "${description}" ===`)
   
   const desc = description.toLowerCase()
   let formato_comercial: string | null = null
   let peso_neto: number | null = null
   let volumen: number | null = null
   
-  // Patrones para peso (kg, g)
+  // PASO 1: Patrones explícitos mejorados
   const pesoPatterns = [
+    // Existentes
     /(\d+(?:[,\.]\d+)?)\s*kg/i,
     /(\d+(?:[,\.]\d+)?)\s*kilogramos?/i,
     /(\d+(?:[,\.]\d+)?)\s*g(?:\s|$)/i,
     /(\d+(?:[,\.]\d+)?)\s*gr(?:\s|$)/i,
-    /(\d+(?:[,\.]\d+)?)\s*gramos?/i
+    /(\d+(?:[,\.]\d+)?)\s*gramos?/i,
+    // NUEVOS - Formatos complejos
+    /bandeja\s+(?:de\s+)?(\d+(?:[,\.]\d+)?)\s*g/i,
+    /pack\s+(?:de\s+)?(\d+(?:[,\.]\d+)?)\s*g/i,
+    /pieza\s+(?:de\s+)?(\d+(?:[,\.]\d+)?)\s*g/i,
+    /aprox\.?\s*(\d+(?:[,\.]\d+)?)\s*kg/i,
+    /aproximadamente\s+(\d+(?:[,\.]\d+)?)\s*kg/i,
+    /peso\s+(?:aprox\.?\s+)?(\d+(?:[,\.]\d+)?)\s*(?:kg|g)/i
   ]
   
-  // Patrones para volumen (l, ml)
   const volumenPatterns = [
+    // Existentes  
     /(\d+(?:[,\.]\d+)?)\s*l(?:\s|$)/i,
     /(\d+(?:[,\.]\d+)?)\s*litros?/i,
     /(\d+(?:[,\.]\d+)?)\s*ml/i,
     /(\d+(?:[,\.]\d+)?)\s*mililitros?/i,
     /(\d+(?:[,\.]\d+)?)\s*cl/i,
-    /(\d+(?:[,\.]\d+)?)\s*centilitros?/i
+    /(\d+(?:[,\.]\d+)?)\s*centilitros?/i,
+    // NUEVOS - Formatos complejos
+    /botella\s+(?:de\s+)?(\d+(?:[,\.]\d+)?)\s*(?:ml|cl|l)/i,
+    /envase\s+(?:de\s+)?(\d+(?:[,\.]\d+)?)\s*(?:ml|cl|l)/i,
+    /brick\s+(?:de\s+)?(\d+(?:[,\.]\d+)?)\s*(?:ml|cl|l)/i
   ]
+
+  // PASO 2: Buscar formatos explícitos
+  console.log(`🔍 Paso 1: Buscando formatos explícitos...`)
   
   // Buscar peso
   for (const pattern of pesoPatterns) {
@@ -2915,6 +2977,7 @@ function extractProductFormat(description: string): { formato_comercial: string 
         peso_neto = valor / 1000 // convertir g a kg
         formato_comercial = `${valor} g`
       }
+      console.log(`✅ Formato explícito encontrado: ${formato_comercial}`)
       break
     }
   }
@@ -2935,30 +2998,250 @@ function extractProductFormat(description: string): { formato_comercial: string 
           volumen = valor
           formato_comercial = `${valor} l`
         }
+        console.log(`✅ Volumen explícito encontrado: ${formato_comercial}`)
         break
       }
     }
   }
-  
-  console.log(`📏 Formato extraído de "${description}": ${formato_comercial}, peso: ${peso_neto}kg, volumen: ${volumen}l`)
+
+  // PASO 3: NUEVO - Inferencia inteligente si no hay formato explícito
+  if (!formato_comercial) {
+    console.log(`🧠 Paso 2: Inferencia inteligente...`)
+    const inferencia = inferFormatFromDescription(desc)
+    if (inferencia.formato_comercial) {
+      formato_comercial = inferencia.formato_comercial
+      peso_neto = inferencia.peso_neto
+      volumen = inferencia.volumen
+      console.log(`🧠 Formato inferido: ${formato_comercial}`)
+    }
+  }
+
+  // PASO 4: NUEVO - Validación de rangos razonables
+  if (formato_comercial) {
+    const validacion = validateFormatRange(formato_comercial, peso_neto, volumen, desc)
+    if (!validacion.valido) {
+      console.log(`⚠️ Formato sospechoso: ${validacion.razon}`)
+      // Opcional: marcar para revisión manual
+    }
+  }
+
+  console.log(`📊 Resultado final: formato="${formato_comercial}", peso=${peso_neto}kg, volumen=${volumen}l`)
   return { formato_comercial, peso_neto, volumen }
 }
 
-// 💰 FUNCIÓN PARA CALCULAR PRECIO POR KG
-function calculatePricePerKg(precioUnitario: number, pesoNeto: number | null): number | null {
-  if (!precioUnitario || !pesoNeto || pesoNeto <= 0) return null
+// 🧠 FUNCIÓN DE INFERENCIA INTELIGENTE DE FORMATO
+function inferFormatFromDescription(description: string): { formato_comercial: string | null, peso_neto: number | null, volumen: number | null } {
+  console.log(`🧠 Analizando descripción para inferir formato: "${description}"`)
+  
+  // Base de datos de productos típicos (hardcoded por ahora)
+  const productosConocidos = [
+    { palabras: ['pollo', 'entero'], peso_tipico: 1.5, formato: '1.5kg aprox.' },
+    { palabras: ['pollo', 'muslos'], peso_tipico: 1.0, formato: '1kg aprox.' },
+    { palabras: ['pollo', 'pechuga'], peso_tipico: 0.8, formato: '800g aprox.' },
+    { palabras: ['ternera', 'filete'], peso_tipico: 0.5, formato: '500g aprox.' },
+    { palabras: ['ternera', 'solomillo'], peso_tipico: 0.4, formato: '400g aprox.' },
+    { palabras: ['cerdo', 'lomo'], peso_tipico: 0.8, formato: '800g aprox.' },
+    { palabras: ['cerdo', 'costillas'], peso_tipico: 1.2, formato: '1.2kg aprox.' },
+    { palabras: ['cordero', 'pierna'], peso_tipico: 2.0, formato: '2kg aprox.' },
+    { palabras: ['pan', 'barra'], peso_tipico: 0.5, formato: '500g' },
+    { palabras: ['pan', 'hogaza'], peso_tipico: 0.8, formato: '800g' },
+    { palabras: ['huevos', 'docena'], peso_tipico: 0.72, formato: '12 uds' },
+    { palabras: ['huevos', '12'], peso_tipico: 0.72, formato: '12 uds' },
+    { palabras: ['huevos', 'frescos'], peso_tipico: 0.72, formato: '12 uds' },
+    { palabras: ['leche', 'brick'], volumen_tipico: 1.0, formato: '1l' },
+    { palabras: ['leche', 'botella'], volumen_tipico: 1.0, formato: '1l' },
+    { palabras: ['aceite', 'botella'], volumen_tipico: 1.0, formato: '1l' },
+    { palabras: ['aceite', 'oliva'], volumen_tipico: 0.5, formato: '500ml' },
+    { palabras: ['vino', 'botella'], volumen_tipico: 0.75, formato: '750ml' },
+    { palabras: ['cerveza', 'botella'], volumen_tipico: 0.33, formato: '330ml' },
+    { palabras: ['agua', 'botella'], volumen_tipico: 1.5, formato: '1.5l' },
+    { palabras: ['refresco', 'lata'], volumen_tipico: 0.33, formato: '330ml' },
+    { palabras: ['yogur', 'pack'], peso_tipico: 0.5, formato: '4x125g' },
+    { palabras: ['yogur', 'natural'], peso_tipico: 0.125, formato: '125g' },
+    { palabras: ['arroz', 'paquete'], peso_tipico: 1.0, formato: '1kg' },
+    { palabras: ['pasta', 'paquete'], peso_tipico: 0.5, formato: '500g' },
+    { palabras: ['harina', 'paquete'], peso_tipico: 1.0, formato: '1kg' },
+    { palabras: ['azucar', 'paquete'], peso_tipico: 1.0, formato: '1kg' },
+    { palabras: ['sal', 'paquete'], peso_tipico: 1.0, formato: '1kg' },
+    { palabras: ['patatas', 'bolsa'], peso_tipico: 2.0, formato: '2kg' },
+    { palabras: ['cebolla', 'bolsa'], peso_tipico: 1.0, formato: '1kg' },
+    { palabras: ['tomate', 'bandeja'], peso_tipico: 0.5, formato: '500g' },
+    { palabras: ['queso', 'cuña'], peso_tipico: 0.25, formato: '250g' },
+    { palabras: ['jamon', 'pieza'], peso_tipico: 0.2, formato: '200g' },
+    { palabras: ['mantequilla', 'pastilla'], peso_tipico: 0.25, formato: '250g' }
+  ]
+  
+  const desc = description.toLowerCase()
+  
+  // Buscar coincidencias
+  for (const producto of productosConocidos) {
+    const coincidencias = producto.palabras.filter(palabra => desc.includes(palabra))
+    
+    if (coincidencias.length >= producto.palabras.length) {
+      console.log(`🎯 Producto conocido detectado: ${producto.palabras.join(' + ')}`)
+      
+      if (producto.peso_tipico) {
+        return {
+          formato_comercial: producto.formato,
+          peso_neto: producto.peso_tipico,
+          volumen: null
+        }
+      } else if (producto.volumen_tipico) {
+        return {
+          formato_comercial: producto.formato,
+          peso_neto: null,
+          volumen: producto.volumen_tipico
+        }
+      }
+    }
+  }
+  
+  // Patrones de unidades sin cantidad específica
+  const patronesUnidades = [
+    { pattern: /(\d+)\s*(?:uds?|unidades?)/i, tipo: 'unidad' },
+    { pattern: /(\d+)\s*(?:pcs?|piezas?)/i, tipo: 'unidad' },
+    { pattern: /(\d+)\s*(?:cajas?)/i, tipo: 'caja' },
+    { pattern: /(\d+)\s*(?:packs?)/i, tipo: 'pack' },
+    { pattern: /docena/i, cantidad: 12, tipo: 'unidad' },
+    { pattern: /media\s+docena/i, cantidad: 6, tipo: 'unidad' }
+  ]
+  
+  for (const patron of patronesUnidades) {
+    const match = desc.match(patron.pattern)
+    if (match) {
+      const cantidad = patron.cantidad || parseInt(match[1])
+      console.log(`📦 Formato por unidades detectado: ${cantidad} ${patron.tipo}`)
+      return {
+        formato_comercial: `${cantidad} ${patron.tipo}`,
+        peso_neto: null,
+        volumen: null
+      }
+    }
+  }
+  
+  console.log(`❌ No se pudo inferir formato para: "${description}"`)
+  return { formato_comercial: null, peso_neto: null, volumen: null }
+}
+
+// ✅ FUNCIÓN DE VALIDACIÓN DE RANGOS RAZONABLES
+function validateFormatRange(formato: string, peso: number | null, volumen: number | null, description: string): { valido: boolean, razon: string } {
+  console.log(`✅ Validando formato: ${formato}`)
+  
+  // Validar peso
+  if (peso !== null) {
+    // Rangos sospechosos
+    if (peso > 50) {
+      return { valido: false, razon: 'Peso demasiado alto para producto individual' }
+    }
+    if (peso < 0.001) {
+      return { valido: false, razon: 'Peso demasiado bajo' }
+    }
+    
+    // Validaciones específicas por categoría
+    if (description.includes('pollo') && (peso < 0.3 || peso > 5)) {
+      return { valido: false, razon: 'Peso de pollo fuera de rango típico' }
+    }
+    if (description.includes('huevo') && peso > 2) {
+      return { valido: false, razon: 'Peso de huevos sospechoso' }
+    }
+    if (description.includes('pan') && (peso < 0.1 || peso > 2)) {
+      return { valido: false, razon: 'Peso de pan fuera de rango típico' }
+    }
+  }
+  
+  // Validar volumen
+  if (volumen !== null) {
+    if (volumen > 20) {
+      return { valido: false, razon: 'Volumen demasiado alto para producto individual' }
+    }
+    if (volumen < 0.01) {
+      return { valido: false, razon: 'Volumen demasiado bajo' }
+    }
+    
+    // Validaciones específicas por categoría
+    if (description.includes('cerveza') && volumen > 2) {
+      return { valido: false, razon: 'Volumen de cerveza sospechoso' }
+    }
+  }
+  
+  return { valido: true, razon: 'Formato válido' }
+}
+
+// 💰 FUNCIÓN MEJORADA PARA CALCULAR PRECIO POR KG
+function calculatePricePerKg(precioUnitario: number, pesoNeto: number | null, descripcion?: string): number | null {
+  console.log(`💰 Calculando precio por kg: ${precioUnitario}€, peso: ${pesoNeto}kg`)
+  
+  if (!precioUnitario || precioUnitario <= 0) {
+    console.log(`❌ Precio unitario inválido: ${precioUnitario}`)
+    return null
+  }
+  
+  // Si no hay peso explícito, intentar inferir
+  if (!pesoNeto || pesoNeto <= 0) {
+    if (descripcion) {
+      console.log(`🔍 Intentando inferir peso desde descripción: "${descripcion}"`)
+      const inferencia = inferFormatFromDescription(descripcion.toLowerCase())
+      pesoNeto = inferencia.peso_neto
+      
+      if (pesoNeto) {
+        console.log(`✅ Peso inferido: ${pesoNeto}kg`)
+      }
+    }
+  }
+  
+  if (!pesoNeto || pesoNeto <= 0) {
+    console.log(`❌ No se pudo determinar peso para calcular precio/kg`)
+    return null
+  }
   
   const precioPorKg = precioUnitario / pesoNeto
-  console.log(`💰 Precio por kg: ${precioUnitario}€ / ${pesoNeto}kg = ${precioPorKg.toFixed(2)}€/kg`)
+  
+  // Validar rango razonable (entre 0.50€/kg y 500€/kg)
+  if (precioPorKg < 0.5 || precioPorKg > 500) {
+    console.log(`⚠️ Precio por kg sospechoso: ${precioPorKg.toFixed(2)}€/kg`)
+    // No retornar null, solo advertir
+  }
+  
+  console.log(`💰 Precio por kg calculado: ${precioPorKg.toFixed(2)}€/kg`)
   return Math.round(precioPorKg * 100) / 100
 }
 
-// 🫗 FUNCIÓN PARA CALCULAR PRECIO POR LITRO
-function calculatePricePerLiter(precioUnitario: number, volumen: number | null): number | null {
-  if (!precioUnitario || !volumen || volumen <= 0) return null
+// 🫗 FUNCIÓN MEJORADA PARA CALCULAR PRECIO POR LITRO  
+function calculatePricePerLiter(precioUnitario: number, volumen: number | null, descripcion?: string): number | null {
+  console.log(`🫗 Calculando precio por litro: ${precioUnitario}€, volumen: ${volumen}l`)
+  
+  if (!precioUnitario || precioUnitario <= 0) {
+    console.log(`❌ Precio unitario inválido: ${precioUnitario}`)
+    return null
+  }
+  
+  // Si no hay volumen explícito, intentar inferir
+  if (!volumen || volumen <= 0) {
+    if (descripcion) {
+      console.log(`🔍 Intentando inferir volumen desde descripción: "${descripcion}"`)
+      const inferencia = inferFormatFromDescription(descripcion.toLowerCase())
+      volumen = inferencia.volumen
+      
+      if (volumen) {
+        console.log(`✅ Volumen inferido: ${volumen}l`)
+      }
+    }
+  }
+  
+  if (!volumen || volumen <= 0) {
+    console.log(`❌ No se pudo determinar volumen para calcular precio/litro`)
+    return null
+  }
   
   const precioPorLitro = precioUnitario / volumen
-  console.log(`🫗 Precio por litro: ${precioUnitario}€ / ${volumen}l = ${precioPorLitro.toFixed(2)}€/l`)
+  
+  // Validar rango razonable (entre 0.20€/l y 200€/l)
+  if (precioPorLitro < 0.2 || precioPorLitro > 200) {
+    console.log(`⚠️ Precio por litro sospechoso: ${precioPorLitro.toFixed(2)}€/l`)
+    // No retornar null, solo advertir
+  }
+  
+  console.log(`🫗 Precio por litro calculado: ${precioPorLitro.toFixed(2)}€/l`)
   return Math.round(precioPorLitro * 100) / 100
 }
 
@@ -3581,12 +3864,14 @@ function processOpenAIProducts(openaiData: any): any[] {
     if (productoCorregido.precio_unitario_sin_iva > 0) {
       productoCorregido.precio_por_kg = calculatePricePerKg(
         productoCorregido.precio_unitario_sin_iva, 
-        formato.peso_neto
+        formato.peso_neto,
+        productoCorregido.descripcion_original  // 🆕 Añadir descripción
       )
       
       productoCorregido.precio_por_litro = calculatePricePerLiter(
         productoCorregido.precio_unitario_sin_iva, 
-        formato.volumen
+        formato.volumen,
+        productoCorregido.descripcion_original  // 🆕 Añadir descripción
       )
     }
     
@@ -3728,10 +4013,15 @@ function classifyDocument(fullText: string): {
     'entrega', 'entregado', 'recepción', 'recibido'
   ]
   
+  console.log('🔍 Buscando palabras de albarán en:', texto.substring(0, 200) + '...')
+  
   palabrasAlbaran.forEach(palabra => {
     if (texto.includes(palabra)) {
+      console.log(`✅ PALABRA ALBARÁN ENCONTRADA: "${palabra}"`)
       patrones.albaran_encontrado = true
       patrones.palabras_albaran.push(palabra)
+    } else {
+      console.log(`❌ Palabra "${palabra}" NO encontrada`)
     }
   })
   
@@ -3741,10 +4031,15 @@ function classifyDocument(fullText: string): {
     'cuota iva', 'vencimiento', 'pagar'
   ]
   
+  console.log('🔍 Buscando palabras de factura...')
+  
   palabrasFactura.forEach(palabra => {
     if (texto.includes(palabra)) {
+      console.log(`✅ PALABRA FACTURA ENCONTRADA: "${palabra}"`)
       patrones.factura_encontrada = true
       patrones.palabras_factura.push(palabra)
+    } else {
+      console.log(`❌ Palabra "${palabra}" NO encontrada`)
     }
   })
   
@@ -3781,11 +4076,11 @@ function classifyDocument(fullText: string): {
     confianza = 0.95
     razonamiento = 'Contiene "factura" y no contiene "albarán"'
   }
-  // REGLA 3: Si dice AMBOS → REVISAR (conflicto)
+  // REGLA 3: Si dice AMBOS → FACTURA (perfecto para cotejación)
   else if (patrones.albaran_encontrado && patrones.factura_encontrada) {
-    tipo = 'incierto'
-    confianza = 0.4
-    razonamiento = 'Contiene tanto "factura" como "albarán" - requiere revisión'
+    tipo = 'factura'
+    confianza = 0.95
+    razonamiento = 'Contiene "factura" y referencias a albaranes - FACTURA perfecta para cotejación'
   }
   // REGLA 4: Si NO dice ninguno, usar indicadores secundarios
   else {
@@ -4386,25 +4681,10 @@ Deno.serve(async (req) => {
         await notifyReviewNeeded(userContext.telefono, documentClassification, documentInfo.nombre_archivo)
       }
       
-      // Pausar procesamiento y retornar
-      console.log('⏸️ PAUSANDO procesamiento - Esperando revisión humana')
+      // ⚠️ Marcar para revisión pero CONTINUAR procesamiento
+      console.log('⚠️ Documento marcado para revisión - CONTINUANDO procesamiento automático')
       
-      return new Response(JSON.stringify({
-        success: true,
-        message: 'Documento necesita revisión de clasificación',
-        needsReview: true,
-        classification: {
-          tipo: documentClassification.tipo,
-          confianza: documentClassification.confianza,
-          razonamiento: documentClassification.razonamiento
-        },
-        documentId: documentIdFinal
-      }), {
-        headers: { 
-          'Content-Type': 'application/json',
-          ...corsHeaders
-        }
-      })
+      // NO retornar aquí, continuar con el procesamiento normal
       
     } else {
       console.log('✅ Confianza alta - Continuando procesamiento automático:', {
@@ -4684,7 +4964,8 @@ Extrae SOLO el proveedor (emisor) que NO sea "${restauranteCheck.nombre}":
         total_factura: extractedData.total_factura,
         base_imponible: extractedData.base_imponible,
         cuota_iva: extractedData.cuota_iva,
-        tipo_iva: extractedData.tipo_iva
+        tipo_iva: extractedData.tipo_iva,
+        estado_cotejacion: 'no_aplica' // 🆕 Facturas no necesitan cotejación
       }
     } else if (documentClassification.tipo === 'albaran') {
       // Campos específicos para albaranes
@@ -4695,7 +4976,8 @@ Extrae SOLO el proveedor (emisor) que NO sea "${restauranteCheck.nombre}":
         total_albaran: extractedData.total_factura,   // Mapear total_factura a total_albaran
         base_imponible: extractedData.base_imponible,
         cuota_iva: extractedData.cuota_iva,
-        tipo_iva: extractedData.tipo_iva
+        tipo_iva: extractedData.tipo_iva,
+        estado_cotejacion: 'pendiente' // 🆕 Albaranes pendientes de cotejación
       }
     } else {
       // Fallback: usar campos de factura por defecto
@@ -4706,7 +4988,8 @@ Extrae SOLO el proveedor (emisor) que NO sea "${restauranteCheck.nombre}":
         total_factura: extractedData.total_factura,
         base_imponible: extractedData.base_imponible,
         cuota_iva: extractedData.cuota_iva,
-        tipo_iva: extractedData.tipo_iva
+        tipo_iva: extractedData.tipo_iva,
+        estado_cotejacion: 'no_aplica' // 🆕 Por defecto no necesita cotejación
       }
     }
     
@@ -4866,10 +5149,29 @@ Extrae SOLO el proveedor (emisor) que NO sea "${restauranteCheck.nombre}":
 
     // 11. Actualizar estado Y URL completa de Storage
     console.log('🔄 Actualizando estado del documento y URL de Storage...')
+    
+    // 🆕 NUEVA LÓGICA: Usar solo estados permitidos en `documentos.estado`
+    // Mantener `estado = 'processed'` y controlar la cotejación con `estado_cotejacion`
+    let estadoFinal = 'processed'
+    let estadoCotejacion = null
+
+    if (documentClassification.tipo === 'albaran') {
+      // No usar un estado no permitido; marcar cotejación como pendiente
+      estadoCotejacion = 'pendiente'
+      console.log('📋 Albarán detectado - Estado=processed, estado_cotejacion=PENDIENTE')
+    } else if (documentClassification.tipo === 'factura') {
+      estadoCotejacion = 'no_aplica'
+      console.log('📄 Factura detectada - Estado=processed, estado_cotejacion=NO_APLICA')
+    } else {
+      estadoCotejacion = 'no_aplica'
+      console.log('❓ Tipo incierto - Estado=processed, estado_cotejacion=NO_APLICA')
+    }
+    
     const { data: updateResult, error: updateError } = await supabaseClient
       .from('documentos')
       .update({ 
-        estado: 'processed',
+        estado: estadoFinal,
+        estado_cotejacion: estadoCotejacion, // 🆕 Nuevo campo
         url_storage: storageUrl // Guardar URL completa en lugar del path relativo
       })
       .eq('id', documentIdFinal)
@@ -4946,10 +5248,75 @@ Extrae SOLO el proveedor (emisor) que NO sea "${restauranteCheck.nombre}":
       console.log('📱 No se envía notificación - No es llamada de WhatsApp')
     }
 
+    // 🚀 === COTEJO AUTOMÁTICO POST-PROCESAMIENTO ===
+    let resultadoCotejo: any = null
+    try {
+      console.log('🤖 === INICIANDO COTEJO AUTOMÁTICO ===')
+      console.log(`📄 Documento procesado: ${documentIdFinal}`)
+      console.log(`📋 Tipo documento: ${documentClassification?.tipo}`)
+      
+      if (documentClassification?.tipo && ['factura', 'albaran'].includes(documentClassification.tipo)) {
+        console.log('✅ Documento válido para cotejo automático')
+        
+        // Ejecutar cotejo inteligente automático
+        resultadoCotejo = await ejecutarCotejoAutomatico(documentIdFinal)
+        
+        if (resultadoCotejo.success) {
+          console.log('🎉 COTEJO AUTOMÁTICO COMPLETADO')
+          console.log(`📊 Resultados:`)
+          console.log(`   🟢 Enlaces automáticos: ${resultadoCotejo.enlaces_automaticos}`)
+          console.log(`   🟡 Sugerencias: ${resultadoCotejo.sugerencias}`)
+          console.log(`   🔴 Requiere revisión: ${resultadoCotejo.requiere_revision}`)
+          console.log(`   📋 Tipo notificación: ${resultadoCotejo.notificacion.tipo}`)
+          
+          // 🆕 NUEVA LÓGICA: Si es un albarán y se encontraron facturas relacionadas
+          if (documentClassification.tipo === 'albaran' && resultadoCotejo.enlaces_automaticos > 0) {
+            console.log('🔄 Albarán enlazado automáticamente - Actualizando estado...')
+            
+            // Actualizar estado del albarán de "pendiente" a "enlazado"
+            const { error: updateError } = await supabase
+              .from('datos_extraidos_albaranes')
+              .update({ 
+                estado_cotejacion: 'enlazado',
+                fecha_ultima_modificacion: new Date().toISOString()
+              })
+              .eq('documento_id', documentIdFinal)
+            
+            if (updateError) {
+              console.error('❌ Error actualizando estado del albarán:', updateError)
+            } else {
+              console.log('✅ Estado del albarán actualizado a "enlazado"')
+            }
+          }
+        } else {
+          console.error('❌ Error en cotejo automático:', resultadoCotejo.error)
+        }
+      } else {
+        console.log('ℹ️ Documento no válido para cotejo automático')
+      }
+    } catch (cotejoError) {
+      console.error('❌ Error ejecutando cotejo automático:', cotejoError)
+      resultadoCotejo = {
+        success: false,
+        error: cotejoError.message,
+        enlaces_automaticos: 0,
+        sugerencias: 0,
+        requiere_revision: 0
+      }
+    }
+
     return new Response(JSON.stringify({ 
       success: true, 
       documentIdFinal,
       message: 'Procesado exitosamente',
+      needsReview: documentClassification?.confianza < 0.8, // 🆕 Indicar si necesita revisión
+      estadoCotejacion: estadoCotejacion, // 🆕 Estado de cotejación
+      resultadoCotejo: resultadoCotejo, // 🆕 Resultado del cotejo automático
+      classification: documentClassification ? {
+        tipo: documentClassification.tipo,
+        confianza: documentClassification.confianza,
+        razonamiento: documentClassification.razonamiento
+      } : null,
       userContext: {
         userId: userContext.user.id,
         userEmail: userContext.user.email,

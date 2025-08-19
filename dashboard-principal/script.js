@@ -162,6 +162,19 @@ document.addEventListener('DOMContentLoaded', () => {
                     e.currentTarget.classList.add('active');
                 });
             });
+
+            // --- LOGOUT FUNCTION ---
+            window.handleLogout = function() {
+                // Limpiar localStorage si hay datos de sesión
+                localStorage.removeItem('user_info');
+                localStorage.removeItem('restaurante_actual');
+                
+                // Mostrar mensaje de confirmación
+                if (confirm('¿Estás seguro de que quieres cerrar sesión?')) {
+                    // Redirigir a la página de login
+                    window.location.href = '../login/index.html';
+                }
+            };
         });
 
 

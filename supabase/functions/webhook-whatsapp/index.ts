@@ -14,7 +14,7 @@ Deno.serve(async (req) => {
 
   // ⚡ TIMEOUT RÁPIDO para evitar reintentos de WhatsApp
   const startTime = Date.now()
-  const MAX_EXECUTION_TIME = 4000 // 4 segundos máximo
+  const MAX_EXECUTION_TIME = 25000 // 25 segundos máximo (aumentado de 4s)
 
   try {
     console.log("=== WEBHOOK WHATSAPP INICIADO ===")
@@ -279,18 +279,22 @@ Te avisaremos cuando termine de procesar.`
     if (Date.now() - startTime > MAX_EXECUTION_TIME) {
       console.log('⏰ TIMEOUT después de descarga - Respondiendo rápido')
       await enviarMensajeWhatsApp(telefono, 
-        `⏰ Tu factura se descargó correctamente y está siendo procesada.
+        `⏰ Tu factura se descargó correctamente y está en cola de procesamiento.
         
 🏢 ${restaurante.nombre}
 📄 ${archivo.name}
 📱 MediaId: ${mediaId}
 
-Te avisaremos cuando termine el procesamiento.`
+El procesamiento se iniciará automáticamente. Te avisaremos cuando termine.`
       )
+      
+      // 🆕 NUEVO: Continuar con el proceso aunque haya timeout
+      console.log('🔄 Continuando con el proceso a pesar del timeout...')
       
       return new Response(JSON.stringify({
         success: true,
         message: 'Archivo descargado - Timeout para evitar reintentos',
+        documentId: null,
         action: 'TIMEOUT_PREVENTION_AFTER_DOWNLOAD'
       }), {
         status: 200,
@@ -349,6 +353,30 @@ Te avisaremos cuando termine el procesamiento.`
 
 El procesamiento se iniciará automáticamente. Te avisaremos cuando termine.`
       )
+      
+      // 🆕 NUEVO: Iniciar process-invoice en background aunque haya timeout
+      console.log('🔄 Iniciando process-invoice en background debido a timeout...')
+      try {
+        const procesarResponse = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/process-invoice`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`
+          },
+          body: JSON.stringify({
+            documentId: documento.id,
+            telefono: telefono
+          })
+        })
+        
+        if (procesarResponse.ok) {
+          console.log('✅ Process-invoice iniciado en background exitosamente')
+        } else {
+          console.error('❌ Error iniciando process-invoice en background:', procesarResponse.status)
+        }
+      } catch (error) {
+        console.error('❌ Error iniciando process-invoice en background:', error)
+      }
       
       return new Response(JSON.stringify({
         success: true,

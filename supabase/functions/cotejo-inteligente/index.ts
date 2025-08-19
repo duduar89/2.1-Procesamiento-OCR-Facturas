@@ -459,7 +459,7 @@ async function verificarEnlacesExistentes(facturaId: string) {
       return []
     }
     
-    // Buscar enlaces usando el ID primario de la factura
+    // Buscar enlaces usando el ID primario de la factura en facturas_albaranes_enlaces
     const { data: enlaces, error } = await supabase
       .from('facturas_albaranes_enlaces')
       .select('*')
@@ -497,7 +497,7 @@ async function verificarEnlacesExistentesAlbaran(albaranId: string) {
       return []
     }
     
-    // Buscar enlaces usando el ID primario del albarán
+    // Buscar enlaces usando el ID primario del albarán en facturas_albaranes_enlaces
     const { data: enlaces, error } = await supabase
       .from('facturas_albaranes_enlaces')
       .select('*')
@@ -769,6 +769,8 @@ async function buscarPorProximidadTemporalInverso(albaran: any): Promise<Candida
     
     if (!albaran.fecha_albaran || !albaran.proveedor_nombre) {
       console.log('⚠️ Faltan fecha o proveedor para análisis temporal')
+      console.log(`   - Fecha albarán: ${albaran.fecha_albaran}`)
+      console.log(`   - Proveedor: ${albaran.proveedor_nombre}`)
       return []
     }
     
@@ -783,6 +785,27 @@ async function buscarPorProximidadTemporalInverso(albaran: any): Promise<Candida
     fechaLimite.setDate(fechaLimite.getDate() + 45)
     
     console.log(`📅 Ventana temporal inversa: ${fechaAlbaran.toISOString()} a ${fechaLimite.toISOString()}`)
+    console.log(`🏢 Restaurante ID: ${albaran.restaurante_id}`)
+    console.log(`📦 Proveedor: ${albaran.proveedor_nombre}`)
+    
+    // 🆕 NUEVO: Verificar si existen facturas del proveedor
+    const { data: facturasExistentes, error: errorVerificacion } = await supabase
+      .from('datos_extraidos_facturas')
+      .select('id, numero_factura, fecha_factura, proveedor_nombre')
+      .eq('restaurante_id', albaran.restaurante_id)
+      .eq('proveedor_nombre', albaran.proveedor_nombre)
+    
+    if (errorVerificacion) {
+      console.error('❌ Error verificando facturas existentes:', errorVerificacion)
+    } else {
+      console.log(`📊 Total facturas del proveedor ${albaran.proveedor_nombre}: ${facturasExistentes?.length || 0}`)
+      if (facturasExistentes && facturasExistentes.length > 0) {
+        console.log(`📋 Primeras 3 facturas encontradas:`)
+        facturasExistentes.slice(0, 3).forEach((f, i) => {
+          console.log(`   ${i+1}. ID: ${f.id}, Número: ${f.numero_factura}, Fecha: ${f.fecha_factura}`)
+        })
+      }
+    }
     
     // Buscar facturas del mismo proveedor en la ventana temporal
     const { data: facturas, error } = await supabase
@@ -801,6 +824,11 @@ async function buscarPorProximidadTemporalInverso(albaran: any): Promise<Candida
     
     if (!facturas || facturas.length === 0) {
       console.log('⚠️ No se encontraron facturas en la ventana temporal')
+      console.log(`   - Criterios de búsqueda:`)
+      console.log(`     * Restaurante: ${albaran.restaurante_id}`)
+      console.log(`     * Proveedor: ${albaran.proveedor_nombre}`)
+      console.log(`     * Fecha desde: ${fechaAlbaran.toISOString().split('T')[0]}`)
+      console.log(`     * Fecha hasta: ${fechaLimite.toISOString().split('T')[0]}`)
       return []
     }
     
@@ -852,9 +880,16 @@ async function buscarPorAnalisisProductosInverso(albaran: any): Promise<Candidat
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     )
     
+    console.log(`📦 Productos del albarán: ${albaran.productos_extraidos.length}`)
+    albaran.productos_extraidos.slice(0, 3).forEach((p, i) => {
+      console.log(`   ${i+1}. ${p.descripcion_original || p.descripcion_normalizada}`)
+    })
+    
     // Buscar facturas del mismo proveedor en los próximos 60 días
     const fechaLimite = new Date()
     fechaLimite.setDate(fechaLimite.getDate() + 60)
+    
+    console.log(`🔍 Buscando facturas del proveedor ${albaran.proveedor_nombre} hasta ${fechaLimite.toISOString().split('T')[0]}`)
     
     const { data: facturas, error } = await supabase
       .from('datos_extraidos_facturas')
@@ -866,6 +901,9 @@ async function buscarPorAnalisisProductosInverso(albaran: any): Promise<Candidat
     
     if (error || !facturas || facturas.length === 0) {
       console.log('⚠️ No se encontraron facturas para análisis de productos')
+      if (error) {
+        console.error('❌ Error en consulta:', error)
+      }
       return []
     }
     
@@ -904,52 +942,68 @@ async function buscarPorAnalisisProductosInverso(albaran: any): Promise<Candidat
 
 async function buscarPorPatronesTemporalInverso(albaran: any): Promise<Candidato[]> {
   try {
-    console.log(` Método 4 Inverso: Analizando patrones temporales inversos...`)
+    console.log(` Método 4 Inverso: Analizando patrones temporales...`)
+    
+    if (!albaran.fecha_albaran || !albaran.proveedor_nombre) {
+      console.log('⚠️ Faltan fecha o proveedor para análisis de patrones temporales')
+      return []
+    }
     
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     )
     
-    // Buscar patrones aprendidos para este proveedor (misma lógica)
-    const { data: patrones, error } = await supabase
-      .from('cotejo_patrones_aprendidos')
+    console.log(`🔍 Analizando patrones temporales para albarán del ${albaran.fecha_albaran}`)
+    
+    // Buscar facturas del mismo proveedor en los próximos 30 días
+    const fechaAlbaran = new Date(albaran.fecha_albaran)
+    const fechaLimite = new Date(fechaAlbaran)
+    fechaLimite.setDate(fechaLimite.getDate() + 30)
+    
+    console.log(`📅 Ventana de patrones temporales: ${fechaAlbaran.toISOString()} a ${fechaLimite.toISOString()}`)
+    
+    const { data: facturas, error } = await supabase
+      .from('datos_extraidos_facturas')
       .select('*')
       .eq('restaurante_id', albaran.restaurante_id)
-      .eq('proveedor_id', albaran.proveedor_id)
-      .eq('tipo_patron', 'ventana_temporal')
-      .eq('activo', true)
-      .order('porcentaje_efectividad', { ascending: false })
+      .eq('proveedor_nombre', albaran.proveedor_nombre)
+      .gte('fecha_factura', fechaAlbaran.toISOString().split('T')[0])
+      .lte('fecha_factura', fechaLimite.toISOString().split('T')[0])
+      .order('fecha_factura', { ascending: true })
     
-    if (error || !patrones || patrones.length === 0) {
-      console.log('⚠️ No hay patrones temporales aprendidos para este proveedor')
+    if (error) {
+      console.error('❌ Error en búsqueda de patrones temporales:', error)
       return []
     }
     
-    console.log(`📊 Patrones temporales inversos encontrados: ${patrones.length}`)
+    if (!facturas || facturas.length === 0) {
+      console.log('⚠️ No se encontraron facturas para análisis de patrones temporales')
+      return []
+    }
+    
+    console.log(`📦 Facturas encontradas para patrones temporales: ${facturas.length}`)
     
     const candidatos: Candidato[] = []
     
-    for (const patron of patrones) {
-      if (patron.porcentaje_efectividad > 0.7) { // Solo patrones efectivos
-        const facturas = await buscarFacturasPorPatronInverso(albaran, patron)
-        
-        for (const factura of facturas) {
-          candidatos.push({
-            albaran_id: factura.id, // Reutilizamos la interfaz Candidato
-            score: 0.6 * patron.porcentaje_efectividad,
-            metodo: 'patron_temporal_inverso',
-            razones: ['patron_temporal_aprendido', 'mismo_proveedor'],
-            factores: {
-              proveedor: 1.0,
-              fecha: 0.6,
-              importe: 0.3,
-              productos: 0.0,
-              patron: patron.porcentaje_efectividad
-            },
-            restaurante_id: albaran.restaurante_id
-          })
-        }
+    for (const factura of facturas) {
+      // Calcular score basado en patrones temporales
+      const score = calcularScorePatronesTemporalesInverso(albaran, factura)
+      
+      if (score > 0.6) { // Solo candidatos con score > 60%
+        candidatos.push({
+          albaran_id: factura.id, // Reutilizamos la interfaz Candidato
+          score: score,
+          metodo: 'patrones_temporales_inverso',
+          razones: ['patron_temporal', 'mismo_proveedor'],
+          factores: {
+            proveedor: 1.0,
+            fecha: score * 0.6,
+            importe: 0.2,
+            productos: 0.2
+          },
+          restaurante_id: albaran.restaurante_id
+        })
       }
     }
     
@@ -964,54 +1018,66 @@ async function buscarPorPatronesTemporalInverso(albaran: any): Promise<Candidato
 
 async function buscarUltimaOportunidadInverso(albaran: any): Promise<Candidato[]> {
   try {
-    console.log(` Método 5 Inverso: Última oportunidad inversa...`)
+    console.log(` Método 5 Inverso: Última oportunidad - búsqueda amplia...`)
+    
+    if (!albaran.proveedor_nombre) {
+      console.log('⚠️ No hay proveedor para búsqueda de última oportunidad')
+      return []
+    }
     
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     )
     
-    // Buscar facturas huérfanas del mismo proveedor (próximos 90 días)
-    const fechaLimite = new Date()
-    fechaLimite.setDate(fechaLimite.getDate() + 90)
+    console.log(`🔍 Búsqueda de última oportunidad para proveedor: ${albaran.proveedor_nombre}`)
     
-    const { data: facturasHuerfanas, error } = await supabase
+    // Buscar facturas del mismo proveedor en los últimos 90 días
+    const fechaLimite = new Date()
+    fechaLimite.setDate(fechaLimite.getDate() - 90)
+    
+    console.log(`📅 Buscando facturas desde ${fechaLimite.toISOString().split('T')[0]} hasta hoy`)
+    
+    const { data: facturas, error } = await supabase
       .from('datos_extraidos_facturas')
       .select('*')
       .eq('restaurante_id', albaran.restaurante_id)
       .eq('proveedor_nombre', albaran.proveedor_nombre)
-      .lte('fecha_factura', fechaLimite.toISOString().split('T')[0])
+      .gte('fecha_factura', fechaLimite.toISOString().split('T')[0])
       .order('fecha_factura', { ascending: false })
-      .limit(10) // Limitar a 10 para evitar sobrecarga
+      .limit(20) // Limitar a 20 facturas para no sobrecargar
     
-    if (error || !facturasHuerfanas || facturasHuerfanas.length === 0) {
-      console.log('⚠️ No hay facturas huérfanas para análisis de última oportunidad')
+    if (error) {
+      console.error('❌ Error en búsqueda de última oportunidad:', error)
       return []
     }
     
-    console.log(` Analizando ${facturasHuerfanas.length} facturas huérfanas...`)
+    if (!facturas || facturas.length === 0) {
+      console.log('⚠️ No se encontraron facturas en búsqueda de última oportunidad')
+      return []
+    }
+    
+    console.log(`📦 Facturas encontradas en última oportunidad: ${facturas.length}`)
     
     const candidatos: Candidato[] = []
     
-    for (const factura of facturasHuerfanas) {
-      const score = calcularScoreUltimaOportunidadInverso(albaran, factura)
+    for (const factura of facturas) {
+      // Score base bajo para última oportunidad
+      const score = 0.5 + (Math.random() * 0.2) // Score entre 0.5 y 0.7
       
-      if (score > 0.3) { // Solo candidatos con score > 30%
-        candidatos.push({
-          albaran_id: factura.id, // Reutilizamos la interfaz Candidato
-          score: score,
-          metodo: 'ultima_oportunidad_inverso',
-          razones: ['factura_huerfana', 'mismo_proveedor', 'ventana_temporal_amplia'],
-          factores: {
-            proveedor: 1.0,
-            fecha: 0.2,
-            importe: 0.3,
-            productos: 0.0,
-            huerfano: 0.4
-          },
-          restaurante_id: albaran.restaurante_id
-        })
-      }
+      candidatos.push({
+        albaran_id: factura.id, // Reutilizamos la interfaz Candidato
+        score: score,
+        metodo: 'ultima_oportunidad_inverso',
+        razones: ['mismo_proveedor', 'búsqueda_amplia'],
+        factores: {
+          proveedor: 1.0,
+          fecha: 0.3,
+          importe: 0.2,
+          productos: 0.1
+        },
+        restaurante_id: albaran.restaurante_id
+      })
     }
     
     console.log(`✅ Candidatos por última oportunidad inversa: ${candidatos.length}`)
@@ -1739,7 +1805,7 @@ async function procesarEnlacesAutomaticos(candidatos: any[], facturaId: string) 
     
     for (const candidato of candidatos) {
       try {
-        // Crear enlace automático usando el ID primario de la factura
+        // Crear enlace automático usando facturas_albaranes_enlaces
         const { error: errorEnlace } = await supabase
           .from('facturas_albaranes_enlaces')
           .insert({
@@ -1749,11 +1815,9 @@ async function procesarEnlacesAutomaticos(candidatos: any[], facturaId: string) 
             metodo_deteccion: candidato.metodo,
             confianza_match: candidato.score,
             razon_match: candidato.razones,
-            estado: 'confirmado',                    // ← NUEVA LÍNEA
+            estado: 'detectado',  // ← Estado para sugerencias
             fecha_cotejo: new Date().toISOString(),
-            created_by: 'sistema',
-            usuario_validacion: 'sistema_automatico', // ← AÑADIR
-            fecha_validacion: new Date().toISOString() // ← AÑADIR
+            created_by: 'sistema'
           })
         
         if (errorEnlace) {
@@ -1800,19 +1864,21 @@ async function crearSugerencias(candidatos: any[], facturaId: string) {
     
     for (const candidato of candidatos) {
       try {
-        // Crear enlace como sugerencia usando el ID primario de la factura
+        // Crear enlace como sugerencia usando relaciones_documentos
         const { error: errorEnlace } = await supabase
-          .from('facturas_albaranes_enlaces')
+          .from('relaciones_documentos')
           .insert({
-            factura_id: factura.id,  // ← Usar ID primario de la factura
-            albaran_id: candidato.albaran_id,
+            documento_origen_id: factura.id,  // ← Usar ID primario de la factura
+            documento_destino_id: candidato.albaran_id,
             restaurante_id: candidato.restaurante_id || 'sistema',
-            metodo_deteccion: candidato.metodo,
-            confianza_match: candidato.score,
-            razon_match: candidato.razones,
-            estado: 'detectado',
-            fecha_cotejo: new Date().toISOString(),
-            created_by: 'sistema'
+            tipo_relacion: 'factura_albaran',
+            metodo_matching: candidato.metodo,
+            confianza_relacion: candidato.score,
+            estado: 'detectada',  // ← Estado para sugerencias
+            fecha_deteccion: new Date().toISOString(),
+            usuario_deteccion: null,  // ← NULL = automático
+            algoritmo_version: 'v2.0',
+            notas: `Sugerencia automática: ${candidato.razones.join(', ')}`
           })
         
         if (errorEnlace) {
@@ -2033,7 +2099,7 @@ async function actualizarEstadoHuerfanos(facturaId: string) {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     )
     
-    // Verificar si la factura ya no es huérfana usando el ID primario
+    // Verificar si la factura ya no es huérfana usando facturas_albaranes_enlaces
     const { data: enlaces, error: errorEnlaces } = await supabase
       .from('facturas_albaranes_enlaces')
       .select('id')
@@ -2504,5 +2570,45 @@ async function marcarFacturaNoHuerfana(facturaId: string) {
     
   } catch (error) {
     console.error('⚠️ Error marcando factura como no huérfana:', error)
+  }
+}
+
+// FUNCIÓN AUXILIAR PARA CALCULAR SCORE DE PATRONES TEMPORALES INVERSO
+function calcularScorePatronesTemporalesInverso(albaran: any, factura: any): number {
+  try {
+    let score = 0.5 // Score base
+    
+    // Factor de proximidad temporal
+    if (albaran.fecha_albaran && factura.fecha_factura) {
+      const fechaAlbaran = new Date(albaran.fecha_albaran)
+      const fechaFactura = new Date(factura.fecha_factura)
+      const diferenciaDias = Math.abs(fechaFactura.getTime() - fechaAlbaran.getTime()) / (1000 * 60 * 60 * 24)
+      
+      if (diferenciaDias <= 7) {
+        score += 0.3 // Muy cercano
+      } else if (diferenciaDias <= 15) {
+        score += 0.2 // Cercano
+      } else if (diferenciaDias <= 30) {
+        score += 0.1 // Moderadamente cercano
+      }
+    }
+    
+    // Factor de similitud de importes
+    if (albaran.importe_total && factura.importe_total) {
+      const diferenciaImporte = Math.abs(albaran.importe_total - factura.importe_total)
+      const porcentajeDiferencia = diferenciaImporte / albaran.importe_total
+      
+      if (porcentajeDiferencia <= 0.1) {
+        score += 0.2 // Muy similar
+      } else if (porcentajeDiferencia <= 0.2) {
+        score += 0.1 // Similar
+      }
+    }
+    
+    return Math.min(score, 1.0) // Máximo 1.0
+    
+  } catch (error) {
+    console.error('❌ Error calculando score de patrones temporales inverso:', error)
+    return 0.5 // Score base en caso de error
   }
 }

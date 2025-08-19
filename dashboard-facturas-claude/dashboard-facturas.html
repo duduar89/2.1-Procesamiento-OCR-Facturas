@@ -22,6 +22,7 @@
     <link rel="stylesheet" href="../style.css">
     <link rel="stylesheet" href="dashboard-facturas.css">
     <link rel="stylesheet" href="hybrid-pdf-modal.css">
+    <link rel="stylesheet" href="button-styles-override.css">
     
 <style>
 /* 🎨 BRAIN STORMERS COMPLETE STYLE SYSTEM */
@@ -2826,6 +2827,9 @@
                     <a href="../index.html" class="btn secondary">
                         🏠 Sistema Principal
                     </a>
+                    <a href="../dashboard-ventas/complete_sales_dashboard.html" class="btn secondary" id="salesDashboardBtn">
+                        📊 Dashboard Ventas
+                    </a>
                     <button class="btn secondary" id="logoutBtn" onclick="handleLogout()">
                         🚪 Cerrar Sesión
                     </button>
@@ -3112,18 +3116,18 @@
                         <thead>
                             <tr>
                                 <th class="expand-column">📦</th>
-                                <th class="sortable" data-field="estado">Estado</th>
-                                <th class="sortable" data-field="tipo_documento">Tipo</th>
-                                <th class="sortable" data-field="numero_factura">Número</th>
-                                <th class="sortable" data-field="proveedor_nombre">Proveedor</th>
-                                <th class="sortable" data-field="fecha_factura">Fecha</th>
-                                <th class="sortable" data-field="importe_neto">Importe neto</th>
-                                <th class="sortable" data-field="iva">Iva</th>
-                                <th class="sortable" data-field="total_factura">Importe total</th>
-                                <th class="sortable" data-field="confianza_global">Confianza</th>
-                                <th class="sortable" data-field="proveedor_nuevo">Proveedor</th>
-                                <th class="sortable" data-field="albaranes">🔗 Albaranes</th>
-                                <th>Acciones</th>
+                                <th class="sortable estado-column" data-field="estado">Estado</th>
+                                <th class="sortable tipo-column" data-field="tipo_documento">Tipo</th>
+                                <th class="sortable numero-column" data-field="numero_factura">Número</th>
+                                <th class="sortable proveedor-column" data-field="proveedor_nombre">Proveedor</th>
+                                <th class="sortable fecha-column" data-field="fecha_factura">Fecha</th>
+                                <th class="sortable importe-column" data-field="importe_neto">Importe neto</th>
+                                <th class="sortable iva-column" data-field="iva">Iva</th>
+                                <th class="sortable total-column" data-field="total_factura">Importe total</th>
+                                <th class="sortable confianza-column" data-field="confianza_global">Confianza</th>
+                                <th class="sortable cotejacion-column" data-field="estado_cotejacion">📋 Estado Cotejación</th>
+                                <th class="sortable albaranes-column" data-field="albaranes">🔗 Albaranes</th>
+                                <th class="acciones-column">Acciones</th>
                             </tr>
                         </thead>
                         <tbody id="facturasTableBody">
@@ -3165,6 +3169,116 @@
 
         <!-- Modal de Factura Expandible -->
         <div class="modal-overlay" id="facturaModal">
+        
+        <!-- Modal Mejorado para Edición y Enseñanza -->
+        <div class="modal-overlay" id="edicionModal" style="display: none;">
+            <div class="modal-container edicion-modal">
+                <div class="modal-header">
+                    <h2 id="edicionModalTitle">Editar y Enseñar Factura</h2>
+                    <div class="modal-actions">
+                        <button class="btn-close" id="edicionModalCloseBtn">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M18 6L6 18M6 6l12 12"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="modal-body">
+                    <div class="edicion-tabs">
+                        <button class="tab-btn active" data-tab="datos">📝 Datos Básicos</button>
+                        <button class="tab-btn" data-tab="productos">🛒 Productos</button>
+                        <button class="tab-btn" data-tab="cotejacion">🔗 Cotejación</button>
+                        <button class="tab-btn" data-tab="revision">✅ Revisión Final</button>
+                    </div>
+                    
+                    <!-- Tab Datos Básicos -->
+                    <div class="tab-content active" id="tab-datos">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>Número de Factura:</label>
+                                <input type="text" id="edit-numero" class="form-input">
+                            </div>
+                            <div class="form-group">
+                                <label>Proveedor:</label>
+                                <input type="text" id="edit-proveedor" class="form-input">
+                            </div>
+                            <div class="form-group">
+                                <label>CIF:</label>
+                                <input type="text" id="edit-cif" class="form-input">
+                            </div>
+                            <div class="form-group">
+                                <label>Fecha:</label>
+                                <input type="date" id="edit-fecha" class="form-input">
+                            </div>
+                            <div class="form-group">
+                                <label>Base Imponible:</label>
+                                <input type="number" id="edit-base" class="form-input" step="0.01">
+                            </div>
+                            <div class="form-group">
+                                <label>IVA:</label>
+                                <input type="number" id="edit-iva" class="form-input" step="0.01">
+                            </div>
+                            <div class="form-group">
+                                <label>Total:</label>
+                                <input type="number" id="edit-total" class="form-input" step="0.01">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Tab Productos -->
+                    <div class="tab-content" id="tab-productos">
+                        <div class="productos-header">
+                            <h3>Productos de la Factura</h3>
+                            <button class="btn btn-primary" onclick="agregarNuevoProducto()">
+                                ➕ Añadir Producto
+                            </button>
+                        </div>
+                        <div id="productos-grid-edit" class="productos-grid">
+                            <!-- Los productos se cargarán dinámicamente -->
+                        </div>
+                    </div>
+                    
+                    <!-- Tab Cotejación -->
+                    <div class="tab-content" id="tab-cotejacion">
+                        <div class="cotejacion-info">
+                            <h3>🔍 Información de Cotejación</h3>
+                            <p>Confianza actual: <span id="confianza-actual">0%</span></p>
+                            <p>Campos con baja confianza: <span id="campos-baja-confianza">0</span></p>
+                        </div>
+                        <div class="cotejacion-actions">
+                            <button class="btn btn-primary" onclick="ejecutarCotejoDesdeModal()">
+                                🔗 Ejecutar Cotejo Automático
+                            </button>
+                            <button class="btn btn-secondary" onclick="verificarCotejacion()">
+                                🔍 Verificar Cotejación
+                            </button>
+                        </div>
+                        <div id="resultados-cotejo" class="resultados-cotejo">
+                            <!-- Los resultados del cotejo se mostrarán aquí -->
+                        </div>
+                    </div>
+                    
+                    <!-- Tab Revisión Final -->
+                    <div class="tab-content" id="tab-revision">
+                        <div class="revision-summary">
+                            <h3>📋 Resumen de Cambios</h3>
+                            <div id="resumen-cambios">
+                                <!-- El resumen se generará dinámicamente -->
+                            </div>
+                        </div>
+                        <div class="revision-actions">
+                            <button class="btn btn-success" onclick="guardarYEnsenar()">
+                                💾 Guardar y Enseñar
+                            </button>
+                            <button class="btn btn-secondary" onclick="cancelarEdicion()">
+                                ❌ Cancelar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
             <div class="modal-container expanded">
                 <div class="modal-header">
                     <h2 id="modalTitle">Proveedor - Número</h2>
@@ -3458,6 +3572,7 @@
     <script src="../config.js"></script>
     <script src="pdf-overlay-system.js"></script>
     <script src="hybrid-pdf-modal.js"></script>
+    <script src="smart-calculations.js"></script>
     <script src="dashboard-facturas.js"></script>
 
     <!-- ===== CHAT AGENTE IA ===== -->

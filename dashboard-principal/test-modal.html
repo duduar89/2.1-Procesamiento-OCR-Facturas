@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Modal Login</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <style>
+        :root {
+            --brand-turquoise: #00D4AA;
+            --brand-turquoise-light: #1DE9B6;
+            --brand-navy: #0F2027;
+            --brand-dark: #1A2B3D;
+            --brand-gray: #2C3E50;
+        }
+
+        .modal {
+            transition: opacity 0.3s ease;
+        }
+        
+        .modal.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+        
+        .glassmorphism {
+            background: rgba(44, 62, 80, 0.6);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(0, 212, 170, 0.2);
+        }
+        
+        .pro-login-button {
+            position: relative;
+            background: linear-gradient(90deg, var(--brand-turquoise), var(--brand-turquoise-light));
+            transition: all 0.3s ease;
+            box-shadow: 0 0 15px rgba(0, 212, 170, 0.3);
+        }
+        
+        .pro-login-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 0 25px rgba(0, 212, 170, 0.5);
+        }
+        
+        .floating-brain {
+            animation: float 4s ease-in-out infinite;
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white p-8">
+    
+    <h1 class="text-3xl font-bold mb-8">Test Modal Login</h1>
+    
+    <!-- Botón de prueba -->
+    <button id="test-login-btn" class="pro-login-button text-white font-bold py-3 px-8 rounded-full text-lg">
+        <i class="fas fa-sign-in-alt mr-2"></i>
+        Abrir Modal de Login
+    </button>
+
+    <!-- Modal de Login -->
+    <div id="login-modal" class="modal fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 z-50 hidden">
+        <div class="glassmorphism rounded-2xl w-full max-w-md relative overflow-hidden h-96">
+            <button id="close-login-modal" class="absolute top-4 right-4 text-gray-400 hover:text-white text-2xl z-20" aria-label="Cerrar modal">&times;</button>
+            <div id="login-content-wrapper" class="p-8 md:p-12 h-full flex flex-col justify-center items-center">
+                <!-- Step 1: Email -->
+                <div id="login-step-1" class="w-full text-center transition-opacity duration-500">
+                    <i class="fa-solid fa-brain text-5xl floating-brain" style="color: var(--brand-turquoise);"></i>
+                    <h2 class="text-3xl font-bold text-center mt-4 mb-2 text-white">Acceso Restaurante</h2>
+                    <p class="text-center text-gray-400 mb-6">Introduce tu credencial para sincronizar.</p>
+                    <form id="login-form-step1" class="w-full">
+                        <label for="username" class="text-sm mb-2 block text-left" style="color: var(--brand-turquoise-light);">Introduzca su correo electrónico</label>
+                        <input type="email" id="username" name="username" class="w-full text-center bg-gray-900/50 border border-gray-700 text-white rounded-lg p-3 focus:ring-2 focus:ring-[var(--brand-turquoise)] focus:border-[var(--brand-turquoise)] transition" placeholder="tu@email.com" required>
+                        <button type="submit" class="w-full flex items-center justify-center text-white font-bold py-3 px-6 rounded-full pro-login-button mt-6 text-lg">
+                            <span>Autenticar</span>
+                        </button>
+                    </form>
+                </div>
+                <!-- Step 2: Password -->
+                <div id="login-step-2" class="w-full text-center transition-opacity duration-500 opacity-0 hidden">
+                    <i class="fa-solid fa-lock text-5xl floating-brain" style="color: var(--brand-turquoise);"></i>
+                    <h2 class="text-3xl font-bold text-center mt-4 mb-2 text-white">Verificación Segura</h2>
+                    <p id="welcome-user" class="text-center text-gray-400 mb-6"></p>
+                    <form id="login-form-step2" class="w-full">
+                        <label for="password" class="text-sm mb-2 block text-left" style="color: var(--brand-turquoise-light);">Introduzca su contraseña</label>
+                        <input type="password" id="password" name="password" class="w-full text-center bg-gray-900/50 border border-gray-700 text-white rounded-lg p-3 focus:ring-2 focus:ring-[var(--brand-turquoise)] focus:border-[var(--brand-turquoise)] transition" placeholder="••••••••" required>
+                        <button type="submit" class="w-full flex items-center justify-center text-white font-bold py-3 px-6 rounded-full pro-login-button mt-6 text-lg">
+                            <span>Acceder al Sistema</span>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('DOM cargado');
+            
+            // Elementos del modal de login
+            const loginModal = document.getElementById('login-modal');
+            const testLoginBtn = document.getElementById('test-login-btn');
+            const closeLoginModal = document.getElementById('close-login-modal');
+            const loginStep1 = document.getElementById('login-step-1');
+            const loginStep2 = document.getElementById('login-step-2');
+            const loginFormStep1 = document.getElementById('login-form-step1');
+            const welcomeUser = document.getElementById('welcome-user');
+            const usernameInput = document.getElementById('username');
+
+            console.log('Elementos encontrados:', {
+                loginModal: loginModal,
+                testLoginBtn: testLoginBtn,
+                closeLoginModal: closeLoginModal,
+                loginStep1: loginStep1,
+                loginStep2: loginStep2
+            });
+
+            // Función para abrir el modal
+            function openLoginModal() {
+                console.log('Abriendo modal de login...');
+                loginModal.classList.remove('hidden');
+                resetLoginModal();
+            }
+
+            // Abrir modal de login
+            if (testLoginBtn) {
+                testLoginBtn.addEventListener('click', openLoginModal);
+                console.log('Evento agregado al botón de prueba');
+            }
+
+            // Cerrar modal de login
+            if (closeLoginModal) {
+                closeLoginModal.addEventListener('click', () => {
+                    loginModal.classList.add('hidden');
+                });
+            }
+
+            // Cerrar modal al hacer clic fuera
+            if (loginModal) {
+                loginModal.addEventListener('click', (e) => {
+                    if (e.target === loginModal) {
+                        loginModal.classList.add('hidden');
+                    }
+                });
+            }
+
+            // Cerrar modal con ESC
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && loginModal && !loginModal.classList.contains('hidden')) {
+                    loginModal.classList.add('hidden');
+                }
+            });
+
+            // Lógica del formulario de login
+            if (loginFormStep1) {
+                loginFormStep1.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    welcomeUser.textContent = `Sincronizado con ${usernameInput.value || 'Invitado'}`;
+                    loginStep1.classList.add('opacity-0');
+                    
+                    setTimeout(() => {
+                        loginStep1.classList.add('hidden');
+                        loginStep2.classList.remove('hidden');
+                        setTimeout(() => loginStep2.classList.remove('opacity-0'), 50);
+                    }, 500);
+                });
+            }
+
+            function resetLoginModal() {
+                if (loginStep2 && loginStep1) {
+                    loginStep2.classList.add('hidden', 'opacity-0');
+                    loginStep1.classList.remove('hidden', 'opacity-0');
+                }
+                if (usernameInput) {
+                    usernameInput.value = '';
+                }
+            }
+
+            // Lógica del formulario de password
+            const loginFormStep2 = document.getElementById('login-form-step2');
+            if (loginFormStep2) {
+                loginFormStep2.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    const password = document.getElementById('password').value;
+                    
+                    console.log('Login attempt:', { username: usernameInput.value, password });
+                    alert('¡Login exitoso!');
+                    loginModal.classList.add('hidden');
+                });
+            }
+        });
+    </script>
+</body>
+</html>

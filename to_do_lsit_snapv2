@@ -1,0 +1,19 @@
+Lista de Cambios y Tareas
+1. Botones y Navegación Principal
+[ ] Renombrar el botón "snap and estimate" para que se llame "Analiza tu carta".
+
+[ ] Renombrar la sección/botón "analiza tu receta" a "Analiza tu plato".
+
+[ ] Reorganizar el orden de las secciones para que "Analiza tu plato" aparezca en segundo lugar, justo debajo de "Analiza tu carta".
+
+2. Título de la Aplicación y Pestaña del Navegador
+[ ] Establecer el título principal de la página como "Snap And estimate".
+
+[ ] Añadir el siguiente subtítulo debajo del título principal: "Un sistema de IA generativa que te calcula los ingredientes y costos de tus platos".
+
+[ ] Actualizar el texto en la pestaña del navegador (<title>) a: "Snap And estimate | By BrainStormers".
+
+3. Contenido y Descripciones
+[ ] Dentro de la funcionalidad "Analiza tu plato", cambiar el texto del botón de acción a "Analiza tu Plato con IA".
+
+[ ] Asegurarse de que la descripción del sistema sea: "Sistema de detección OCR que analiza ingredientes y estima la cantidad de los platos analizados".

@@ -1,0 +1,1455 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Ventas - Restaurante</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/date-fns/2.29.3/index.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f8fafc;
+            color: #334155;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Header */
+        .header {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            margin-bottom: 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            color: #1e293b;
+            font-size: 28px;
+            font-weight: 700;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        /* Navigation */
+        .nav-tabs {
+            display: flex;
+            gap: 4px;
+            margin-bottom: 24px;
+            background: white;
+            padding: 8px;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .nav-tab {
+            padding: 12px 24px;
+            border: none;
+            background: transparent;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s;
+            color: #64748b;
+        }
+
+        .nav-tab.active {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .nav-tab:hover:not(.active) {
+            background: #f1f5f9;
+            color: #475569;
+        }
+
+        /* Content Sections */
+        .content-section {
+            display: none;
+        }
+
+        .content-section.active {
+            display: block;
+        }
+
+        /* Cards */
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            margin-bottom: 24px;
+        }
+
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 16px;
+        }
+
+        /* Metrics Grid */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+            margin-bottom: 24px;
+        }
+
+        .metric-card {
+            background: white;
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .metric-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #3b82f6, #1d4ed8);
+        }
+
+        .metric-value {
+            font-size: 32px;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 8px;
+        }
+
+        .metric-label {
+            font-size: 14px;
+            color: #64748b;
+            font-weight: 500;
+        }
+
+        .metric-change {
+            font-size: 12px;
+            margin-top: 8px;
+            padding: 4px 8px;
+            border-radius: 20px;
+            font-weight: 500;
+        }
+
+        .metric-change.positive {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .metric-change.negative {
+            background: #fef2f2;
+            color: #dc2626;
+        }
+
+        /* Charts Grid */
+        .charts-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 24px;
+            margin-bottom: 24px;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 400px;
+        }
+
+        /* Tables */
+        .table-container {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            text-align: left;
+            padding: 12px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        th {
+            background: #f8fafc;
+            font-weight: 600;
+            color: #475569;
+            font-size: 14px;
+        }
+
+        td {
+            color: #334155;
+        }
+
+        /* Forms */
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #374151;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.2s;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 14px;
+        }
+
+        .btn-primary {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #2563eb;
+        }
+
+        .btn-secondary {
+            background: #f1f5f9;
+            color: #475569;
+        }
+
+        .btn-secondary:hover {
+            background: #e2e8f0;
+        }
+
+        .btn-success {
+            background: #10b981;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #059669;
+        }
+
+        /* Status indicators */
+        .status {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .status.success {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .status.error {
+            background: #fef2f2;
+            color: #dc2626;
+        }
+
+        .status.warning {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        /* Date Range Picker */
+        .date-range {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        .date-range input {
+            padding: 8px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        /* Loading */
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+            color: #64748b;
+        }
+
+        .spinner {
+            width: 24px;
+            height: 24px;
+            border: 2px solid #e2e8f0;
+            border-top: 2px solid #3b82f6;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 12px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .metrics-grid {
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            }
+            
+            .header {
+                flex-direction: column;
+                gap: 16px;
+                text-align: center;
+            }
+            
+            .date-range {
+                flex-direction: column;
+                align-items: stretch;
+            }
+        }
+
+        /* Configuration specific styles */
+        .config-section {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .integration-card {
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 20px;
+            transition: border-color 0.2s;
+        }
+
+        .integration-card.active {
+            border-color: #3b82f6;
+            background: #f8fafc;
+        }
+
+        .integration-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .integration-name {
+            font-weight: 600;
+            color: #1e293b;
+        }
+
+        .sync-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 16px;
+            padding: 12px;
+            background: #f8fafc;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>Panel de Ventas</h1>
+            <div class="header-actions">
+                <a href="../dashboard-facturas-claude/dashboard-facturas.html" class="btn btn-secondary">
+                    🔙 Volver a Facturas
+                </a>
+                <div id="last-sync" class="text-sm text-gray-600"></div>
+                <button class="btn btn-primary" onclick="syncData()">
+                    <span id="sync-btn-text">Sincronizar</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Navigation -->
+        <div class="nav-tabs">
+            <button class="nav-tab active" onclick="showSection('dashboard')">Dashboard</button>
+            <button class="nav-tab" onclick="showSection('products')">Productos</button>
+            <button class="nav-tab" onclick="showSection('analytics')">Análisis</button>
+            <button class="nav-tab" onclick="showSection('config')">Configuración</button>
+        </div>
+
+        <!-- Dashboard Section -->
+        <div id="dashboard-section" class="content-section active">
+            <!-- Date Range Selector -->
+            <div class="date-range">
+                <label>Período:</label>
+                <input type="date" id="fecha-inicio" class="form-input">
+                <span>hasta</span>
+                <input type="date" id="fecha-fin" class="form-input">
+                <button class="btn btn-secondary" onclick="loadDashboard()">Aplicar</button>
+                <button class="btn btn-secondary" onclick="setQuickRange('today')">Hoy</button>
+                <button class="btn btn-secondary" onclick="setQuickRange('week')">Esta semana</button>
+                <button class="btn btn-secondary" onclick="setQuickRange('month')">Este mes</button>
+            </div>
+
+            <!-- Metrics Grid -->
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-value" id="total-ventas">€0</div>
+                    <div class="metric-label">Ventas Netas</div>
+                    <div class="metric-change" id="change-ventas"></div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value" id="total-ventas-bruto">€0</div>
+                    <div class="metric-label">Ventas Brutas</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value" id="total-impuestos">€0</div>
+                    <div class="metric-label">Total Impuestos</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value" id="total-tickets">0</div>
+                    <div class="metric-label">Tickets</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value" id="ticket-promedio">€0</div>
+                    <div class="metric-label">Ticket Promedio</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value" id="total-comensales">0</div>
+                    <div class="metric-label">Comensales</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value" id="total-descuentos">€0</div>
+                    <div class="metric-label">Descuentos</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value" id="total-propinas">€0</div>
+                    <div class="metric-label">Propinas</div>
+                </div>
+            </div>
+
+            <!-- Charts Grid -->
+            <div class="charts-grid">
+                <div class="card">
+                    <div class="card-title">Ventas por Día</div>
+                    <div class="chart-container">
+                        <canvas id="sales-chart"></canvas>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-title">Métodos de Pago</div>
+                    <div class="chart-container">
+                        <canvas id="payment-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Top Products Table -->
+            <div class="card">
+                <div class="card-title">Productos Más Vendidos</div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Producto</th>
+                                <th>Categoría</th>
+                                <th>Cantidad</th>
+                                <th>Importe</th>
+                                <th>Veces Vendido</th>
+                            </tr>
+                        </thead>
+                        <tbody id="products-table">
+                            <tr>
+                                <td colspan="5" class="loading">
+                                    <div class="spinner"></div>
+                                    Cargando productos...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Products Section -->
+        <div id="products-section" class="content-section">
+            <div class="card">
+                <div class="card-title">Análisis de Productos</div>
+                <div class="chart-container">
+                    <canvas id="products-chart"></canvas>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">Ventas por Categoría</div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Categoría</th>
+                                <th>Importe</th>
+                                <th>Porcentaje</th>
+                                <th>Productos</th>
+                            </tr>
+                        </thead>
+                        <tbody id="categories-table">
+                            <tr>
+                                <td colspan="4" class="loading">
+                                    <div class="spinner"></div>
+                                    Cargando categorías...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Analytics Section -->
+        <div id="analytics-section" class="content-section">
+            <div class="card">
+                <div class="card-title">Análisis Avanzado</div>
+                <p>Próximamente: Comparativas detalladas, tendencias y predicciones.</p>
+            </div>
+        </div>
+
+        <!-- Configuration Section -->
+        <div id="config-section" class="content-section">
+            <div class="config-section">
+                <div class="card">
+                    <div class="card-title">Configuración de Integraciones</div>
+                    
+                    <!-- Numier Integration -->
+                    <div class="integration-card" id="numier-integration">
+                        <div class="integration-header">
+                            <div>
+                                <div class="integration-name">Numier POS</div>
+                                <div class="text-sm text-gray-600">Integración con software Numier</div>
+                            </div>
+                            <div class="status" id="numier-status">Desconectado</div>
+                        </div>
+                        
+                        <div id="numier-config">
+                            <div class="form-group">
+                                <label class="form-label">API Key</label>
+                                <input type="password" id="numier-api-key" class="form-input" placeholder="Introduce tu API Key de Numier">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label">TPV IDs (separados por comas)</label>
+                                <input type="text" id="numier-tpv-ids" class="form-input" placeholder="ej: 9763,9764">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label">URL Base (opcional)</label>
+                                <input type="text" id="numier-base-url" class="form-input" 
+                                       value="https://www.numier.com/api/public/index.php/api" 
+                                       placeholder="URL base de la API">
+                            </div>
+                            
+                            <button class="btn btn-primary" onclick="setupNumier()">
+                                <span id="setup-btn-text">Configurar Integración</span>
+                            </button>
+                        </div>
+                        
+                        <div class="sync-status" id="numier-sync-status" style="display: none;">
+                            <span>✓</span>
+                            <span>Última sincronización: <span id="numier-last-sync">Nunca</span></span>
+                        </div>
+                    </div>
+
+                    <!-- Manual Upload -->
+                    <div class="integration-card">
+                        <div class="integration-header">
+                            <div>
+                                <div class="integration-name">Carga Manual</div>
+                                <div class="text-sm text-gray-600">Subir datos mediante CSV/Excel</div>
+                            </div>
+                            <div class="status success">Disponible</div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Subir archivo de ventas</label>
+                            <input type="file" id="manual-file" class="form-input" accept=".csv,.xlsx">
+                        </div>
+                        
+                        <button class="btn btn-secondary" onclick="uploadManualData()">
+                            Subir Datos
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        // 🔐 SEGURIDAD: Usar Service Role Key para acceso directo a Supabase
+        // ⚠️ IMPORTANTE: Esta key tiene permisos completos, mantener segura
+        const SUPABASE_URL = 'https://yurqgcpgwsgdnxnpyxes.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl1cnFnY3Bnd3NnZG54bnB5eGVzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5MjgzODIsImV4cCI6MjA3MDUwNDM4Mn0.iOPGaCYvtE9EQgkl7ytKAymvKKQzsfwlPUyM5ChDiRg';
+        const SUPABASE_SERVICE_ROLE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl1cnFnY3Bnd3NnZG54bnB5eGVzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkyODM4MiwiZXhwIjoyMDcwNTA0MzgyfQ.cVwMjZ72uZwOrX-tGJFsOhVVDATiMBnWeyYRu0P6bvQ';
+        const RESTAURANT_ID = '2852b1af-38d8-43ec-8872-2b2921d5a231';
+
+        // Global variables
+        let currentSection = 'dashboard';
+        let dashboardData = null;
+        let salesChart = null;
+        let paymentChart = null;
+        let productsChart = null;
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            setDefaultDates();
+            loadDashboard();
+            checkIntegrationStatus();
+        });
+
+        // Navigation
+        function showSection(section) {
+            // Hide all sections
+            document.querySelectorAll('.content-section').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+            
+            // Show selected section
+            document.getElementById(section + '-section').classList.add('active');
+            event.target.classList.add('active');
+            
+            currentSection = section;
+            
+            // Load section data
+            if (section === 'products') {
+                loadProductsData();
+            } else if (section === 'analytics') {
+                loadAnalyticsData();
+            }
+        }
+
+        // Date functions
+        function setDefaultDates() {
+            const today = new Date();
+            const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+            
+            document.getElementById('fecha-inicio').value = weekAgo.toISOString().split('T')[0];
+            document.getElementById('fecha-fin').value = today.toISOString().split('T')[0];
+        }
+
+        function setQuickRange(range) {
+            const today = new Date();
+            let startDate, endDate = today;
+            
+            switch(range) {
+                case 'today':
+                    startDate = today;
+                    break;
+                case 'week':
+                    startDate = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+                    break;
+                case 'month':
+                    startDate = new Date(today.getFullYear(), today.getMonth(), 1);
+                    break;
+            }
+            
+            document.getElementById('fecha-inicio').value = startDate.toISOString().split('T')[0];
+            document.getElementById('fecha-fin').value = endDate.toISOString().split('T')[0];
+            
+            loadDashboard();
+        }
+
+        // Dashboard functions
+        async function loadDashboard() {
+            const fechaInicio = document.getElementById('fecha-inicio').value;
+            const fechaFin = document.getElementById('fecha-fin').value;
+            
+            if (!fechaInicio || !fechaFin) {
+                alert('Por favor selecciona un rango de fechas');
+                return;
+            }
+
+            try {
+                console.log('🚀 Cargando datos reales desde Supabase...');
+                
+                const response = await fetch(`${SUPABASE_URL}/functions/v1/get-dashboard-data`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+                        'Content-Type': 'application/json',
+                        'apikey': SUPABASE_SERVICE_ROLE_KEY
+                    },
+                    body: JSON.stringify({
+                        restaurante_id: RESTAURANT_ID,
+                        fecha_inicio: fechaInicio,
+                        fecha_fin: fechaFin,
+                        comparar_periodo: true
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                dashboardData = await response.json();
+                console.log('🔍 Datos recibidos de Supabase:', dashboardData);
+                console.log('🔍 Estructura de datos:', {
+                    tiene_resumen: !!dashboardData.data?.resumen,
+                    tiene_metodos_pago: !!dashboardData.data?.metodos_pago,
+                    tiene_ventas_por_dia: !!dashboardData.data?.ventas_por_dia,
+                    tiene_productos_top: !!dashboardData.data?.productos_top
+                });
+                updateDashboard();
+                showNotification('✅ Datos cargados correctamente desde Supabase', 'success');
+
+            } catch (error) {
+                console.error('❌ Error cargando datos reales:', error);
+                showNotification(`❌ Error: ${error.message}`, 'error');
+            }
+        }
+
+        // 🔧 FUNCIÓN DE MODO DEMO
+        function loadDemoData() {
+            console.log('🎭 Cargando datos de demostración...');
+            
+            // Datos de prueba realistas
+            const demoData = {
+                resumen: {
+                    total_ventas: 15420.50,
+                    total_tickets: 127,
+                    ticket_promedio: 121.42,
+                    total_comensales: 89,
+                    crecimiento_vs_anterior: 12.5
+                },
+                metodos_pago: {
+                    efectivo: 4120.30,
+                    tarjeta: 9870.20,
+                    otros: 1430.00
+                },
+                ventas_por_dia: [
+                    { fecha: '2025-08-11', ventas: 1850.00 },
+                    { fecha: '2025-08-12', ventas: 2100.00 },
+                    { fecha: '2025-08-13', ventas: 1950.00 },
+                    { fecha: '2025-08-14', ventas: 2300.00 },
+                    { fecha: '2025-08-15', ventas: 2800.00 },
+                    { fecha: '2025-08-16', ventas: 3200.00 },
+                    { fecha: '2025-08-17', ventas: 1220.50 }
+                ],
+                productos_top: [
+                    { nombre: 'Pizza Margherita', categoria: 'Pizzas', cantidad: 45, importe: 2250.00, veces_vendido: 45 },
+                    { nombre: 'Pasta Carbonara', categoria: 'Pastas', cantidad: 38, importe: 1900.00, veces_vendido: 38 },
+                    { nombre: 'Ensalada César', categoria: 'Ensaladas', cantidad: 32, importe: 960.00, veces_vendido: 32 },
+                    { nombre: 'Tiramisú', categoria: 'Postres', cantidad: 28, importe: 840.00, veces_vendido: 28 },
+                    { nombre: 'Vino Tinto', categoria: 'Bebidas', cantidad: 25, importe: 750.00, veces_vendido: 25 }
+                ],
+                categorias_ventas: [
+                    { categoria: 'Pizzas', importe: 4500.00, porcentaje: 29.2, productos_count: 8 },
+                    { categoria: 'Pastas', importe: 3800.00, porcentaje: 24.6, productos_count: 6 },
+                    { categoria: 'Carnes', importe: 3200.00, porcentaje: 20.8, productos_count: 5 },
+                    { categoria: 'Pescados', importe: 2100.00, porcentaje: 13.6, productos_count: 4 },
+                    { categoria: 'Postres', importe: 1200.00, porcentaje: 7.8, productos_count: 3 },
+                    { categoria: 'Bebidas', importe: 620.50, porcentaje: 4.0, productos_count: 8 }
+                ]
+            };
+            
+            dashboardData = demoData;
+            updateDashboard();
+            
+            // Mostrar notificación de modo demo
+            showNotification('🎭 Modo demostración activado - Datos de prueba', 'info');
+        }
+
+        // 🔔 FUNCIÓN DE NOTIFICACIONES SIMPLE
+        function showNotification(message, type = 'info') {
+            // Crear notificación
+            const notification = document.createElement('div');
+            notification.className = `notification notification-${type}`;
+            notification.innerHTML = `
+                <div class="notification-content">
+                    <span class="notification-message">${message}</span>
+                    <button class="notification-close" onclick="this.parentElement.parentElement.remove()">×</button>
+                </div>
+            `;
+            
+            // Estilos de notificación
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: ${type === 'error' ? '#ef4444' : type === 'success' ? '#10b981' : '#3b82f6'};
+                color: white;
+                padding: 16px 20px;
+                border-radius: 8px;
+                box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+                z-index: 10000;
+                max-width: 400px;
+                animation: slideIn 0.3s ease-out;
+            `;
+            
+            // Agregar estilos de animación
+            const style = document.createElement('style');
+            style.textContent = `
+                @keyframes slideIn {
+                    from { transform: translateX(100%); opacity: 0; }
+                    to { transform: translateX(0); opacity: 1; }
+                }
+                .notification-content {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                }
+                .notification-close {
+                    background: none;
+                    border: none;
+                    color: white;
+                    font-size: 20px;
+                    cursor: pointer;
+                    margin-left: 15px;
+                }
+            `;
+            document.head.appendChild(style);
+            
+            // Mostrar notificación
+            document.body.appendChild(notification);
+            
+            // Auto-ocultar después de 5 segundos
+            setTimeout(() => {
+                if (notification.parentElement) {
+                    notification.remove();
+                }
+            }, 5000);
+        }
+
+        function updateDashboard() {
+            if (!dashboardData) {
+                console.warn('⚠️ No hay datos del dashboard disponibles');
+                return;
+            }
+
+            console.log('🔍 Actualizando dashboard con datos:', dashboardData);
+            console.log('🔍 Estructura esperada vs recibida:', {
+                esperado: ['resumen', 'metodos_pago', 'ventas_por_dia', 'productos_top'],
+                recibido: Object.keys(dashboardData),
+                tiene_data: !!dashboardData.data
+            });
+
+            try {
+                // Intentar acceder a los datos en la estructura correcta
+                const data = dashboardData.data || dashboardData;
+                const { resumen, metodos_pago, ventas_por_dia, productos_top } = data;
+
+            // Update metrics
+                if (resumen) {
+                    document.getElementById('total-ventas').textContent = `€${resumen.total_ventas?.toLocaleString() || '0'}`;
+                    document.getElementById('total-tickets').textContent = (resumen.total_tickets || 0).toLocaleString();
+                    document.getElementById('ticket-promedio').textContent = `€${(resumen.ticket_promedio || 0).toFixed(2)}`;
+                    document.getElementById('total-comensales').textContent = (resumen.total_comensales || 0).toLocaleString();
+                    // Nuevas métricas
+                    const bruto = (resumen.total_ventas_bruto || 0);
+                    const impuestos = (resumen.total_impuestos || 0);
+                    const descuentos = (resumen.total_descuentos || 0);
+                    const propinas = (resumen.total_propinas || 0);
+                    document.getElementById('total-ventas-bruto').textContent = `€${bruto.toLocaleString()}`;
+                    document.getElementById('total-impuestos').textContent = `€${impuestos.toLocaleString()}`;
+                    document.getElementById('total-descuentos').textContent = `€${descuentos.toLocaleString()}`;
+                    document.getElementById('total-propinas').textContent = `€${propinas.toLocaleString()}`;
+
+            // Update change indicators
+            if (resumen.crecimiento_vs_anterior !== undefined) {
+                const changeElement = document.getElementById('change-ventas');
+                const change = resumen.crecimiento_vs_anterior;
+                changeElement.textContent = `${change > 0 ? '+' : ''}${change.toFixed(1)}% vs período anterior`;
+                changeElement.className = `metric-change ${change >= 0 ? 'positive' : 'negative'}`;
+                    }
+            }
+
+            // Update last sync
+            if (data && data.ultimo_sync) {
+                document.getElementById('last-sync').textContent = 
+                    `Última sync: ${new Date(data.ultimo_sync).toLocaleString()}`;
+            }
+
+            // Update charts
+                if (ventas_por_dia && ventas_por_dia.length > 0) {
+            updateSalesChart(ventas_por_dia);
+                }
+                
+                if (metodos_pago) {
+            updatePaymentChart(metodos_pago);
+                }
+
+            // Update products table
+                console.log('🔍 Productos recibidos:', productos_top);
+                console.log('🔍 Tipo de productos_top:', typeof productos_top);
+                console.log('🔍 Es array?', Array.isArray(productos_top));
+                console.log('🔍 Longitud:', productos_top?.length);
+                console.log('🔍 Estructura completa de productos_top:', JSON.stringify(productos_top, null, 2));
+                
+                if (productos_top && productos_top.length > 0) {
+                    console.log('✅ Actualizando tabla de productos con', productos_top.length, 'productos');
+                    
+                    // Procesar productos para la tabla
+                    const productosProcesados = productos_top.map(producto => {
+                        console.log('🔍 Procesando producto:', producto);
+                        return {
+                            nombre: producto.nombre,
+                            categoria: producto.categoria_nombre || producto.categoria,
+                            cantidad: producto.cantidad || 0,
+                            importe: producto.importe || 0,
+                            veces_vendido: producto.veces_vendido || 0
+                        };
+                    });
+                    
+                    console.log('🔍 Productos procesados:', productosProcesados);
+                    updateProductsTable(productosProcesados);
+                    
+                    // ACTUALIZAR TAMBIÉN LA PESTAÑA DE PRODUCTOS
+                    updateProductsChart(productosProcesados);
+                    updateCategoriesTable(productosProcesados);
+                } else {
+                    console.warn('⚠️ No hay productos para mostrar:', productos_top);
+                    
+                    // Debug adicional - ver qué hay en dashboardData
+                    console.log('🔍 dashboardData completo:', dashboardData);
+                    console.log('🔍 dashboardData.data:', dashboardData.data);
+                    console.log('🔍 Claves disponibles en dashboardData:', Object.keys(dashboardData));
+                    if (dashboardData.data) {
+                        console.log('🔍 Claves disponibles en dashboardData.data:', Object.keys(dashboardData.data));
+                    }
+                }
+
+                console.log('✅ Dashboard actualizado correctamente');
+
+            } catch (error) {
+                console.error('❌ Error actualizando dashboard:', error);
+                showNotification('Error actualizando dashboard: ' + error.message, 'error');
+            }
+        }
+
+        function updateSalesChart(ventasPorDia) {
+            const ctx = document.getElementById('sales-chart').getContext('2d');
+            
+            if (salesChart) {
+                salesChart.destroy();
+            }
+
+            salesChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ventasPorDia.map(d => new Date(d.fecha).toLocaleDateString()),
+                    datasets: [{
+                        label: 'Ventas',
+                        data: ventasPorDia.map(d => d.ventas),
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return '€' + value.toLocaleString();
+                                }
+                            }
+                        }
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return 'Ventas: €' + context.raw.toLocaleString();
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function updatePaymentChart(metodosPago) {
+            const ctx = document.getElementById('payment-chart').getContext('2d');
+            
+            if (paymentChart) {
+                paymentChart.destroy();
+            }
+
+            paymentChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Efectivo', 'Tarjeta', 'Otros'],
+                    datasets: [{
+                        data: [metodosPago.efectivo, metodosPago.tarjeta, metodosPago.otros],
+                        backgroundColor: ['#10b981', '#3b82f6', '#f59e0b'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const value = context.raw;
+                                    const percentage = context.dataset.data
+                                        .reduce((a, b) => a + b, 0) > 0 
+                                        ? (value / context.dataset.data.reduce((a, b) => a + b, 0) * 100).toFixed(1)
+                                        : 0;
+                                    return `${context.label}: €${value.toLocaleString()} (${percentage}%)`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateProductsTable(productosTop) {
+            console.log('🔍 updateProductsTable llamada con:', productosTop);
+            console.log('🔍 Tipo de productosTop:', typeof productosTop);
+            console.log('🔍 Es array?', Array.isArray(productosTop));
+            console.log('🔍 Longitud:', productosTop?.length);
+            
+            const tbody = document.getElementById('products-table');
+            console.log('🔍 Elemento tbody encontrado:', tbody);
+            console.log('🔍 HTML del tbody antes de actualizar:', tbody.innerHTML);
+            
+            if (!productosTop || productosTop.length === 0) {
+                console.warn('⚠️ No hay productos para mostrar en la tabla');
+                tbody.innerHTML = '<tr><td colspan="5">No hay datos de productos disponibles</td></tr>';
+                return;
+            }
+
+            // Ordenar productos por importe descendente
+            const productosOrdenados = productosTop.sort((a, b) => (b.importe || 0) - (a.importe || 0));
+            console.log('🔍 Productos ordenados:', productosOrdenados);
+
+            const htmlGenerado = productosOrdenados.map(producto => {
+                console.log('🔍 Generando fila para producto:', producto);
+                const fila = `<tr style="background: white; border: 1px solid #ddd;">
+                    <td style="padding: 10px; border: 1px solid #ddd;">${producto.nombre || 'Sin nombre'}</td>
+                    <td style="padding: 10px; border: 1px solid #ddd;">${producto.categoria || 'Sin categoría'}</td>
+                    <td style="padding: 10px; border: 1px solid #ddd;">${producto.cantidad || 0}</td>
+                    <td style="padding: 10px; border: 1px solid #ddd;">€${(producto.importe || 0).toFixed(2)}</td>
+                    <td style="padding: 10px; border: 1px solid #ddd;">${producto.veces_vendido || 0}</td>
+                </tr>`;
+                console.log('🔍 Fila generada:', fila);
+                return fila;
+            }).join('');
+            
+            console.log('🔍 HTML generado:', htmlGenerado);
+            tbody.innerHTML = htmlGenerado;
+            console.log('🔍 HTML del tbody después de actualizar:', tbody.innerHTML);
+
+            // FORZAR VISIBILIDAD - TEMPORAL
+            const table = tbody.closest('table');
+            if (table) {
+                table.style.border = '2px solid red';
+                table.style.background = 'yellow';
+                console.log('🔍 Tabla encontrada y estilizada:', table);
+            }
+
+            console.log('✅ Tabla de productos actualizada con', productosOrdenados.length, 'productos');
+        }
+
+        // NUEVA FUNCIÓN: Actualizar gráfico de productos
+        function updateProductsChart(productosTop) {
+            console.log('🔍 updateProductsChart llamada con:', productosTop);
+            
+            const ctx = document.getElementById('products-chart');
+            if (!ctx) {
+                console.warn('⚠️ No se encontró el canvas products-chart');
+                return;
+            }
+
+            // Destruir gráfico anterior si existe
+            if (window.productsChart) {
+                window.productsChart.destroy();
+            }
+
+            // Preparar datos para el gráfico
+            const categorias = {};
+            productosTop.forEach(producto => {
+                const categoria = producto.categoria || 'Sin categoría';
+                if (!categorias[categoria]) {
+                    categorias[categoria] = { total: 0, count: 0 };
+                }
+                categorias[categoria].total += producto.importe || 0;
+                categorias[categoria].count += 1;
+            });
+
+            const labels = Object.keys(categorias);
+            const data = labels.map(cat => categorias[cat].total);
+
+            // Crear gráfico de barras
+            window.productsChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Importe Total por Categoría',
+                        data: data,
+                        backgroundColor: '#3b82f6',
+                        borderColor: '#2563eb',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return '€' + value.toLocaleString();
+                                }
+                            }
+                        }
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return 'Total: €' + context.raw.toLocaleString();
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            console.log('✅ Gráfico de productos actualizado');
+        }
+
+        // NUEVA FUNCIÓN: Actualizar tabla de categorías
+        function updateCategoriesTable(productosTop) {
+            console.log('🔍 updateCategoriesTable llamada con:', productosTop);
+            
+            const tbody = document.getElementById('categories-table');
+            if (!tbody) {
+                console.warn('⚠️ No se encontró el tbody categories-table');
+                return;
+            }
+
+            // Agrupar productos por categoría
+            const categorias = {};
+            productosTop.forEach(producto => {
+                const categoria = producto.categoria || 'Sin categoría';
+                if (!categorias[categoria]) {
+                    categorias[categoria] = { total: 0, count: 0 };
+                }
+                categorias[categoria].total += producto.importe || 0;
+                categorias[categoria].count += 1;
+            });
+
+            // Calcular total general
+            const totalGeneral = Object.values(categorias).reduce((sum, cat) => sum + cat.total, 0);
+
+            // Generar filas de categorías
+            const htmlGenerado = Object.entries(categorias)
+                .sort(([,a], [,b]) => b.total - a.total) // Ordenar por importe descendente
+                .map(([categoria, datos]) => {
+                    const porcentaje = totalGeneral > 0 ? ((datos.total / totalGeneral) * 100).toFixed(1) : 0;
+                    return `<tr style="background: white; border: 1px solid #ddd;">
+                        <td style="padding: 10px; border: 1px solid #ddd;">${categoria}</td>
+                        <td style="padding: 10px; border: 1px solid #ddd;">€${datos.total.toFixed(2)}</td>
+                        <td style="padding: 10px; border: 1px solid #ddd;">${porcentaje}%</td>
+                        <td style="padding: 10px; border: 1px solid #ddd;">${datos.count}</td>
+                    </tr>`;
+                }).join('');
+
+            tbody.innerHTML = htmlGenerado;
+            console.log('✅ Tabla de categorías actualizada con', Object.keys(categorias).length, 'categorías');
+        }
+
+        // Configuration functions
+        async function checkIntegrationStatus() {
+            // Simulated - replace with actual API call
+            setTimeout(() => {
+                document.getElementById('numier-status').textContent = 'Configurado';
+                document.getElementById('numier-status').className = 'status success';
+                document.getElementById('numier-sync-status').style.display = 'flex';
+            }, 1000);
+        }
+
+        async function setupNumier() {
+            const apiKey = document.getElementById('numier-api-key').value;
+            const tpvIds = document.getElementById('numier-tpv-ids').value.split(',').map(id => id.trim());
+            const baseUrl = document.getElementById('numier-base-url').value;
+
+            if (!apiKey || !tpvIds.length) {
+                alert('Por favor completa todos los campos requeridos');
+                return;
+            }
+
+            const setupBtn = document.getElementById('setup-btn-text');
+            setupBtn.textContent = 'Configurando...';
+
+            try {
+                const response = await fetch(`${SUPABASE_URL}/functions/v1/setup-numier-integration`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`, // ← USAR SERVICE ROLE
+                        'Content-Type': 'application/json',
+                        'apikey': SUPABASE_SERVICE_ROLE_KEY // ← CAMBIAR TAMBIÉN ESTO
+                    },
+                    body: JSON.stringify({
+                        restaurante_id: RESTAURANT_ID,
+                        api_key: apiKey,
+                        tpv_ids: tpvIds,
+                        base_url: baseUrl,
+                        test_connection: true
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    alert('Integración Numier configurada correctamente');
+                    document.getElementById('numier-status').textContent = 'Configurado';
+                    document.getElementById('numier-status').className = 'status success';
+                    document.getElementById('numier-integration').classList.add('active');
+                    document.getElementById('numier-sync-status').style.display = 'flex';
+                    
+                    // Clear sensitive data
+                    document.getElementById('numier-api-key').value = '';
+                    
+                    // Load dashboard with new data
+                    loadDashboard();
+                } else {
+                    throw new Error(result.error || 'Error desconocido');
+                }
+
+            } catch (error) {
+                console.error('Error:', error);
+                alert(`Error configurando Numier: ${error.message}`);
+            } finally {
+                setupBtn.textContent = 'Configurar Integración';
+            }
+        }
+
+        async function syncData() {
+            const syncBtn = document.getElementById('sync-btn-text');
+            syncBtn.textContent = 'Sincronizando...';
+
+            try {
+                const fechaInicio = document.getElementById('fecha-inicio').value;
+                const fechaFin = document.getElementById('fecha-fin').value;
+
+                const response = await fetch(`${SUPABASE_URL}/functions/v1/sync-numier-data`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`, // ← USAR SERVICE ROLE
+                        'Content-Type': 'application/json',
+                        'apikey': SUPABASE_SERVICE_ROLE_KEY // ← CAMBIAR TAMBIÉN ESTO
+                    },
+                    body: JSON.stringify({
+                        restaurante_id: RESTAURANT_ID,
+                        fecha_inicio: fechaInicio,
+                        fecha_fin: fechaFin,
+                        endpoints: ['sales', 'products']
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    alert(`Sincronización completada: ${result.message}`);
+                    
+                    // Update last sync time
+                    document.getElementById('last-sync').textContent = 
+                        `Última sync: ${new Date().toLocaleString()}`;
+                    
+                    // Reload dashboard
+                    loadDashboard();
+                } else {
+                    throw new Error(result.error || 'Error desconocido');
+                }
+
+            } catch (error) {
+                console.error('Error:', error);
+                alert(`Error sincronizando datos: ${error.message}`);
+            } finally {
+                syncBtn.textContent = 'Sincronizar';
+            }
+        }
+
+        async function uploadManualData() {
+            const fileInput = document.getElementById('manual-file');
+            const file = fileInput.files[0];
+
+            if (!file) {
+                alert('Por favor selecciona un archivo');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('restaurante_id', RESTAURANT_ID);
+            formData.append('formato', file.name.endsWith('.csv') ? 'csv' : 'excel');
+
+            try {
+                const response = await fetch(`${SUPABASE_URL}/functions/v1/upload-manual-data`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`, // ← USAR SERVICE ROLE
+                        'apikey': SUPABASE_SERVICE_ROLE_KEY // ← CAMBIAR TAMBIÉN ESTO
+                    },
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    alert(`Archivo cargado correctamente: ${result.procesados} registros procesados`);
+                    fileInput.value = '';
+                    loadDashboard();
+                } else {
+                    throw new Error(result.error || 'Error desconocido');
+                }
+
+            } catch (error) {
+                console.error('Error:', error);
+                alert(`Error cargando archivo: ${error.message}`);
+            }
+        }
+
+        // Products section
+        async function loadProductsData() {
+            if (!dashboardData) return;
+
+            // ELIMINADO - FUNCIONES DUPLICADAS
+        }
+
+        // FUNCIÓN ELIMINADA - DUPLICADA CON LA QUE CREAMOS ARRIBA
+
+        // FUNCIÓN ELIMINADA - DUPLICADA CON LA QUE CREAMOS ARRIBA
+
+        // Analytics section
+        function loadAnalyticsData() {
+            // Placeholder for advanced analytics
+            console.log('Loading analytics data...');
+        }
+
+        // Función para actualizar información del usuario en el header
+        function updateUserInfo(authData) {
+            if (authData && authData.user_nombre) {
+                const headerTitle = document.querySelector('.header h1');
+                if (headerTitle) {
+                    headerTitle.innerHTML = `Panel de Ventas - ${authData.restaurante_nombre}`;
+                }
+                
+                // Agregar información del usuario
+                const userInfo = document.createElement('div');
+                userInfo.className = 'user-info';
+                userInfo.innerHTML = `
+                    <span class="user-name">👤 ${authData.user_nombre}</span>
+                    <span class="restaurant-name">🏢 ${authData.restaurante_nombre}</span>
+                `;
+                
+                const headerActions = document.querySelector('.header-actions');
+                if (headerActions) {
+                    headerActions.insertBefore(userInfo, headerActions.firstChild);
+                }
+            }
+        }
+
+        // Utility functions
+        function formatCurrency(amount) {
+            return new Intl.NumberFormat('es-ES', {
+                style: 'currency',
+                currency: 'EUR'
+            }).format(amount);
+        }
+
+        function formatDate(dateString) {
+            return new Date(dateString).toLocaleDateString('es-ES');
+        }
+
+        function formatPercentage(value) {
+            return `${value.toFixed(1)}%`;
+        }
+
+        // Error handling
+        window.addEventListener('error', function(e) {
+            console.error('Error global:', e.error);
+        });
+
+        // Handle fetch errors
+        async function safeFetch(url, options) {
+            try {
+                const response = await fetch(url, options);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                return response;
+            } catch (error) {
+                console.error('Fetch error:', error);
+                throw error;
+            }
+        }
+
+        // Export functions for testing
+        window.salesDashboard = {
+            loadDashboard,
+            syncData,
+            setupNumier,
+            showSection,
+            setQuickRange
+        };
+    </script>
+</body>
+</html>
