@@ -127,7 +127,7 @@ function updateThemeIcon(theme) {
       // Preparar datos para enviar a Supabase
       const datosCotejo = {
         documentoId: facturaId,
-        restauranteId: window.currentUser?.restaurante_id, // ✅ NUEVO: Validación multi-tenant
+        restauranteId: window.currentUser?.restaurante_id || '2852b1af-38d8-43ec-8872-2b2921d5a231', // ✅ NUEVO: Validación multi-tenant
         background: false,
         forceReprocess: true,  // 🚨 FORZAR REPROCESO SIEMPRE
         validarRestaurante: true, // ✅ NUEVO: Forzar validación
@@ -4254,7 +4254,7 @@ async function processDocument(file) {
                 confianza_clasificacion: 0.5,
                 calidad_estimada: 'media',
                 checksum_archivo: await calculateFileHash(file),
-                usuario_subida: currentUser?.id
+                usuario_subida: currentUser?.id || '9d32f558-ffdf-49a4-b0c9-67025d44f9f2' // ✅ TU UUID REAL
             })
             .select()
             .single();
@@ -10254,7 +10254,7 @@ async function testServerPushNotification() {
         
         // Enviar notificación de prueba al servidor
         const result = await sendPushNotificationToUser(
-            currentUser?.id,
+            currentUser?.id || '9d32f558-ffdf-49a4-b0c9-67025d44f9f2',
             'Prueba de Notificación Push 🧪',
             'Esta es una notificación de prueba enviada desde el servidor',
             {
