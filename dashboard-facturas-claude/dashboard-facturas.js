@@ -126,8 +126,11 @@ function updateThemeIcon(theme) {
       // Preparar datos para enviar a Supabase
       const datosCotejo = {
         documentoId: facturaId,
+        restauranteId: window.currentUser?.restaurante_id, // ✅ NUEVO: Validación multi-tenant
         background: false,
-        forceReprocess: true  // 🚨 FORZAR REPROCESO SIEMPRE
+        forceReprocess: true,  // 🚨 FORZAR REPROCESO SIEMPRE
+        validarRestaurante: true, // ✅ NUEVO: Forzar validación
+        limpiarEnlacesPrevios: true // ✅ NUEVO: Limpiar duplicados
       }
       
       console.log('📤 Datos que se envían a Supabase:', datosCotejo)
