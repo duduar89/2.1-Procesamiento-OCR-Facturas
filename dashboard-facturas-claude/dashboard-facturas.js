@@ -5166,10 +5166,18 @@ function renderFacturasTable(data = window.facturasData || []) {
     const tbody = document.querySelector('.facturas-table tbody');
     const tableEmpty = document.getElementById('tableEmpty');
     
+    // ✅ VALIDACIÓN DE ELEMENTOS CRÍTICOS
     if (!tbody) {
-        console.error('❌ No se encontró tbody de la tabla');
+        console.error('❌ Error: No se encontró el tbody de la tabla');
+        showNotification('Error: Tabla no encontrada', 'error');
         return;
     }
+    
+    if (!tableEmpty) {
+        console.warn('⚠️ Advertencia: Elemento tableEmpty no encontrado');
+    }
+    
+
     
     // Ocultar mensaje de tabla vacía
     if (tableEmpty) {
@@ -5429,6 +5437,12 @@ function renderFacturasTable(data = window.facturasData || []) {
             
             // Verificar el HTML de la tabla
             const tbody = document.querySelector('.facturas-table tbody');
+            
+            // ✅ VALIDACIÓN DE TBODY
+            if (!tbody) {
+                console.error('❌ Error: tbody no encontrado en expandir albaranes');
+                return;
+            }
             if (tbody) {
                 console.log('🔍 HTML de la tabla generado:', tbody.innerHTML.substring(0, 500) + '...');
             }
