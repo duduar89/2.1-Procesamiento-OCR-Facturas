@@ -3528,8 +3528,9 @@ async function updateProductPriceStatistics(productoMaestroId: string, nuevoPrec
 }
 
 // 🤖 FUNCIÓN PARA EXTRAER DATOS CON OpenAI
-async function extractDataWithOpenAI(text: string, contextAnalysis?: any): Promise<any> {
+async function extractDataWithOpenAI(text: string, documentType: string = 'factura', contextAnalysis?: any): Promise<any> {
   console.log('🤖 === INICIANDO EXTRACCIÓN CON OpenAI Y CONTEXTO ===')
+  console.log('📄 Tipo de documento:', documentType)
   
   const openaiApiKey = Deno.env.get('OPENAI_API_KEY')
   if (!openaiApiKey) {
@@ -3561,53 +3562,58 @@ REGLAS OBLIGATORIAS:
 `
   }
   
+  // 🎯 ADAPTAR PROMPT SEGÚN TIPO DE DOCUMENTO
+  const tipoTexto = documentType === 'albaran' ? 'albarán de entrega' : 'factura'
+  const tipoAccion = documentType === 'albaran' ? 'ENTREGA/ENVÍA' : 'VENDE/EMITE'
+  const tipoDocumento = documentType === 'albaran' ? 'albarán' : 'factura'
+  
   const prompt = `${contextInstructions}
-Eres un experto en extracción de datos de facturas españolas. Extrae TODOS los datos siguientes del texto de la factura.
+Eres un experto en extracción de datos de documentos comerciales españoles. Extrae TODOS los datos siguientes del texto del ${tipoTexto}.
 
 ⚠️ CRÍTICO - IDENTIFICACIÓN DE PROVEEDOR: 
-Esta es una factura de COMPRA de un restaurante. Identifica CORRECTAMENTE el PROVEEDOR:
+Este es un ${tipoTexto} de COMPRA de un restaurante. Identifica CORRECTAMENTE el PROVEEDOR:
 
-🏢 PROVEEDOR (quien VENDE/EMITE la factura):
-- Aparece en la parte SUPERIOR de la factura
+🏢 PROVEEDOR (quien ${tipoAccion} el ${tipoDocumento}):
+- Aparece en la parte SUPERIOR del ${tipoDocumento}
 - Incluye logo, nombre comercial y CIF/NIF del emisor
-- Suele tener textos como "Factura", "Invoice", número de factura cerca
+- Suele tener textos como "${documentType === 'albaran' ? 'Albarán' : 'Factura'}", "${documentType === 'albaran' ? 'ALBARAN CARGO' : 'Invoice'}", número de ${tipoDocumento} cerca
 - Ejemplos: "DISTRIBUIDORA XYZ S.L. CIF: B12345678"
 
-🍽️ CLIENTE/RESTAURANTE (quien COMPRA/RECIBE la factura):
+🍽️ CLIENTE/RESTAURANTE (quien RECIBE el ${tipoDocumento}):
 - Aparece más abajo, en secciones como "Facturar a:", "Cliente:", "Destinatario:"
 - Puede aparecer con direcciones de entrega
-- NO es el proveedor, es el comprador
+- NO es el proveedor, es el receptor
 
 REGLA: Si ves el mismo CIF/nombre en ambas posiciones, el PROVEEDOR es quien aparece ARRIBA con el logo/encabezado.
 
-TEXTO DE LA FACTURA:
+TEXTO DEL ${tipoTexto.toUpperCase()}:
 ${text}
 
 EXTRAE EXACTAMENTE ESTOS DATOS en formato JSON:
 
 {
-  "factura": {
+  "documento": {
     "proveedor_nombre": {
-      "valor": "nombre del proveedor/empresa (quien EMITE la factura, NO el cliente)",
+      "valor": "nombre del proveedor/empresa (quien ${tipoAccion.toLowerCase()} el ${tipoDocumento}, NO el cliente)",
       "confianza": 0.0-1.0,
       "texto_fuente": "texto exacto donde lo encontraste"
     },
     "proveedor_cif": {
-      "valor": "CIF/NIF del PROVEEDOR (quien emite la factura, formato: A12345678)",
+      "valor": "CIF/NIF del PROVEEDOR (quien ${tipoAccion.toLowerCase()} el ${tipoDocumento}, formato: A12345678)",
       "confianza": 0.0-1.0,
       "texto_fuente": "texto exacto donde lo encontraste"
     },
-    "numero_factura": {
-      "valor": "número de factura",
+    "numero_documento": {
+      "valor": "número de ${tipoDocumento}",
       "confianza": 0.0-1.0,
       "texto_fuente": "texto exacto donde lo encontraste"
     },
-    "fecha_factura": {
+    "fecha_documento": {
       "valor": "YYYY-MM-DD",
       "confianza": 0.0-1.0,
       "texto_fuente": "texto exacto donde lo encontraste"
     },
-    "total_factura": {
+    "total_documento": {
       "valor": número (sin €, formato: 123.45),
       "confianza": 0.0-1.0,
       "texto_fuente": "texto exacto donde lo encontraste"
@@ -4750,7 +4756,7 @@ Deno.serve(async (req) => {
     
     let openaiResult: any
     try {
-      openaiResult = await extractDataWithOpenAI(fullText, contextAnalysis)
+      openaiResult = await extractDataWithOpenAI(fullText, documentClassification.tipo, contextAnalysis)
       console.log('✅ OpenAI completado con contexto preventivo')
       console.log('📊 Resultado OpenAI:', JSON.stringify(openaiResult, null, 2))
     } catch (error) {
