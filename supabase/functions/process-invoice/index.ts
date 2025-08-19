@@ -4004,26 +4004,43 @@ function classifyDocument(fullText: string): {
     palabras_albaran: [],
     palabras_factura: [],
     precios_encontrados: 0,
-    indicadores_entrega: []
+    indicadores_entrega: [],
+    albaran_en_inicio: false
   }
   
-  // 📦 DETECTAR ALBARÁN
+  // 📦 DETECTAR ALBARÁN (MEJORADO)
   const palabrasAlbaran = [
-    'albarán', 'albaran', 'delivery note', 'nota de entrega',
-    'entrega', 'entregado', 'recepción', 'recibido'
+    'albarán', 'albaran', 'albarán cargo', 'albaran cargo',
+    'delivery note', 'nota de entrega', 'nota entrega',
+    'entrega', 'entregado', 'recepción', 'recibido',
+    'documento entrega', 'comprobante entrega'
   ]
   
-  console.log('🔍 Buscando palabras de albarán en:', texto.substring(0, 200) + '...')
+  // 🔍 BÚSQUEDA PRIORITARIA: Buscar al inicio del documento (primeros 500 chars)
+  const inicioTexto = texto.substring(0, 500)
+  console.log('🔍 Buscando palabras de albarán al inicio del documento:', inicioTexto.substring(0, 100) + '...')
   
+  let albaranEnInicio = false
   palabrasAlbaran.forEach(palabra => {
-    if (texto.includes(palabra)) {
-      console.log(`✅ PALABRA ALBARÁN ENCONTRADA: "${palabra}"`)
+    if (inicioTexto.includes(palabra)) {
+      console.log(`✅ PALABRA ALBARÁN ENCONTRADA AL INICIO: "${palabra}"`)
       patrones.albaran_encontrado = true
       patrones.palabras_albaran.push(palabra)
-    } else {
-      console.log(`❌ Palabra "${palabra}" NO encontrada`)
+      albaranEnInicio = true
+      patrones.albaran_en_inicio = true
     }
   })
+  
+  // 🔍 BÚSQUEDA GLOBAL si no se encontró al inicio
+  if (!albaranEnInicio) {
+    palabrasAlbaran.forEach(palabra => {
+      if (texto.includes(palabra)) {
+        console.log(`✅ PALABRA ALBARÁN ENCONTRADA EN EL TEXTO: "${palabra}"`)
+        patrones.albaran_encontrado = true
+        patrones.palabras_albaran.push(palabra)
+      }
+    })
+  }
   
   // 📄 DETECTAR FACTURA
   const palabrasFactura = [
@@ -4059,42 +4076,54 @@ function classifyDocument(fullText: string): {
     }
   })
   
-  // 🎯 LÓGICA DE CLASIFICACIÓN
+  // 🎯 LÓGICA DE CLASIFICACIÓN (MEJORADA CON PRIORIDADES)
   let tipo: 'factura' | 'albaran' | 'incierto' = 'incierto'
   let confianza = 0.5
   let razonamiento = ''
   
-  // REGLA 1: Si dice "albarán" y NO dice "factura" → ALBARÁN
-  if (patrones.albaran_encontrado && !patrones.factura_encontrada) {
+  // ⭐ REGLA PRIORITARIA: Si "albarán" está al INICIO del documento → ALBARÁN (alta confianza)
+  if (albaranEnInicio) {
     tipo = 'albaran'
     confianza = 0.95
-    razonamiento = 'Contiene "albarán" y no contiene "factura"'
+    razonamiento = `"${patrones.palabras_albaran[0]}" encontrado al inicio del documento - ALBARÁN con alta confianza`
+  }
+  // REGLA 1: Si dice "albarán" y NO dice "factura" → ALBARÁN
+  else if (patrones.albaran_encontrado && !patrones.factura_encontrada) {
+    tipo = 'albaran'
+    confianza = 0.9
+    razonamiento = `Contiene "${patrones.palabras_albaran.join(', ')}" y no contiene "factura"`
   }
   // REGLA 2: Si dice "factura" y NO dice "albarán" → FACTURA
   else if (patrones.factura_encontrada && !patrones.albaran_encontrado) {
     tipo = 'factura'
-    confianza = 0.95
-    razonamiento = 'Contiene "factura" y no contiene "albarán"'
+    confianza = 0.9
+    razonamiento = `Contiene "${patrones.palabras_factura.join(', ')}" y no contiene "albarán"`
   }
-  // REGLA 3: Si dice AMBOS → FACTURA (perfecto para cotejación)
+  // REGLA 3: Si dice AMBOS → PRIORIDAD A ALBARÁN si tiene indicadores de entrega
   else if (patrones.albaran_encontrado && patrones.factura_encontrada) {
-    tipo = 'factura'
-    confianza = 0.95
-    razonamiento = 'Contiene "factura" y referencias a albaranes - FACTURA perfecta para cotejación'
+    if (patrones.indicadores_entrega.length >= 2) {
+      tipo = 'albaran'
+      confianza = 0.85
+      razonamiento = `Contiene ambos términos pero ${patrones.indicadores_entrega.length} indicadores de entrega - ALBARÁN`
+    } else {
+      tipo = 'factura'
+      confianza = 0.85
+      razonamiento = `Contiene "factura" y referencias a albaranes pero sin indicadores de entrega - FACTURA para cotejación`
+    }
   }
   // REGLA 4: Si NO dice ninguno, usar indicadores secundarios
   else {
     // Muchos precios → probablemente factura
-    if (patrones.precios_encontrados > 3) {
+    if (patrones.precios_encontrados > 5) {
       tipo = 'factura'
       confianza = 0.7
-      razonamiento = `No contiene palabras clave, pero ${patrones.precios_encontrados} precios encontrados`
+      razonamiento = `No contiene palabras clave, pero ${patrones.precios_encontrados} precios encontrados - probablemente FACTURA`
     }
     // Indicadores de entrega → probablemente albarán
-    else if (patrones.indicadores_entrega.length > 1) {
+    else if (patrones.indicadores_entrega.length >= 2) {
       tipo = 'albaran'
-      confianza = 0.6
-      razonamiento = `No contiene palabras clave, pero ${patrones.indicadores_entrega.length} indicadores de entrega`
+      confianza = 0.65
+      razonamiento = `No contiene palabras clave, pero ${patrones.indicadores_entrega.length} indicadores de entrega - probablemente ALBARÁN`
     }
     // Default: factura (comportamiento actual)
     else {
