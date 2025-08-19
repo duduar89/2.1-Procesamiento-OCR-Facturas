@@ -3594,8 +3594,26 @@ async function checkAuthentication() {
         // 🚫 MODO DESARROLLO: Saltarse autenticación en localhost para debugging
         if (window.location.hostname === 'localhost' && CONFIG.TENANT?.MODO === 'desarrollo') {
             console.log('🔧 MODO DESARROLLO: Saltando verificación de autenticación');
-            // Configurar usuario y restaurante de prueba
-            currentUser = { id: 'dev-user', nombre: 'Usuario Desarrollo', email: 'dev@test.com' };
+            // ✅ CONFIGURAR USUARIO REAL DESDE SESIÓN
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (session) {
+                currentUser = { 
+                    id: session.user.id, // UUID REAL de Supabase Auth
+                    nombre: 'Eduardo Aguilar', 
+                    email: session.user.email,
+                    restaurante_id: '2852b1af-38d8-43ec-8872-2b2921d5a231',
+                    rol: 'admin_restaurante'
+                };
+                console.log('✅ Usuario real configurado:', currentUser.email);
+            } else {
+                currentUser = { 
+                    id: '9d32f558-ffdf-49a4-b0c9-67025d44f9f2', // TU UUID REAL
+                    nombre: 'Eduardo Aguilar', 
+                    email: 'eduardo.aguilar.collado@gmail.com',
+                    restaurante_id: '2852b1af-38d8-43ec-8872-2b2921d5a231',
+                    rol: 'admin_restaurante'
+                };
+            }
             CONFIG.TENANT.RESTAURANTE_ID = '2852b1af-38d8-43ec-8872-2b2921d5a231'; // ID hardcodeado para desarrollo
             CONFIG.TENANT.RESTAURANTE_ACTUAL = { id: CONFIG.TENANT.RESTAURANTE_ID, nombre: 'Restaurante Desarrollo' };
             updateUserInfo();
