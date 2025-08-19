@@ -82,6 +82,45 @@
     margin-bottom: 20px;
     padding-bottom: 16px;
     border-bottom: 2px solid rgba(0, 212, 170, 0.1);
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+/* ✅ ESTILOS PARA FILTROS DE DOCUMENTO */
+.document-filters {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.filter-btn {
+    padding: 8px 16px;
+    border: 2px solid rgba(0, 212, 170, 0.3);
+    background: rgba(0, 212, 170, 0.05);
+    color: var(--bs-turquoise);
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+}
+
+.filter-btn:hover {
+    background: rgba(0, 212, 170, 0.1);
+    transform: translateY(-1px);
+}
+
+.filter-btn.active {
+    background: var(--bs-gradient-primary);
+    color: white;
+    border-color: var(--bs-turquoise);
+    box-shadow: 0 4px 15px rgba(0, 212, 170, 0.25);
+}
+
+.filter-btn span {
+    font-weight: 600;
+    margin-left: 4px;
 }
 
 .table-title {
@@ -3085,7 +3124,21 @@
         <section class="table-section">
             <div class="table-container">
                 <div class="table-header">
-                    <h3 class="table-title">Facturas Procesadas</h3>
+                    <h3 class="table-title">Documentos Procesados</h3>
+                    
+                    <!-- ✅ FILTROS DE TIPO DE DOCUMENTO -->
+                    <div class="document-filters">
+                        <button class="filter-btn active" data-filter="todos" onclick="filterByDocumentType('todos')">
+                            📄 Todos (<span id="countTodos">0</span>)
+                        </button>
+                        <button class="filter-btn" data-filter="factura" onclick="filterByDocumentType('factura')">
+                            🧾 Facturas (<span id="countFacturas">0</span>)
+                        </button>
+                        <button class="filter-btn" data-filter="albaran" onclick="filterByDocumentType('albaran')">
+                            📦 Albaranes (<span id="countAlbaranes">0</span>)
+                        </button>
+                    </div>
+                    
                     <div class="table-actions">
                         <button class="btn-table primary" id="refreshBtn">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

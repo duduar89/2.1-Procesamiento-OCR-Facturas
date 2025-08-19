@@ -8,6 +8,7 @@ let processingState = false;
 let facturasData = [];
 let currentPage = 1;
 const itemsPerPage = 10;
+let currentDocumentFilter = 'todos'; // ✅ NUEVO: Filtro actual de documentos
 // hybridPDFModal se inicializa desde hybrid-pdf-modal.js
 
 // ===== SISTEMA DE TEMAS =====
@@ -5162,9 +5163,58 @@ function clearFilters() {
     updatePagination((window.facturasData || []).length);
 }
 
+// ===== FILTRADO POR TIPO DE DOCUMENTO =====
+function filterByDocumentType(tipo) {
+    console.log(`🔍 Filtrando documentos por tipo: ${tipo}`);
+    
+    currentDocumentFilter = tipo;
+    currentPage = 1; // Resetear paginación
+    
+    // Actualizar botones activos
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    document.querySelector(`[data-filter="${tipo}"]`).classList.add('active');
+    
+    // Renderizar tabla con filtro
+    renderFacturasTable();
+    
+    // Actualizar contadores
+    updateDocumentCounts();
+}
+
+function getFilteredData() {
+    if (currentDocumentFilter === 'todos') {
+        return window.facturasData || [];
+    }
+    
+    return (window.facturasData || []).filter(doc => 
+        doc.tipo_documento === currentDocumentFilter
+    );
+}
+
+function updateDocumentCounts() {
+    const allData = window.facturasData || [];
+    const facturas = allData.filter(doc => doc.tipo_documento === 'factura');
+    const albaranes = allData.filter(doc => doc.tipo_documento === 'albaran');
+    
+    // Actualizar contadores en los botones
+    const countTodos = document.getElementById('countTodos');
+    const countFacturas = document.getElementById('countFacturas');
+    const countAlbaranes = document.getElementById('countAlbaranes');
+    
+    if (countTodos) countTodos.textContent = allData.length;
+    if (countFacturas) countFacturas.textContent = facturas.length;
+    if (countAlbaranes) countAlbaranes.textContent = albaranes.length;
+    
+    console.log(`📊 Contadores actualizados: ${allData.length} total, ${facturas.length} facturas, ${albaranes.length} albaranes`);
+}
+
 // ===== FUNCIONES DE TABLA =====
-function renderFacturasTable(data = window.facturasData || []) {
-    console.log('Renderizando tabla con', data.length, 'facturas');
+function renderFacturasTable(data = null) {
+    // Usar datos filtrados si no se pasan datos específicos
+    const dataToRender = data || getFilteredData();
+    console.log(`Renderizando tabla con ${dataToRender.length} documentos (filtro: ${currentDocumentFilter})`);
     
     const tbody = document.querySelector('.facturas-table tbody');
     const tableEmpty = document.getElementById('tableEmpty');
