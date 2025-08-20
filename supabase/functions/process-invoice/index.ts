@@ -3528,8 +3528,9 @@ async function updateProductPriceStatistics(productoMaestroId: string, nuevoPrec
 }
 
 // 🤖 FUNCIÓN PARA EXTRAER DATOS CON OpenAI
-async function extractDataWithOpenAI(text: string, contextAnalysis?: any): Promise<any> {
+async function extractDataWithOpenAI(text: string, documentType: string = 'factura', contextAnalysis?: any): Promise<any> {
   console.log('🤖 === INICIANDO EXTRACCIÓN CON OpenAI Y CONTEXTO ===')
+  console.log('📄 Tipo de documento:', documentType)
   
   const openaiApiKey = Deno.env.get('OPENAI_API_KEY')
   if (!openaiApiKey) {
@@ -3561,13 +3562,27 @@ REGLAS OBLIGATORIAS:
 `
   }
   
-  const prompt = `${contextInstructions}
-Eres un experto en extracción de datos de facturas españolas. Extrae TODOS los datos siguientes del texto de la factura.
+  // 🎯 ADAPTAR PROMPT SEGÚN TIPO DE DOCUMENTO
+  const tipoTexto = documentType === 'albaran' ? 'albarán de entrega' : 'factura'
+  const tipoAccion = documentType === 'albaran' ? 'ENTREGA/ENVÍA' : 'VENDE/EMITE'
+  const tipoDocumento = documentType === 'albaran' ? 'albarán' : 'factura'
+  
+  // ⚠️ INSTRUCCIÓN ESPECÍFICA PARA ALBARANES
+  const instruccionEspecifica = documentType === 'albaran' ? `
+⚠️ IMPORTANTE - ESTE ES UN ALBARÁN, NO UNA FACTURA:
+- Los albaranes pueden tener precios pero el enfoque principal es la ENTREGA
+- Busca términos como "ALBARAN CARGO", "NOTA DE ENTREGA", "ENVÍO"
+- El número de documento puede aparecer como "Número albarán" o similar
+- Los totales pueden estar ausentes o ser informativos
+` : ''
+  
+  const prompt = `${contextInstructions}${instruccionEspecifica}
+Eres un experto en extracción de datos de documentos comerciales españoles. Extrae TODOS los datos siguientes del texto del ${tipoTexto}.
 
 ⚠️ CRÍTICO - IDENTIFICACIÓN DE PROVEEDOR: 
-Esta es una factura de COMPRA de un restaurante. Identifica CORRECTAMENTE el PROVEEDOR:
+Este es un ${tipoTexto} de COMPRA de un restaurante. Identifica CORRECTAMENTE el PROVEEDOR:
 
-🏢 PROVEEDOR (quien VENDE/EMITE la factura):
+🏢 PROVEEDOR (quien ${tipoAccion} el ${tipoDocumento}):
 - Aparece en la parte SUPERIOR de la factura
 - Incluye logo, nombre comercial y CIF/NIF del emisor
 - Suele tener textos como "Factura", "Invoice", número de factura cerca
@@ -4009,10 +4024,27 @@ function classifyDocument(fullText: string): {
   
   // 📦 DETECTAR ALBARÁN - MEJORADO SEGÚN TUS ESPECIFICACIONES
   const palabrasAlbaran = [
-    'albarán', 'albaran', 'albarana', // Variaciones de albarán
-    'entregado', 'entrega', 'delivery', 'nota de entrega',
-    'pedido', 'orden', 'recepción', 'recibido',
-    'suministro', 'envío', 'remito', 'guía'
+    // Términos principales de albarán
+    'albarán', 'albaran', 'albarán cargo', 'albaran cargo',
+    
+    // Variaciones de entrega (como mencionaste)
+    'entrega', 'entregado', 'nota de entrega', 'nota entrega',
+    'documento entrega', 'comprobante entrega', 'hoja de entrega',
+    
+    // Términos de envío (como mencionaste)
+    'envío', 'envio', 'remito', 'guía de remisión',
+    'orden de envío', 'orden envio',
+    
+    // Términos de pedido (como mencionaste)  
+    'pedido', 'orden de pedido', 'confirmación pedido',
+    'orden de compra', 'purchase order',
+    
+    // Términos adicionales
+    'recepción', 'recibido', 'suministro',
+    
+    // Términos en inglés
+    'delivery note', 'delivery receipt', 'packing slip',
+    'shipping note', 'dispatch note'
   ]
   
   console.log('🔍 Buscando palabras de albarán en:', texto.substring(0, 200) + '...')
@@ -4029,11 +4061,24 @@ function classifyDocument(fullText: string): {
   
   // 📄 DETECTAR FACTURA - MEJORADO SEGÚN TUS ESPECIFICACIONES
   const palabrasFactura = [
-    'factura', 'invoice', 'fact.', 'fac.',
-    'total factura', 'base imponible', 'cuota iva', 
-    'vencimiento', 'pagar', 'cobrar', 'importe',
+    // Términos principales de factura
+    'factura', 'invoice', 'bill', 'fact.', 'fac.',
+    
+    // Tipos específicos de factura (como mencionaste)
+    'factura simplificada', 'factura proforma', 'factura rectificativa',
+    'factura comercial', 'factura de venta', 'factura fiscal',
+    'pro forma invoice', 'commercial invoice', 'tax invoice',
+    
+    // Términos financieros típicos de facturas
+    'total factura', 'importe factura', 'base imponible',
+    'cuota iva', 'iva desglosado', 'tipo impositivo',
+    'vencimiento', 'fecha vencimiento', 'forma de pago',
+    'condiciones pago', 'pagar', 'cobrar',
+    'retención', 'descuento', 'recargo',
+    
+    // Identificadores de factura
     'número factura', 'nº factura', 'fecha factura',
-    'emisor', 'proveedor', 'vendedor'
+    'emisor', 'proveedor', 'vendedor', 'importe'
   ]
   
   console.log('🔍 Buscando palabras de factura...')
@@ -4768,7 +4813,7 @@ Deno.serve(async (req) => {
     
     let openaiResult: any
     try {
-      openaiResult = await extractDataWithOpenAI(fullText, contextAnalysis)
+      openaiResult = await extractDataWithOpenAI(fullText, documentClassification.tipo, contextAnalysis)
       console.log('✅ OpenAI completado con contexto preventivo')
       console.log('📊 Resultado OpenAI:', JSON.stringify(openaiResult, null, 2))
     } catch (error) {
