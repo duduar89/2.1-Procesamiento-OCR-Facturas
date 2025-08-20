@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>⚡ Prueba Rápida - Refactoring</title>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f0f9ff;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        
+        .status {
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        
+        .success {
+            background: #ecfdf5;
+            color: #065f46;
+            border: 2px solid #10b981;
+        }
+        
+        .error {
+            background: #fef2f2;
+            color: #991b1b;
+            border: 2px solid #ef4444;
+        }
+        
+        .loading {
+            background: #f0f9ff;
+            color: #1e40af;
+            border: 2px solid #3b82f6;
+        }
+        
+        .details {
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 15px 0;
+            font-family: monospace;
+            text-align: left;
+            font-size: 14px;
+        }
+        
+        button {
+            background: linear-gradient(135deg, #3b82f6, #1e40af);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            margin: 10px;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>⚡ Prueba Rápida del Refactoring</h1>
+        <p>Verificación instantánea de los cambios implementados</p>
+        
+        <div id="status" class="status loading">
+            🔄 Verificando configuración...
+        </div>
+        
+        <div id="details" class="details" style="display: none;"></div>
+        
+        <div style="margin: 30px 0;">
+            <button onclick="runQuickTest()">🔄 Repetir Prueba</button>
+            <button onclick="showDetails()">📋 Ver Detalles</button>
+            <button onclick="testNotifications()">🔔 Test Notificaciones</button>
+        </div>
+        
+        <div id="notifications"></div>
+    </div>
+
+    <!-- Cargar archivos -->
+    <script src="config.js"></script>
+    <script src="config-central.js"></script>
+    <script src="utils.js"></script>
+    
+    <script>
+        let testsPassed = 0;
+        let testsTotal = 5;
+        let testDetails = [];
+        
+        function runQuickTest() {
+            testsPassed = 0;
+            testsTotal = 5;
+            testDetails = [];
+            
+            const statusEl = document.getElementById('status');
+            const detailsEl = document.getElementById('details');
+            
+            statusEl.className = 'status loading';
+            statusEl.innerHTML = '🔄 Ejecutando pruebas...';
+            detailsEl.style.display = 'none';
+            
+            setTimeout(() => {
+                // Test 1: CONFIG
+                if (typeof CONFIG !== 'undefined' && CONFIG.SUPABASE) {
+                    testsPassed++;
+                    testDetails.push('✅ CONFIG: Configuración básica cargada');
+                } else {
+                    testDetails.push('❌ CONFIG: No encontrado o incorrecto');
+                }
+                
+                // Test 2: config-central.js
+                if (typeof getSupabaseClient === 'function') {
+                    testsPassed++;
+                    testDetails.push('✅ config-central.js: Cliente Supabase centralizado');
+                } else {
+                    testDetails.push('❌ config-central.js: getSupabaseClient no disponible');
+                }
+                
+                // Test 3: utils.js
+                if (typeof Utils !== 'undefined' && Utils.showNotification) {
+                    testsPassed++;
+                    testDetails.push('✅ utils.js: Utilidades centralizadas disponibles');
+                } else {
+                    testDetails.push('❌ utils.js: No cargado o incompleto');
+                }
+                
+                // Test 4: Cliente Supabase
+                try {
+                    const client = getSupabaseClient();
+                    if (client && client.from) {
+                        testsPassed++;
+                        testDetails.push('✅ Supabase: Cliente inicializado correctamente');
+                    } else {
+                        testDetails.push('❌ Supabase: Cliente no funcional');
+                    }
+                } catch (e) {
+                    testDetails.push('❌ Supabase: Error al inicializar - ' + e.message);
+                }
+                
+                // Test 5: Funciones básicas
+                try {
+                    const currency = Utils.formatCurrency(123.45);
+                    const date = Utils.formatDate('2024-01-01');
+                    if (currency.includes('€') && date) {
+                        testsPassed++;
+                        testDetails.push('✅ Funciones: Formato de moneda y fecha funcionan');
+                    } else {
+                        testDetails.push('❌ Funciones: Problemas con formato');
+                    }
+                } catch (e) {
+                    testDetails.push('❌ Funciones: Error - ' + e.message);
+                }
+                
+                // Mostrar resultado
+                showResult();
+            }, 1000);
+        }
+        
+        function showResult() {
+            const statusEl = document.getElementById('status');
+            const percentage = Math.round((testsPassed / testsTotal) * 100);
+            
+            if (testsPassed === testsTotal) {
+                statusEl.className = 'status success';
+                statusEl.innerHTML = `🎉 ¡PERFECTO! ${testsPassed}/${testsTotal} tests pasaron (${percentage}%)`;
+                
+                // Mostrar notificación de éxito
+                setTimeout(() => {
+                    if (typeof Utils !== 'undefined' && Utils.showNotification) {
+                        Utils.showNotification('¡Todos los tests pasaron! Refactoring exitoso 🎉', 'success', 5000);
+                    }
+                }, 500);
+                
+            } else if (percentage >= 80) {
+                statusEl.className = 'status success';
+                statusEl.innerHTML = `✅ EXCELENTE: ${testsPassed}/${testsTotal} tests pasaron (${percentage}%)`;
+                
+                setTimeout(() => {
+                    if (typeof Utils !== 'undefined' && Utils.showNotification) {
+                        Utils.showNotification('Mayoría de tests pasaron. ¡Muy bien! ✅', 'success', 4000);
+                    }
+                }, 500);
+                
+            } else if (percentage >= 60) {
+                statusEl.className = 'status error';
+                statusEl.innerHTML = `⚠️ REGULAR: ${testsPassed}/${testsTotal} tests pasaron (${percentage}%) - Revisar`;
+                
+            } else {
+                statusEl.className = 'status error';
+                statusEl.innerHTML = `❌ PROBLEMAS: Solo ${testsPassed}/${testsTotal} tests pasaron (${percentage}%)`;
+            }
+        }
+        
+        function showDetails() {
+            const detailsEl = document.getElementById('details');
+            detailsEl.style.display = detailsEl.style.display === 'none' ? 'block' : 'none';
+            
+            if (detailsEl.style.display === 'block') {
+                detailsEl.innerHTML = testDetails.join('\n');
+            }
+        }
+        
+        function testNotifications() {
+            if (typeof Utils !== 'undefined' && Utils.showNotification) {
+                Utils.showNotification('✅ Notificación de éxito', 'success', 3000);
+                setTimeout(() => {
+                    Utils.showNotification('⚠️ Notificación de advertencia', 'warning', 3000);
+                }, 1000);
+                setTimeout(() => {
+                    Utils.showNotification('❌ Notificación de error', 'error', 3000);
+                }, 2000);
+            } else {
+                alert('Sistema de notificaciones no disponible');
+            }
+        }
+        
+        // Ejecutar automáticamente al cargar
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(runQuickTest, 500);
+        });
+        
+        console.log('⚡ Prueba rápida cargada');
+    </script>
+</body>
+</html>
