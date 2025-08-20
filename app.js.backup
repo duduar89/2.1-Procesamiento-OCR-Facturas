@@ -1,5 +1,4 @@
 // ===== APP.JS - INTERFAZ PARA EDGE FUNCTION =====
-// ✅ ACTUALIZADO: Usando configuración central y utilidades centralizadas
 
 // Variables globales - REDUCIDAS con configuración central
 let currentUser = null;
@@ -152,8 +151,8 @@ function handleFileSelect(e) {
 // ===== VALIDAR Y PROCESAR ARCHIVO =====
 async function handleFile(file) {
     try {
-        // ✅ USAR VALIDACIÓN CENTRALIZADA
-        if (!Utils.validateFile(file)) {
+        // Validaciones
+        if (!validateFile(file)) {
             return;
         }
 
@@ -167,25 +166,41 @@ async function handleFile(file) {
 
     } catch (error) {
         console.error('Error procesando archivo:', error);
-        Utils.showNotification('Error procesando archivo: ' + error.message, 'error');
-        Utils.hideLoadingOverlay();
+        showNotification('Error procesando archivo: ' + error.message, 'error');
+        hideLoadingOverlay();
     }
+}
+
+// ===== VALIDAR ARCHIVO =====
+function validateFile(file) {
+    // Verificar tipo
+    if (!CONFIG.APP.ALLOWED_TYPES.includes(file.type)) {
+        showNotification('Solo se permiten archivos PDF', 'error');
+        return false;
+    }
+
+    // Verificar tamaño
+    if (file.size > CONFIG.APP.MAX_FILE_SIZE) {
+        showNotification('El archivo es demasiado grande. Máximo 10MB', 'error');
+        return false;
+    }
+
+    return true;
 }
 
 // ===== PROCESAR DOCUMENTO =====
 async function processDocument(file) {
     try {
         processingState = true;
-        Utils.showLoadingOverlay('Subiendo archivo...');
-
-        const supabaseClient = getSupabaseClient();
+        showLoadingOverlay('Subiendo archivo...');
 
         // 1. Subir archivo a Supabase Storage
         const fileName = `${Date.now()}_${file.name}`;
         const filePath = `${CONFIG.TENANT.RESTAURANTE_ID}/${fileName}`;
 
-        Utils.updateLoadingText('Subiendo archivo a storage...');
+        updateLoadingText('Subiendo archivo a storage...');
         
+        const supabaseClient = getSupabaseClient();
         const { data: uploadData, error: uploadError } = await supabaseClient.storage
             .from(CONFIG.SUPABASE.STORAGE_BUCKET)
             .upload(filePath, file);
@@ -194,10 +209,10 @@ async function processDocument(file) {
             throw new Error(`Error subiendo archivo: ${uploadError.message}`);
         }
 
-        Utils.updateLoadingText('Archivo subido, iniciando procesamiento...');
+        updateLoadingText('Archivo subido, iniciando procesamiento...');
 
         // 2. Crear registro en tabla documentos
-        const documentId = Utils.generateUUID(); // ✅ USAR FUNCIÓN CENTRALIZADA
+        const documentId = crypto.randomUUID(); // Generar UUID válido
         
         const { data: docData, error: docError } = await supabaseClient
             .from('documentos')
@@ -212,7 +227,7 @@ async function processDocument(file) {
                 estado: 'uploaded',
                 confianza_clasificacion: 0.5, // Por defecto
                 calidad_estimada: 'media', // Por defecto
-                checksum_archivo: await Utils.calculateFileHash(file), // ✅ USAR FUNCIÓN CENTRALIZADA
+                checksum_archivo: await calculateFileHash(file),
                 usuario_subida: currentUser?.id // Si tienes el usuario
             })
             .select()
@@ -222,7 +237,7 @@ async function processDocument(file) {
             throw new Error(`Error creando registro: ${docError.message}`);
         }
 
-        Utils.updateLoadingText('Procesando con IA...');
+        updateLoadingText('Procesando con IA...');
 
         // 3. Llamar a la Edge Function
         const { data: processData, error: processError } = await supabaseClient.functions
@@ -239,18 +254,18 @@ async function processDocument(file) {
             throw new Error(`Error en procesamiento: ${processError.message}`);
         }
 
-        Utils.updateLoadingText('Procesamiento completado');
+        updateLoadingText('Procesamiento completado');
 
         // 4. Obtener resultados
         await loadProcessedResults(documentId);
 
-        Utils.hideLoadingOverlay();
-        Utils.showNotification('¡Documento procesado exitosamente!', 'success');
+        hideLoadingOverlay();
+        showNotification('¡Documento procesado exitosamente!', 'success');
 
     } catch (error) {
         console.error('Error en procesamiento:', error);
-        Utils.showNotification('Error: ' + error.message, 'error');
-        Utils.hideLoadingOverlay();
+        showNotification('Error: ' + error.message, 'error');
+        hideLoadingOverlay();
         processingState = false;
     }
 }
@@ -258,8 +273,6 @@ async function processDocument(file) {
 // ===== CARGAR RESULTADOS PROCESADOS =====
 async function loadProcessedResults(documentId) {
     try {
-        const supabaseClient = getSupabaseClient();
-
         // Obtener datos de factura
         const { data: facturaData, error: facturaError } = await supabaseClient
             .from('datos_extraidos_facturas')
@@ -283,7 +296,7 @@ async function loadProcessedResults(documentId) {
 
     } catch (error) {
         console.error('Error cargando resultados:', error);
-        Utils.showNotification('Error cargando resultados: ' + error.message, 'error');
+        showNotification('Error cargando resultados: ' + error.message, 'error');
     }
 }
 
@@ -296,8 +309,11 @@ function displayResults(facturaData, productos) {
     const confidence = Math.round((facturaData.confianza_global || 0) * 100);
     confidenceValue.textContent = `${confidence}%`;
     
-    // ✅ USAR FUNCIÓN CENTRALIZADA PARA CONFIANZA
-    const confidenceClass = Utils.getConfidenceClass(facturaData.confianza_global);
+    // Determinar color de confianza
+    let confidenceClass = 'low';
+    if (confidence >= 90) confidenceClass = 'high';
+    else if (confidence >= 70) confidenceClass = 'medium';
+    
     confidenceValue.className = `confidence-value ${confidenceClass}`;
 
     // Crear campos de datos
@@ -305,10 +321,10 @@ function displayResults(facturaData, productos) {
         { label: 'Proveedor', value: facturaData.proveedor_nombre, confidence: facturaData.confianza_proveedor },
         { label: 'CIF', value: facturaData.proveedor_cif, confidence: facturaData.confianza_cif },
         { label: 'Número Factura', value: facturaData.numero_factura, confidence: facturaData.confianza_numero },
-        { label: 'Fecha', value: Utils.formatDate(facturaData.fecha_factura), confidence: facturaData.confianza_fecha }, // ✅ USAR FUNCIÓN CENTRALIZADA
-        { label: 'Base Imponible', value: Utils.formatCurrency(facturaData.base_imponible), confidence: facturaData.confianza_base }, // ✅ USAR FUNCIÓN CENTRALIZADA
-        { label: 'IVA', value: Utils.formatCurrency(facturaData.iva_importe), confidence: facturaData.confianza_iva }, // ✅ USAR FUNCIÓN CENTRALIZADA
-        { label: 'Total', value: Utils.formatCurrency(facturaData.total_factura), confidence: facturaData.confianza_total } // ✅ USAR FUNCIÓN CENTRALIZADA
+        { label: 'Fecha', value: formatDate(facturaData.fecha_factura), confidence: facturaData.confianza_fecha },
+        { label: 'Base Imponible', value: formatCurrency(facturaData.base_imponible), confidence: facturaData.confianza_base },
+        { label: 'IVA', value: formatCurrency(facturaData.iva_importe), confidence: facturaData.confianza_iva },
+        { label: 'Total', value: formatCurrency(facturaData.total_factura), confidence: facturaData.confianza_total }
     ];
 
     fieldsContainer.innerHTML = '';
@@ -339,7 +355,9 @@ function createFieldElement(field) {
     div.className = 'field-item';
     
     const confidence = Math.round((field.confidence || 0) * 100);
-    const confidenceClass = Utils.getConfidenceClass(field.confidence); // ✅ USAR FUNCIÓN CENTRALIZADA
+    let confidenceClass = 'low';
+    if (confidence >= 90) confidenceClass = 'high';
+    else if (confidence >= 70) confidenceClass = 'medium';
 
     div.innerHTML = `
         <div class="field-header">
@@ -364,8 +382,8 @@ function createProductsSection(productos) {
                     <div class="product-description">${producto.descripcion_original}</div>
                     <div class="product-details">
                         <span>Cantidad: ${producto.cantidad || 'N/A'}</span>
-                        <span>Precio: ${Utils.formatCurrency(producto.precio_unitario_sin_iva)}</span>
-                        <span>Total: ${Utils.formatCurrency(producto.precio_total_linea_sin_iva)}</span>
+                        <span>Precio: ${formatCurrency(producto.precio_unitario_sin_iva)}</span>
+                        <span>Total: ${formatCurrency(producto.precio_total_linea_sin_iva)}</span>
                     </div>
                 </div>
             `).join('')}
@@ -386,6 +404,22 @@ function showActionsSection() {
     updateStatus('Documento procesado', 'success');
 }
 
+function showLoadingOverlay(text = 'Procesando...') {
+    const overlay = document.getElementById('loadingOverlay');
+    const loadingText = document.getElementById('loadingText');
+    
+    loadingText.textContent = text;
+    overlay.style.display = 'flex';
+}
+
+function hideLoadingOverlay() {
+    document.getElementById('loadingOverlay').style.display = 'none';
+}
+
+function updateLoadingText(text) {
+    document.getElementById('loadingText').textContent = text;
+}
+
 function updateStatus(message, type = 'info') {
     const statusEl = document.getElementById('status');
     statusEl.textContent = message;
@@ -395,7 +429,7 @@ function updateStatus(message, type = 'info') {
 // ===== ACCIONES DE BOTONES =====
 function downloadResults() {
     if (!window.currentResults) {
-        Utils.showNotification('No hay datos para descargar', 'error');
+        showNotification('No hay datos para descargar', 'error');
         return;
     }
 
@@ -411,7 +445,7 @@ function downloadResults() {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
     
-    Utils.showNotification('Datos descargados', 'success');
+    showNotification('Datos descargados', 'success');
 }
 
 function resetInterface() {
@@ -428,35 +462,74 @@ function resetInterface() {
     document.getElementById('fileInput').value = '';
     
     updateStatus('Listo para procesar', 'success');
-    Utils.showNotification('Interfaz reiniciada', 'info');
+    showNotification('Interfaz reiniciada', 'info');
 }
 
 async function copyToClipboard() {
     if (!window.currentResults) {
-        Utils.showNotification('No hay datos para copiar', 'error');
+        showNotification('No hay datos para copiar', 'error');
         return;
     }
 
     try {
         const data = JSON.stringify(window.currentResults, null, 2);
         await navigator.clipboard.writeText(data);
-        Utils.showNotification('Datos copiados al portapapeles', 'success');
+        showNotification('Datos copiados al portapapeles', 'success');
     } catch (error) {
-        Utils.showNotification('Error copiando al portapapeles', 'error');
+        showNotification('Error copiando al portapapeles', 'error');
     }
 }
 
 async function handleLogout() {
     try {
-        const supabaseClient = getSupabaseClient();
         await supabaseClient.auth.signOut();
         localStorage.removeItem('user_info');
         localStorage.removeItem('restaurante_actual');
         window.location.href = 'login.html';
     } catch (error) {
         console.error('Error en logout:', error);
-        Utils.showNotification('Error cerrando sesión', 'error');
+        showNotification('Error cerrando sesión', 'error');
     }
 }
 
-console.log('✅ app.js cargado con configuración central y utilidades centralizadas');
+// ===== UTILIDADES =====
+function showNotification(message, type = 'info') {
+    const notification = document.createElement('div');
+    notification.className = `notification ${type}`;
+    notification.textContent = message;
+    
+    const container = document.getElementById('notifications');
+    container.appendChild(notification);
+    
+    // Auto-remover después de 5 segundos
+    setTimeout(() => {
+        if (notification.parentNode) {
+            notification.parentNode.removeChild(notification);
+        }
+    }, 5000);
+}
+
+function formatCurrency(value) {
+    if (!value && value !== 0) return 'N/A';
+    return new Intl.NumberFormat('es-ES', {
+        style: 'currency',
+        currency: 'EUR'
+    }).format(value);
+}
+
+function formatDate(dateString) {
+    if (!dateString) return 'N/A';
+    try {
+        return new Date(dateString).toLocaleDateString('es-ES');
+    } catch (error) {
+        return dateString;
+    }
+}
+
+async function calculateFileHash(file) {
+    // Función simple para generar hash del archivo
+    const arrayBuffer = await file.arrayBuffer();
+    const hashBuffer = await crypto.subtle.digest('SHA-256', arrayBuffer);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
