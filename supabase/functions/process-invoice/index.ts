@@ -3576,26 +3576,41 @@ REGLAS OBLIGATORIAS:
 - Los totales pueden estar ausentes o ser informativos
 ` : ''
   
-  const prompt = `${contextInstructions}${instruccionEspecifica}
-Eres un experto en extracción de datos de documentos comerciales españoles. Extrae TODOS los datos siguientes del texto del ${tipoTexto}.
+  const prompt = `${contextInstructions}
+⚠️ DETECCIÓN AUTOMÁTICA: Este texto puede ser FACTURA o ALBARÁN:
+- Si empieza con "ALBARAN", "ENTREGA", "PEDIDO" → Es ALBARÁN
+- Si empieza con "FACTURA", "INVOICE" → Es FACTURA
 
-⚠️ CRÍTICO - IDENTIFICACIÓN DE PROVEEDOR: 
-Este es un ${tipoTexto} de COMPRA de un restaurante. Identifica CORRECTAMENTE el PROVEEDOR:
+⚠️ NUNCA INVENTES DATOS:
+- Si no encuentras el proveedor, pon null
+- NO uses "Distrib GODOVISI" - NO está en el texto
+- El proveedor debe existir LITERALMENTE en el texto
 
-🏢 PROVEEDOR (quien ${tipoAccion} el ${tipoDocumento}):
-- Aparece en la parte SUPERIOR de la factura
+Eres un experto en extracción de datos de documentos comerciales españoles.
+
+⚠️ CRÍTICO - IDENTIFICACIÓN DE PROVEEDOR:
+Este documento es de COMPRA de un restaurante. Identifica CORRECTAMENTE el PROVEEDOR:
+
+🏢 PROVEEDOR (quien EMITE/ENTREGA el documento):
+- Aparece en la parte SUPERIOR del documento
 - Incluye logo, nombre comercial y CIF/NIF del emisor
-- Suele tener textos como "Factura", "Invoice", número de factura cerca
-- Ejemplos: "DISTRIBUIDORA XYZ S.L. CIF: B12345678"
+- ⚠️ NUNCA uses "CORRELIMO", "CORRELIMO HUELVA SL" - SON EL CLIENTE
+- ⚠️ NUNCA inventes nombres como "Distrib GODOVISI" si no están en el texto
+- ⚠️ Solo extrae nombres que estén LITERALMENTE en el texto
 
-🍽️ CLIENTE/RESTAURANTE (quien COMPRA/RECIBE la factura):
-- Aparece más abajo, en secciones como "Facturar a:", "Cliente:", "Destinatario:"
-- Puede aparecer con direcciones de entrega
-- NO es el proveedor, es el comprador
+🍽️ CLIENTE/RESTAURANTE (quien RECIBE el documento):
+- "CORRELIMO HUELVA SL" es el CLIENTE en este caso
+- Aparece en secciones como "Cliente:", "Destinatario:"
+- CIF "B56390065" pertenece al CLIENTE, no al proveedor
+- NO es el proveedor, es el receptor
 
-REGLA: Si ves el mismo CIF/nombre en ambas posiciones, el PROVEEDOR es quien aparece ARRIBA con el logo/encabezado.
+⚠️ REGLAS CRÍTICAS:
+1. NO extraigas "CORRELIMO" como proveedor
+2. NO inventes nombres que no estén en el texto
+3. Si no encuentras proveedor claro, pon null
+4. El proveedor debe estar LITERALMENTE en el texto
 
-TEXTO DE LA FACTURA:
+TEXTO DEL DOCUMENTO:
 ${text}
 
 EXTRAE EXACTAMENTE ESTOS DATOS en formato JSON:
