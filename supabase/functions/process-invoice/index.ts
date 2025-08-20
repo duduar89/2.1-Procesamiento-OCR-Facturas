@@ -4096,15 +4096,22 @@ function classifyDocument(fullText: string): {
   let razonamiento = ''
   
   // 📋 CASO 1: TÉRMINOS EXCLUSIVOS CLAROS
-  if (patrones.albaran_encontrado && !patrones.factura_encontrada) {
+  
+  // ⭐ FACTURA tiene PRIORIDAD si tiene términos financieros fuertes
+  if (patrones.factura_encontrada || 
+      texto.includes('base imponible') || 
+      texto.includes('cuota iva') ||
+      texto.includes('total factura')) {
+    tipo = 'factura'
+    confianza = 0.95
+    razonamiento = `Términos de factura detectados: "${patrones.palabras_factura.join(', ')}"`
+  }
+  
+  // 📦 ALBARÁN solo si NO hay términos de factura
+  else if (patrones.albaran_encontrado && !patrones.factura_encontrada) {
     tipo = 'albaran'
     confianza = 0.95
     razonamiento = `Términos exclusivos de albarán: "${patrones.palabras_albaran.join(', ')}"`
-  }
-  else if (patrones.factura_encontrada && !patrones.albaran_encontrado) {
-    tipo = 'factura'
-    confianza = 0.95
-    razonamiento = `Términos exclusivos de factura: "${patrones.palabras_factura.join(', ')}"`
   }
   
   // 📋 CASO 2: AMBOS PRESENTES - USAR CONTEXTO
