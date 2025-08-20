@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🧪 Test Refactoring - Verificación Completa</title>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #f8fafc, #e2e8f0);
+            line-height: 1.6;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        .test-section {
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 15px 0;
+            background: #f9fafb;
+        }
+        
+        .test-section.success {
+            border-color: #10b981;
+            background: #ecfdf5;
+        }
+        
+        .test-section.error {
+            border-color: #ef4444;
+            background: #fef2f2;
+        }
+        
+        .test-section.warning {
+            border-color: #f59e0b;
+            background: #fffbeb;
+        }
+        
+        .test-result {
+            font-weight: bold;
+            font-size: 1.1em;
+            margin-bottom: 10px;
+        }
+        
+        .test-details {
+            font-family: monospace;
+            background: #1f2937;
+            color: #f3f4f6;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 10px 0;
+            overflow-x: auto;
+            font-size: 14px;
+        }
+        
+        button {
+            background: linear-gradient(135deg, #3b82f6, #1e40af);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            margin: 5px;
+            transition: all 0.3s ease;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+        }
+        
+        button.success {
+            background: linear-gradient(135deg, #10b981, #059669);
+        }
+        
+        button.warning {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+        }
+        
+        button.error {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e5e7eb;
+            border-radius: 4px;
+            margin: 20px 0;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #10b981, #059669);
+            width: 0%;
+            transition: width 0.5s ease;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .stat-card {
+            background: white;
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .stat-number {
+            font-size: 2em;
+            font-weight: bold;
+            color: #3b82f6;
+        }
+        
+        .stat-label {
+            color: #6b7280;
+            font-size: 0.9em;
+        }
+        
+        #notifications {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 10000;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🧪 Test de Refactoring Completo</h1>
+            <p>Verificación de todos los cambios implementados</p>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+        </div>
+        
+        <div class="stats" id="stats">
+            <div class="stat-card">
+                <div class="stat-number" id="testsTotal">0</div>
+                <div class="stat-label">Tests Totales</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="testsPassed">0</div>
+                <div class="stat-label">✅ Pasados</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="testsFailed">0</div>
+                <div class="stat-label">❌ Fallidos</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="testsProgress">0%</div>
+                <div class="stat-label">Progreso</div>
+            </div>
+        </div>
+        
+        <div style="text-align: center; margin: 20px 0;">
+            <button onclick="runAllTests()">🚀 Ejecutar Todos los Tests</button>
+            <button onclick="runBasicTests()" class="success">🔍 Solo Tests Básicos</button>
+            <button onclick="clearResults()" class="warning">🧹 Limpiar Resultados</button>
+        </div>
+        
+        <div id="testResults"></div>
+    </div>
+
+    <!-- Cargar archivos en orden correcto -->
+    <script src="config.js"></script>
+    <script src="config-central.js"></script>
+    <script src="utils.js"></script>
+    
+    <script>
+        // ===== SISTEMA DE TESTING COMPLETO =====
+        
+        let testResults = [];
+        let testsCompleted = 0;
+        
+        // Tests a ejecutar
+        const allTests = [
+            {
+                name: '📄 CONFIG cargado correctamente',
+                test: () => typeof CONFIG !== 'undefined' && CONFIG.SUPABASE && CONFIG.SUPABASE.URL,
+                details: () => `URL: ${CONFIG.SUPABASE.URL.substring(0, 30)}...`
+            },
+            {
+                name: '🔧 config-central.js funcional',
+                test: () => typeof getSupabaseClient === 'function',
+                details: () => 'Función getSupabaseClient disponible globalmente'
+            },
+            {
+                name: '🛠️ utils.js cargado correctamente',
+                test: () => typeof Utils !== 'undefined' && typeof Utils.showNotification === 'function',
+                details: () => `Funciones disponibles: ${Object.keys(Utils).length}`
+            },
+            {
+                name: '🔗 Cliente Supabase se puede inicializar',
+                test: async () => {
+                    try {
+                        const client = getSupabaseClient();
+                        return client && typeof client.from === 'function';
+                    } catch (e) {
+                        return false;
+                    }
+                },
+                details: () => 'Cliente creado y funciones básicas disponibles'
+            },
+            {
+                name: '📢 Sistema de notificaciones funciona',
+                test: () => {
+                    try {
+                        Utils.showNotification('Test de notificación', 'success', 2000);
+                        return true;
+                    } catch (e) {
+                        return false;
+                    }
+                },
+                details: () => 'Notificación mostrada correctamente'
+            },
+            {
+                name: '💰 Funciones de formato disponibles',
+                test: () => {
+                    try {
+                        const currency = Utils.formatCurrency(123.45);
+                        const date = Utils.formatDate('2024-01-01');
+                        return currency.includes('€') && date.includes('/');
+                    } catch (e) {
+                        return false;
+                    }
+                },
+                details: () => `Moneda: ${Utils.formatCurrency(123.45)}, Fecha: ${Utils.formatDate('2024-01-01')}`
+            },
+            {
+                name: '🎯 Funciones de confianza operativas',
+                test: () => {
+                    try {
+                        const highClass = Utils.getConfidenceClass(0.95);
+                        const mediumClass = Utils.getConfidenceClass(0.75);
+                        const lowClass = Utils.getConfidenceClass(0.45);
+                        return highClass === 'high' && mediumClass === 'medium' && lowClass === 'low';
+                    } catch (e) {
+                        return false;
+                    }
+                },
+                details: () => 'Alta: high, Media: medium, Baja: low'
+            },
+            {
+                name: '⚡ Utilidades avanzadas disponibles',
+                test: () => {
+                    try {
+                        const uuid = Utils.generateUUID();
+                        return uuid && uuid.length === 36 && uuid.includes('-');
+                    } catch (e) {
+                        return false;
+                    }
+                },
+                details: () => `UUID generado: ${Utils.generateUUID().substring(0, 20)}...`
+            },
+            {
+                name: '🔒 Compatibilidad legacy mantenida',
+                test: () => {
+                    return typeof showNotification === 'function' && 
+                           typeof formatCurrency === 'function' &&
+                           typeof formatDate === 'function';
+                },
+                details: () => 'Funciones legacy disponibles para código existente'
+            },
+            {
+                name: '🏢 Configuración multi-tenant funcional',
+                test: () => {
+                    return typeof TenantUtils !== 'undefined' && 
+                           typeof TenantManager !== 'undefined';
+                },
+                details: () => 'Sistema multi-tenant cargado correctamente'
+            }
+        ];
+        
+        async function runAllTests() {
+            clearResults();
+            testsCompleted = 0;
+            testResults = [];
+            
+            updateStats(0, 0, 0, 0);
+            updateProgress(0);
+            
+            Utils.showNotification('🚀 Iniciando tests completos...', 'info');
+            
+            for (let i = 0; i < allTests.length; i++) {
+                const test = allTests[i];
+                await runSingleTest(test, i + 1);
+                
+                testsCompleted++;
+                const progress = Math.round((testsCompleted / allTests.length) * 100);
+                updateProgress(progress);
+                
+                // Pausa pequeña para visualizar progreso
+                await new Promise(resolve => setTimeout(resolve, 200));
+            }
+            
+            showFinalResults();
+        }
+        
+        async function runBasicTests() {
+            const basicTests = allTests.slice(0, 5); // Solo primeros 5 tests
+            clearResults();
+            testsCompleted = 0;
+            testResults = [];
+            
+            Utils.showNotification('🔍 Ejecutando tests básicos...', 'info');
+            
+            for (let i = 0; i < basicTests.length; i++) {
+                const test = basicTests[i];
+                await runSingleTest(test, i + 1);
+                testsCompleted++;
+                updateProgress(Math.round((testsCompleted / basicTests.length) * 100));
+                await new Promise(resolve => setTimeout(resolve, 300));
+            }
+            
+            showFinalResults();
+        }
+        
+        async function runSingleTest(test, number) {
+            const container = document.getElementById('testResults');
+            
+            // Crear elemento de test
+            const testDiv = document.createElement('div');
+            testDiv.className = 'test-section';
+            testDiv.innerHTML = `
+                <div class="test-result">🔄 Test ${number}: ${test.name}</div>
+                <div class="test-details">Ejecutando...</div>
+            `;
+            container.appendChild(testDiv);
+            
+            try {
+                // Ejecutar test
+                const result = await test.test();
+                const details = test.details ? test.details() : 'Sin detalles adicionales';
+                
+                if (result) {
+                    testDiv.className = 'test-section success';
+                    testDiv.innerHTML = `
+                        <div class="test-result">✅ Test ${number}: ${test.name}</div>
+                        <div class="test-details">✅ PASADO: ${details}</div>
+                    `;
+                    testResults.push({ passed: true, name: test.name });
+                } else {
+                    testDiv.className = 'test-section error';
+                    testDiv.innerHTML = `
+                        <div class="test-result">❌ Test ${number}: ${test.name}</div>
+                        <div class="test-details">❌ FALLIDO: ${details}</div>
+                    `;
+                    testResults.push({ passed: false, name: test.name });
+                }
+            } catch (error) {
+                testDiv.className = 'test-section error';
+                testDiv.innerHTML = `
+                    <div class="test-result">❌ Test ${number}: ${test.name}</div>
+                    <div class="test-details">❌ ERROR: ${error.message}</div>
+                `;
+                testResults.push({ passed: false, name: test.name, error: error.message });
+            }
+            
+            // Actualizar estadísticas
+            const passed = testResults.filter(r => r.passed).length;
+            const failed = testResults.filter(r => !r.passed).length;
+            updateStats(testResults.length, passed, failed, Math.round((passed / testResults.length) * 100));
+        }
+        
+        function updateStats(total, passed, failed, percentage) {
+            document.getElementById('testsTotal').textContent = total;
+            document.getElementById('testsPassed').textContent = passed;
+            document.getElementById('testsFailed').textContent = failed;
+            document.getElementById('testsProgress').textContent = percentage + '%';
+        }
+        
+        function updateProgress(percentage) {
+            document.getElementById('progressFill').style.width = percentage + '%';
+        }
+        
+        function clearResults() {
+            document.getElementById('testResults').innerHTML = '';
+            updateStats(0, 0, 0, 0);
+            updateProgress(0);
+        }
+        
+        function showFinalResults() {
+            const passed = testResults.filter(r => r.passed).length;
+            const total = testResults.length;
+            const percentage = Math.round((passed / total) * 100);
+            
+            let message, type;
+            
+            if (percentage === 100) {
+                message = `🎉 ¡PERFECTO! Todos los ${total} tests pasaron exitosamente`;
+                type = 'success';
+            } else if (percentage >= 80) {
+                message = `✅ EXCELENTE: ${passed}/${total} tests pasaron (${percentage}%)`;
+                type = 'success';
+            } else if (percentage >= 60) {
+                message = `⚠️ BUENO: ${passed}/${total} tests pasaron (${percentage}%). Revisar fallos`;
+                type = 'warning';
+            } else {
+                message = `❌ PROBLEMAS: Solo ${passed}/${total} tests pasaron (${percentage}%). Revisar configuración`;
+                type = 'error';
+            }
+            
+            Utils.showNotification(message, type, 8000);
+            
+            // Agregar resumen final
+            const container = document.getElementById('testResults');
+            const summaryDiv = document.createElement('div');
+            summaryDiv.className = `test-section ${type}`;
+            summaryDiv.innerHTML = `
+                <div class="test-result">📊 RESUMEN FINAL</div>
+                <div class="test-details">
+                    ${message}
+                    <br><br>
+                    <strong>Estado del Refactoring:</strong><br>
+                    ${percentage === 100 ? '✅ LISTO para continuar con dashboard-facturas.js' :
+                      percentage >= 80 ? '🔄 MAYORMENTE listo, revisar fallos menores' :
+                      '⚠️ REQUIERE atención antes de continuar'}
+                </div>
+            `;
+            container.appendChild(summaryDiv);
+        }
+        
+        // Auto-ejecutar tests básicos al cargar
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(() => {
+                Utils.showNotification('🧪 Página de testing cargada. Ejecutando verificación inicial...', 'info');
+                setTimeout(() => runBasicTests(), 1000);
+            }, 500);
+        });
+        
+        console.log('🧪 Sistema de testing cargado. Tests disponibles:', allTests.length);
+    </script>
+</body>
+</html>
