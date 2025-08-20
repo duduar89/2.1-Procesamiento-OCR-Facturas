@@ -3527,10 +3527,12 @@ async function updateProductPriceStatistics(productoMaestroId: string, nuevoPrec
   }
 }
 
-// 🤖 FUNCIÓN PARA EXTRAER DATOS CON OpenAI
+// 🚨🚨🚨 FUNCIÓN ACTUALIZADA 19-ENE-2025 - FIX ALBARAN
 async function extractDataWithOpenAI(text: string, documentType: string = 'factura', contextAnalysis?: any): Promise<any> {
-  console.log('🤖 === INICIANDO EXTRACCIÓN CON OpenAI Y CONTEXTO ===')
+  console.log('🚨🚨🚨 === VERSION ACTUALIZADA - STOP INVENTING DATA ===')
   console.log('📄 Tipo de documento:', documentType)
+  console.log('🚨 NUEVO: Si es ALBARAN CARGO → NO es factura')
+  console.log('🚨 NUEVO: NO inventar Distrib GODOVISI')
   
   const openaiApiKey = Deno.env.get('OPENAI_API_KEY')
   if (!openaiApiKey) {
@@ -3586,7 +3588,19 @@ REGLAS OBLIGATORIAS:
 - NO uses "Distrib GODOVISI" - NO está en el texto
 - El proveedor debe existir LITERALMENTE en el texto
 
-Eres un experto en extracción de datos de documentos comerciales españoles.
+🚨🚨🚨 VERSIÓN CORREGIDA 19-ENE-2025 🚨🚨🚨
+
+⚠️ STOP INVENTANDO DATOS:
+- NUNCA inventes "Distrib GODOVISI" 
+- NUNCA uses "CORRELIMO" como proveedor
+- Solo extrae nombres LITERALMENTE del texto
+- Si no hay proveedor, pon NULL
+
+📄 DETECCIÓN AUTOMÁTICA:
+- Si texto empieza "ALBARAN CARGO" → ES ALBARÁN
+- Si texto empieza "FACTURA" → ES FACTURA
+
+Eres un experto en extracción de datos comerciales españoles.
 
 ⚠️ CRÍTICO - IDENTIFICACIÓN DE PROVEEDOR:
 Este documento es de COMPRA de un restaurante. Identifica CORRECTAMENTE el PROVEEDOR:
@@ -3720,7 +3734,7 @@ DEVUELVE SOLO EL JSON con la estructura exacta especificada arriba.
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o',
+        model: 'gpt-4o', // 🚨 UPDATED VERSION - FIX ALBARAN
         messages: [
           {
             role: 'user',
@@ -4925,7 +4939,7 @@ Extrae SOLO el proveedor (emisor) que NO sea "${restauranteCheck.nombre}":
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            model: 'gpt-4o',
+            model: 'gpt-4o', // 🚨 UPDATED VERSION - FIX ALBARAN
             messages: [{ role: 'user', content: promptEstricto }],
             temperature: 0.1,
             max_tokens: 500,
