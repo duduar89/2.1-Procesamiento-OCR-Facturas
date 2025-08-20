@@ -3585,20 +3585,21 @@ REGLAS OBLIGATORIAS:
 
 ⚠️ NUNCA INVENTES DATOS:
 - Si no encuentras el proveedor, pon null
-- NO uses "Distrib GODOVISI" - NO está en el texto
+- NO inventes nombres que no estén en el texto
 - El proveedor debe existir LITERALMENTE en el texto
+- USA EL CONTEXTO DEL RESTAURANTE PARA EVITAR CONFUSIONES
 
 🚨🚨🚨 VERSIÓN CORREGIDA 19-ENE-2025 🚨🚨🚨
 
 ⚠️ STOP INVENTANDO DATOS:
-- NUNCA inventes "Distrib GODOVISI" 
-- NUNCA uses "CORRELIMO" como proveedor
+- NUNCA inventes nombres que NO estén en el texto
+- NUNCA uses al CLIENTE como proveedor
 - Solo extrae nombres LITERALMENTE del texto
-- Si no hay proveedor, pon NULL
+- Si no hay proveedor claro, pon NULL
 
 📄 DETECCIÓN AUTOMÁTICA:
-- Si texto empieza "ALBARAN CARGO" → ES ALBARÁN
-- Si texto empieza "FACTURA" → ES FACTURA
+- Si texto empieza con "ALBARAN", "ENTREGA", "PEDIDO", "ENVIO" → ES ALBARÁN
+- Si texto empieza con "FACTURA", "INVOICE" → ES FACTURA
 
 Eres un experto en extracción de datos comerciales españoles.
 
@@ -3608,21 +3609,22 @@ Este documento es de COMPRA de un restaurante. Identifica CORRECTAMENTE el PROVE
 🏢 PROVEEDOR (quien EMITE/ENTREGA el documento):
 - Aparece en la parte SUPERIOR del documento
 - Incluye logo, nombre comercial y CIF/NIF del emisor
-- ⚠️ NUNCA uses "CORRELIMO", "CORRELIMO HUELVA SL" - SON EL CLIENTE
-- ⚠️ NUNCA inventes nombres como "Distrib GODOVISI" si no están en el texto
+- ⚠️ NUNCA uses nombres de secciones "Cliente:" como proveedor
+- ⚠️ NUNCA inventes nombres que no estén en el texto
 - ⚠️ Solo extrae nombres que estén LITERALMENTE en el texto
 
 🍽️ CLIENTE/RESTAURANTE (quien RECIBE el documento):
-- "CORRELIMO HUELVA SL" es el CLIENTE en este caso
-- Aparece en secciones como "Cliente:", "Destinatario:"
-- CIF "B56390065" pertenece al CLIENTE, no al proveedor
+- Aparece en secciones como "Cliente:", "Destinatario:", "Facturar a:"
+- Puede tener direcciones de entrega
 - NO es el proveedor, es el receptor
+- Suele aparecer en la parte inferior del documento
 
-⚠️ REGLAS CRÍTICAS:
-1. NO extraigas "CORRELIMO" como proveedor
+⚠️ REGLAS CRÍTICAS UNIVERSALES:
+1. NO extraigas nombres de secciones "Cliente:" como proveedor
 2. NO inventes nombres que no estén en el texto
 3. Si no encuentras proveedor claro, pon null
 4. El proveedor debe estar LITERALMENTE en el texto
+5. Busca el proveedor en la parte SUPERIOR, no en secciones de cliente
 
 TEXTO DEL DOCUMENTO:
 ${text}
