@@ -16,8 +16,11 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 // Tipos
 interface CotejoRequest {
   documentoId: string
+  restauranteId?: string      // ✅ NUEVO: Validación multi-tenant
   background?: boolean
   forceReprocess?: boolean
+  validarRestaurante?: boolean // ✅ NUEVO: Forzar validación
+  limpiarEnlacesPrevios?: boolean // ✅ NUEVO: Limpiar duplicados
 }
 
 interface Candidato {
@@ -56,19 +59,48 @@ serve(async (req) => {
   }
 
   try {
-    const { documentoId, background = false, forceReprocess = false }: CotejoRequest = await req.json()
+    const { 
+      documentoId, 
+      restauranteId,
+      background = false, 
+      forceReprocess = false,
+      validarRestaurante = true,
+      limpiarEnlacesPrevios = true
+    }: CotejoRequest = await req.json()
 
     if (!documentoId) {
       throw new Error('documentoId es requerido')
     }
 
-    console.log(` === INICIANDO COTEJO INTELIGENTE ===`)
-    console.log(` Documento ID: ${documentoId}`)
+    console.log(`🤖 === INICIANDO COTEJO INTELIGENTE MEJORADO ===`)
+    console.log(`📄 Documento ID: ${documentoId}`)
+    console.log(`🏢 Restaurante ID: ${restauranteId || 'No especificado'}`)
     console.log(`🔄 Background: ${background}`)
     console.log(`🔧 Force Reprocess: ${forceReprocess}`)
+    console.log(`✅ Validar Restaurante: ${validarRestaurante}`)
+    console.log(`🧹 Limpiar Enlaces Previos: ${limpiarEnlacesPrevios}`)
+
+    // ✅ VALIDAR RESTAURANTE SI ES REQUERIDO
+    let restauranteValidado = restauranteId;
+    if (validarRestaurante && !restauranteId) {
+      console.log('🔍 Obteniendo restaurante_id del documento...');
+      restauranteValidado = await obtenerRestauranteDelDocumento(documentoId);
+      
+      if (!restauranteValidado) {
+        throw new Error('No se pudo determinar el restaurante_id del documento');
+      }
+      
+      console.log(`✅ Restaurante obtenido: ${restauranteValidado}`);
+    }
+
+    // 🧹 LIMPIAR ENLACES PREVIOS SI ES REQUERIDO
+    if (limpiarEnlacesPrevios && restauranteValidado) {
+      console.log('🧹 Limpiando enlaces duplicados...');
+      await limpiarEnlacesDuplicados(documentoId, restauranteValidado);
+    }
 
     // Ejecutar cotejo
-    const resultado = await ejecutarCotejoInteligente(documentoId, forceReprocess)
+    const resultado = await ejecutarCotejoInteligente(documentoId, forceReprocess, restauranteValidado)
 
     console.log(`✅ COTEJO COMPLETADO`)
     console.log(`📊 Resultado:`, resultado)
@@ -105,8 +137,70 @@ serve(async (req) => {
   }
 })
 
+// ✅ FUNCIÓN PARA OBTENER RESTAURANTE DEL DOCUMENTO
+async function obtenerRestauranteDelDocumento(documentoId: string): Promise<string | null> {
+  try {
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    )
+
+    // Buscar en ambas tablas
+    const [factura, albaran] = await Promise.all([
+      supabase.from('datos_extraidos_facturas').select('restaurante_id').eq('documento_id', documentoId).maybeSingle(),
+      supabase.from('datos_extraidos_albaranes').select('restaurante_id').eq('documento_id', documentoId).maybeSingle()
+    ])
+
+    return factura?.restaurante_id || albaran?.restaurante_id || null;
+  } catch (error) {
+    console.error('❌ Error obteniendo restaurante_id:', error);
+    return null;
+  }
+}
+
+// 🧹 FUNCIÓN PARA LIMPIAR ENLACES DUPLICADOS
+async function limpiarEnlacesDuplicados(documentoId: string, restauranteId: string): Promise<void> {
+  try {
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    )
+
+    // Buscar enlaces existentes
+    const { data: enlaces, error } = await supabase
+      .from('enlaces_facturas_albaranes')
+      .select('id, estado, fecha_creacion')
+      .or(`factura_id.eq.${documentoId},albaran_id.eq.${documentoId}`)
+      .eq('restaurante_id', restauranteId);
+
+    if (error) throw error;
+
+    if (enlaces && enlaces.length > 1) {
+      // Mantener solo el más reciente y eliminar duplicados
+      const enlacesOrdenados = enlaces.sort((a, b) => 
+        new Date(b.fecha_creacion).getTime() - new Date(a.fecha_creacion).getTime()
+      );
+      
+      const enlacesAEliminar = enlacesOrdenados.slice(1);
+      
+      if (enlacesAEliminar.length > 0) {
+        const { error: deleteError } = await supabase
+          .from('enlaces_facturas_albaranes')
+          .delete()
+          .in('id', enlacesAEliminar.map(e => e.id));
+
+        if (deleteError) throw deleteError;
+        
+        console.log(`✅ Eliminados ${enlacesAEliminar.length} enlaces duplicados`);
+      }
+    }
+  } catch (error) {
+    console.error('❌ Error limpiando enlaces duplicados:', error);
+  }
+}
+
 // FUNCIÓN PRINCIPAL DE COTEJO
-async function ejecutarCotejoInteligente(documentoId: string, forceReprocess: boolean): Promise<ResultadoCotejo> {
+async function ejecutarCotejoInteligente(documentoId: string, forceReprocess: boolean, restauranteId?: string): Promise<ResultadoCotejo> {
   
   // NOTA IMPORTANTE: documentoId aquí es el documento_id que envía el dashboard
   // Internamente, el sistema detecta si es factura o albarán y ejecuta el cotejo correspondiente
@@ -1497,56 +1591,230 @@ async function buscarPorAnalisisProductos(factura: any): Promise<Candidato[]> {
   }
 }
 
-// Función auxiliar para calcular score de productos
-async function calcularScoreProductos(factura: any, albaran: any): Promise<number> {
+// ✅ ALGORITMO DE SCORING MEJORADO - VERSIÓN 2.0
+async function calcularScoreMejorado(factura: any, albaran: any): Promise<{
+  score: number;
+  factores: Record<string, number>;
+  confianza: 'alta' | 'media' | 'baja';
+  razones: string[];
+}> {
   try {
-    let score = 0.75 // Score base para este método
-    
-    // Obtener productos del albarán (si existen)
+    const factores: Record<string, number> = {};
+    const razones: string[] = [];
+    let scoreTotal = 0;
+
+    // ✅ FACTOR 1: COINCIDENCIA DE PROVEEDOR (40% peso)
+    if (factura.proveedor_nombre && albaran.proveedor_nombre) {
+      const similarity = calcularSimilitudTexto(
+        factura.proveedor_nombre.toLowerCase().trim(),
+        albaran.proveedor_nombre.toLowerCase().trim()
+      );
+      factores.proveedor = similarity;
+      scoreTotal += similarity * 0.4;
+      
+      if (similarity >= 0.9) razones.push('Proveedor coincide exactamente');
+      else if (similarity >= 0.7) razones.push('Proveedor muy similar');
+      else if (similarity >= 0.5) razones.push('Proveedor parcialmente similar');
+      else razones.push('Proveedor diferente');
+    } else {
+      factores.proveedor = 0;
+      razones.push('Sin datos de proveedor para comparar');
+    }
+
+    // ✅ FACTOR 2: PROXIMIDAD DE FECHAS (30% peso)
+    if (factura.fecha_factura && albaran.fecha_albaran) {
+      const diffDias = Math.abs(
+        new Date(factura.fecha_factura).getTime() - new Date(albaran.fecha_albaran).getTime()
+      ) / (1000 * 60 * 60 * 24);
+      
+      let factorFecha = 0;
+      if (diffDias <= 1) {
+        factorFecha = 1.0;
+        razones.push('Fechas muy próximas (mismo día)');
+      } else if (diffDias <= 7) {
+        factorFecha = 0.8;
+        razones.push(`Fechas próximas (${Math.round(diffDias)} días)`);
+      } else if (diffDias <= 30) {
+        factorFecha = 0.5;
+        razones.push(`Fechas en el mismo mes (${Math.round(diffDias)} días)`);
+      } else {
+        factorFecha = 0.1;
+        razones.push(`Fechas lejanas (${Math.round(diffDias)} días)`);
+      }
+      
+      factores.fecha = factorFecha;
+      scoreTotal += factorFecha * 0.3;
+    } else {
+      factores.fecha = 0;
+      razones.push('Sin fechas para comparar');
+    }
+
+    // ✅ FACTOR 3: SIMILITUD DE IMPORTES (20% peso)
+    if (factura.total_factura && albaran.total_albaran) {
+      const diffImporte = Math.abs(factura.total_factura - albaran.total_albaran);
+      const promedioImporte = (factura.total_factura + albaran.total_albaran) / 2;
+      const porcentajeDiff = promedioImporte > 0 ? diffImporte / promedioImporte : 1;
+      
+      let factorImporte = 0;
+      if (porcentajeDiff <= 0.02) {
+        factorImporte = 1.0;
+        razones.push('Importes prácticamente iguales (±2%)');
+      } else if (porcentajeDiff <= 0.05) {
+        factorImporte = 0.8;
+        razones.push(`Importes muy similares (±${Math.round(porcentajeDiff * 100)}%)`);
+      } else if (porcentajeDiff <= 0.10) {
+        factorImporte = 0.5;
+        razones.push(`Importes similares (±${Math.round(porcentajeDiff * 100)}%)`);
+      } else {
+        factorImporte = 0.1;
+        razones.push(`Importes diferentes (±${Math.round(porcentajeDiff * 100)}%)`);
+      }
+      
+      factores.importe = factorImporte;
+      scoreTotal += factorImporte * 0.2;
+    } else {
+      factores.importe = 0;
+      razones.push('Sin importes para comparar');
+    }
+
+    // ✅ FACTOR 4: PRODUCTOS EN COMÚN (10% peso)
+    const productosScore = await calcularScoreProductosMejorado(factura, albaran);
+    factores.productos = productosScore.score;
+    scoreTotal += productosScore.score * 0.1;
+    razones.push(...productosScore.razones);
+
+    // ✅ DETERMINAR CONFIANZA
+    let confianza: 'alta' | 'media' | 'baja';
+    if (scoreTotal >= 0.8) confianza = 'alta';
+    else if (scoreTotal >= 0.6) confianza = 'media';
+    else confianza = 'baja';
+
+    return {
+      score: Math.round(scoreTotal * 100) / 100,
+      factores,
+      confianza,
+      razones
+    };
+
+  } catch (error) {
+    console.error('❌ Error en algoritmo de scoring mejorado:', error);
+    return {
+      score: 0,
+      factores: {},
+      confianza: 'baja',
+      razones: ['Error en el cálculo']
+    };
+  }
+}
+
+// ✅ SCORING DE PRODUCTOS MEJORADO
+async function calcularScoreProductosMejorado(factura: any, albaran: any): Promise<{
+  score: number;
+  razones: string[];
+}> {
+  try {
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    )
+    );
     
     const { data: productosAlbaran } = await supabase
       .from('productos_extraidos')
-      .select('descripcion_original, descripcion_normalizada')
-      .eq('documento_id', albaran.documento_id)
+      .select('descripcion_original, descripcion_normalizada, cantidad, precio_unitario_sin_iva')
+      .eq('documento_id', albaran.documento_id);
     
     if (!productosAlbaran || productosAlbaran.length === 0) {
-      return score * 0.5 // Reducir score si no hay productos
+      return { score: 0.3, razones: ['Albarán sin productos'] };
     }
     
-    // Comparar productos de factura vs albarán
-    const productosFactura = factura.productos_extraidos || []
-    let coincidencias = 0
+    const productosFactura = factura.productos_extraidos || [];
+    if (productosFactura.length === 0) {
+      return { score: 0.3, razones: ['Factura sin productos'] };
+    }
+    
+    let coincidencias = 0;
+    let coincidenciasExactas = 0;
     
     for (const productoFactura of productosFactura) {
-      const descFactura = (productoFactura.descripcion_original || productoFactura.descripcion_normalizada || '').toLowerCase()
+      const descFactura = (productoFactura.descripcion_original || '').toLowerCase().trim();
       
       for (const productoAlbaran of productosAlbaran) {
-        const descAlbaran = (productoAlbaran.descripcion_original || productoAlbaran.descripcion_normalizada || '').toLowerCase()
+        const descAlbaran = (productoAlbaran.descripcion_original || '').toLowerCase().trim();
         
-        // Comparación simple de similitud
-        if (compararProductos(descFactura, descAlbaran)) {
-          coincidencias++
-          break
+        const similitud = calcularSimilitudTexto(descFactura, descAlbaran);
+        
+        if (similitud >= 0.8) {
+          coincidenciasExactas++;
+          coincidencias++;
+          break;
+        } else if (similitud >= 0.6) {
+          coincidencias++;
+          break;
         }
       }
     }
     
-    // Calcular score basado en coincidencias
-    if (productosFactura.length > 0) {
-      const porcentajeCoincidencia = coincidencias / productosFactura.length
-      score = score * (0.3 + porcentajeCoincidencia * 0.7)
+    const porcentajeCoincidencia = coincidencias / productosFactura.length;
+    const porcentajeExacta = coincidenciasExactas / productosFactura.length;
+    
+    // Score basado en coincidencias
+    let score = 0.2 + (porcentajeCoincidencia * 0.6) + (porcentajeExacta * 0.2);
+    
+    const razones = [];
+    if (coincidenciasExactas > 0) {
+      razones.push(`${coincidenciasExactas} productos coinciden exactamente`);
+    }
+    if (coincidencias > coincidenciasExactas) {
+      razones.push(`${coincidencias - coincidenciasExactas} productos similares`);
+    }
+    if (coincidencias === 0) {
+      razones.push('No hay productos en común');
     }
     
-    return Math.max(0, Math.min(1, score))
+    return {
+      score: Math.max(0, Math.min(1, score)),
+      razones
+    };
     
   } catch (error) {
-    console.error('❌ Error calculando score de productos:', error)
-    return 0.5
+    console.error('❌ Error calculando score de productos mejorado:', error);
+    return { score: 0.2, razones: ['Error comparando productos'] };
   }
+}
+
+// ✅ FUNCIÓN AUXILIAR PARA SIMILITUD DE TEXTO MEJORADA
+function calcularSimilitudTexto(texto1: string, texto2: string): number {
+  if (!texto1 || !texto2) return 0;
+  
+  // Normalizar textos
+  const t1 = texto1.toLowerCase().trim();
+  const t2 = texto2.toLowerCase().trim();
+  
+  // Coincidencia exacta
+  if (t1 === t2) return 1.0;
+  
+  // Similitud de Jaccard con n-gramas
+  const ngrams1 = obtenerNGramas(t1, 2);
+  const ngrams2 = obtenerNGramas(t2, 2);
+  
+  const union = new Set([...ngrams1, ...ngrams2]);
+  const intersection = ngrams1.filter(ng => ngrams2.includes(ng));
+  
+  return intersection.length / union.size;
+}
+
+function obtenerNGramas(texto: string, n: number): string[] {
+  const ngramas = [];
+  for (let i = 0; i <= texto.length - n; i++) {
+    ngramas.push(texto.slice(i, i + n));
+  }
+  return ngramas;
+}
+
+// Función auxiliar para calcular score de productos (LEGACY - mantenida para compatibilidad)
+async function calcularScoreProductos(factura: any, albaran: any): Promise<number> {
+  const resultado = await calcularScoreProductosMejorado(factura, albaran);
+  return resultado.score;
 }
 
 async function buscarPorPatronesTemporal(factura: any): Promise<Candidato[]> {

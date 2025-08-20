@@ -126,8 +126,11 @@ function updateThemeIcon(theme) {
       // Preparar datos para enviar a Supabase
       const datosCotejo = {
         documentoId: facturaId,
+        restauranteId: window.currentUser?.restaurante_id, // ✅ NUEVO: Validación multi-tenant
         background: false,
-        forceReprocess: true  // 🚨 FORZAR REPROCESO SIEMPRE
+        forceReprocess: true,  // 🚨 FORZAR REPROCESO SIEMPRE
+        validarRestaurante: true, // ✅ NUEVO: Forzar validación
+        limpiarEnlacesPrevios: true // ✅ NUEVO: Limpiar duplicados
       }
       
       console.log('📤 Datos que se envían a Supabase:', datosCotejo)
@@ -5166,10 +5169,18 @@ function renderFacturasTable(data = window.facturasData || []) {
     const tbody = document.querySelector('.facturas-table tbody');
     const tableEmpty = document.getElementById('tableEmpty');
     
+    // ✅ VALIDACIÓN DE ELEMENTOS CRÍTICOS
     if (!tbody) {
-        console.error('❌ No se encontró tbody de la tabla');
+        console.error('❌ Error: No se encontró el tbody de la tabla');
+        showNotification('Error: Tabla no encontrada', 'error');
         return;
     }
+    
+    if (!tableEmpty) {
+        console.warn('⚠️ Advertencia: Elemento tableEmpty no encontrado');
+    }
+    
+
     
     // Ocultar mensaje de tabla vacía
     if (tableEmpty) {
@@ -5429,6 +5440,12 @@ function renderFacturasTable(data = window.facturasData || []) {
             
             // Verificar el HTML de la tabla
             const tbody = document.querySelector('.facturas-table tbody');
+            
+            // ✅ VALIDACIÓN DE TBODY
+            if (!tbody) {
+                console.error('❌ Error: tbody no encontrado en expandir albaranes');
+                return;
+            }
             if (tbody) {
                 console.log('🔍 HTML de la tabla generado:', tbody.innerHTML.substring(0, 500) + '...');
             }
