@@ -3564,19 +3564,19 @@ REGLAS OBLIGATORIAS:
 `
   }
   
-  // 🎯 ADAPTAR PROMPT SEGÚN TIPO DE DOCUMENTO
-  const tipoTexto = documentType === 'albaran' ? 'albarán de entrega' : 'factura'
-  const tipoAccion = documentType === 'albaran' ? 'ENTREGA/ENVÍA' : 'VENDE/EMITE'
-  const tipoDocumento = documentType === 'albaran' ? 'albarán' : 'factura'
+  // 🚨 PROMPT FIJO - SIN VARIABLES DINÁMICAS (para evitar problemas)
+  console.log('🔍 === GENERANDO PROMPT FIJO ===')
+  console.log('📄 DocumentType recibido:', documentType)
   
-  // ⚠️ INSTRUCCIÓN ESPECÍFICA PARA ALBARANES
-  const instruccionEspecifica = documentType === 'albaran' ? `
-⚠️ IMPORTANTE - ESTE ES UN ALBARÁN, NO UNA FACTURA:
-- Los albaranes pueden tener precios pero el enfoque principal es la ENTREGA
-- Busca términos como "ALBARAN CARGO", "NOTA DE ENTREGA", "ENVÍO"
-- El número de documento puede aparecer como "Número albarán" o similar
-- Los totales pueden estar ausentes o ser informativos
-` : ''
+  // 📋 DETERMINAR TIPO BASADO EN EL TEXTO DIRECTAMENTE  
+  const esAlbaran = text.toLowerCase().substring(0, 200).includes('albaran')
+  const esTipoAlbaran = documentType === 'albaran' || esAlbaran
+  
+  console.log('📊 Análisis de tipo:', {
+    documentType_param: documentType,
+    texto_contiene_albaran: esAlbaran,
+    decision_final: esTipoAlbaran ? 'ALBARAN' : 'FACTURA'
+  })
   
   const prompt = `${contextInstructions}
 ⚠️ DETECCIÓN AUTOMÁTICA: Este texto puede ser FACTURA o ALBARÁN:
