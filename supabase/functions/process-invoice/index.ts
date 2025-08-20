@@ -4034,9 +4034,8 @@ function classifyDocument(fullText: string): {
   console.log('🔍 === INICIANDO CLASIFICACIÓN DE DOCUMENTO ===')
   
   if (!fullText || fullText.length < 10) {
-    console.log('⚠️ Texto insuficiente para clasificar')
     return {
-      tipo: 'factura', // Default seguro
+      tipo: 'factura',
       confianza: 0.3,
       patrones: { error: 'texto_insuficiente' },
       razonamiento: 'Texto muy corto, defaulteando a factura'
@@ -4044,6 +4043,8 @@ function classifyDocument(fullText: string): {
   }
   
   const texto = fullText.toLowerCase()
+  const inicioTexto = texto.substring(0, 200) // Solo primeras líneas
+  
   const patrones = {
     albaran_encontrado: false,
     factura_encontrada: false,
@@ -4053,194 +4054,102 @@ function classifyDocument(fullText: string): {
     indicadores_entrega: []
   }
   
-  // 📦 DETECTAR ALBARÁN - MEJORADO SEGÚN TUS ESPECIFICACIONES
-  const palabrasAlbaran = [
-    // Términos principales de albarán
-    'albarán', 'albaran', 'albarán cargo', 'albaran cargo',
-    
-    // Variaciones de entrega (como mencionaste)
-    'entrega', 'entregado', 'nota de entrega', 'nota entrega',
-    'documento entrega', 'comprobante entrega', 'hoja de entrega',
-    
-    // Términos de envío (como mencionaste)
-    'envío', 'envio', 'remito', 'guía de remisión',
-    'orden de envío', 'orden envio',
-    
-    // Términos de pedido (como mencionaste)  
-    'pedido', 'orden de pedido', 'confirmación pedido',
-    'orden de compra', 'purchase order',
-    
-    // Términos adicionales
-    'recepción', 'recibido', 'suministro',
-    
-    // Términos en inglés
-    'delivery note', 'delivery receipt', 'packing slip',
-    'shipping note', 'dispatch note'
+  // 🎯 TÉRMINOS ESPECÍFICOS Y NO AMBIGUOS
+  
+  // 1️⃣ TÉRMINOS EXCLUSIVOS DE ALBARÁN (NO aparecen en facturas)
+  const terminosAlbaranExclusivos = [
+    'albaran', 'albarán', 'albaran cargo', 'albarán cargo',
+    'nota de entrega', 'comprobante entrega', 'hoja de entrega',
+    'delivery note', 'packing slip'
   ]
   
-  // 🔍 BÚSQUEDA PRIORITARIA: Buscar al inicio del documento (primeros 300 chars)
-  const inicioTexto = texto.substring(0, 300)
-  console.log('🔍 Buscando palabras de albarán AL INICIO del documento:', inicioTexto.substring(0, 100) + '...')
+  // 2️⃣ TÉRMINOS EXCLUSIVOS DE FACTURA (NO aparecen en albaranes)  
+  const terminosFacturaExclusivos = [
+    'factura', 'invoice', 'factura proforma', 'factura simplificada',
+    'base imponible', 'cuota iva', 'total factura', 'importe factura',
+    'vencimiento', 'fecha vencimiento', 'condiciones pago'
+  ]
   
-  let albaranEnInicio = false
-  palabrasAlbaran.forEach(palabra => {
-    if (inicioTexto.includes(palabra)) {
-      console.log(`✅ PALABRA ALBARÁN ENCONTRADA AL INICIO: "${palabra}"`)
+  // 🔍 DETECTAR TÉRMINOS ESPECÍFICOS
+  terminosAlbaranExclusivos.forEach(termino => {
+    if (texto.includes(termino)) {
       patrones.albaran_encontrado = true
-      patrones.palabras_albaran.push(palabra)
-      albaranEnInicio = true
+      patrones.palabras_albaran.push(termino)
+      console.log(`✅ TÉRMINO ESPECÍFICO ALBARÁN: "${termino}"`)
     }
   })
   
-  // 🔍 BÚSQUEDA GLOBAL si no se encontró al inicio
-  if (!albaranEnInicio) {
-    console.log('🔍 Buscando en todo el texto...')
-    palabrasAlbaran.forEach(palabra => {
-      if (texto.includes(palabra)) {
-        console.log(`✅ PALABRA ALBARÁN ENCONTRADA EN EL TEXTO: "${palabra}"`)
-        patrones.albaran_encontrado = true
-        patrones.palabras_albaran.push(palabra)
-      }
-    })
-  }
-  
-  // 📄 DETECTAR FACTURA - MEJORADO SEGÚN TUS ESPECIFICACIONES
-  const palabrasFactura = [
-    // Términos principales de factura
-    'factura', 'invoice', 'bill', 'fact.', 'fac.',
-    
-    // Tipos específicos de factura (como mencionaste)
-    'factura simplificada', 'factura proforma', 'factura rectificativa',
-    'factura comercial', 'factura de venta', 'factura fiscal',
-    'pro forma invoice', 'commercial invoice', 'tax invoice',
-    
-    // Términos financieros típicos de facturas
-    'total factura', 'importe factura', 'base imponible',
-    'cuota iva', 'iva desglosado', 'tipo impositivo',
-    'vencimiento', 'fecha vencimiento', 'forma de pago',
-    'condiciones pago', 'pagar', 'cobrar',
-    'retención', 'descuento', 'recargo',
-    
-    // Identificadores de factura
-    'número factura', 'nº factura', 'fecha factura',
-    'emisor', 'proveedor', 'vendedor', 'importe'
-  ]
-  
-  console.log('🔍 Buscando palabras de factura...')
-  
-  palabrasFactura.forEach(palabra => {
-    if (texto.includes(palabra)) {
-      console.log(`✅ PALABRA FACTURA ENCONTRADA: "${palabra}"`)
+  terminosFacturaExclusivos.forEach(termino => {
+    if (texto.includes(termino)) {
       patrones.factura_encontrada = true
-      patrones.palabras_factura.push(palabra)
-    } else {
-      console.log(`❌ Palabra "${palabra}" NO encontrada`)
+      patrones.palabras_factura.push(termino)
+      console.log(`✅ TÉRMINO ESPECÍFICO FACTURA: "${termino}"`)
     }
   })
   
-  // 💰 DETECTAR PRECIOS (indicador fuerte de factura)
-  const preciosEncontrados = texto.match(/\d+[,\.]\d{2}\s*€/g) || []
-  patrones.precios_encontrados = preciosEncontrados.length
+  // 📊 CONTAR PRECIOS
+  patrones.precios_encontrados = (texto.match(/\d+[,\.]\d{2}\s*€/g) || []).length
   
-  // 🚚 DETECTAR INDICADORES DE ENTREGA
-  const indicadoresEntrega = [
-    'transportista', 'conductor', 'matrícula', 'conformidad',
-    'firma', 'estado entrega'
-  ]
-  
-  indicadoresEntrega.forEach(indicador => {
-    if (texto.includes(indicador)) {
-      patrones.indicadores_entrega.push(indicador)
-    }
-  })
-  
-  // 🎯 LÓGICA DE CLASIFICACIÓN MEJORADA - CON PRIORIDAD CORRECTA
-  let tipo: 'factura' | 'albaran' | 'incierto' = 'incierto'
+  // 🎯 LÓGICA DE DIFERENCIACIÓN CONSERVADORA
+  let tipo: 'factura' | 'albaran' | 'incierto' = 'factura' // Default conservador
   let confianza = 0.5
   let razonamiento = ''
   
-  // ⭐ REGLA PRIORITARIA: Si "ALBARÁN" está al INICIO del documento → ALBARÁN (máxima prioridad)
-  if (albaranEnInicio) {
-    tipo = 'albaran'
-    confianza = 0.98
-    razonamiento = `"${patrones.palabras_albaran[0]}" encontrado al INICIO del documento - ALBARÁN con máxima confianza`
-  }
-  
-  // ✅ REGLA 1: Si dice "ALBARÁN" en cualquier parte y NO hay "factura" al inicio → ALBARÁN
-  else if (patrones.albaran_encontrado && !inicioTexto.includes('factura')) {
+  // 📋 CASO 1: TÉRMINOS EXCLUSIVOS CLAROS
+  if (patrones.albaran_encontrado && !patrones.factura_encontrada) {
     tipo = 'albaran'
     confianza = 0.95
-    razonamiento = `Contiene términos de albarán: "${patrones.palabras_albaran.join(', ')}" sin "factura" al inicio`
+    razonamiento = `Términos exclusivos de albarán: "${patrones.palabras_albaran.join(', ')}"`
   }
-  
-  // ✅ REGLA 2: Si dice "FACTURA" al inicio del documento → FACTURA
-  else if (inicioTexto.includes('factura') || inicioTexto.includes('invoice')) {
+  else if (patrones.factura_encontrada && !patrones.albaran_encontrado) {
     tipo = 'factura'
     confianza = 0.95
-    razonamiento = 'Documento contiene "FACTURA" al inicio - Clasificación directa'
+    razonamiento = `Términos exclusivos de factura: "${patrones.palabras_factura.join(', ')}"`
   }
   
-  // ✅ REGLA 3: Si dice "FACTURA" en cualquier parte → FACTURA
-  else if (texto.includes('factura') || texto.includes('invoice')) {
-    tipo = 'factura'
-    confianza = 0.90
-    razonamiento = 'Documento contiene la palabra "FACTURA" - Clasificación directa'
-  }
-  
-  // ✅ REGLA 3: Si dice "ENTREGADO" o "PEDIDO" → Probablemente ALBARÁN
-  else if (texto.includes('entregado') || texto.includes('pedido') || texto.includes('orden')) {
-    tipo = 'albaran'
-    confianza = 0.85
-    razonamiento = 'Contiene "ENTREGADO" o "PEDIDO" - Indicadores de albarán'
-  }
-  
-  // ✅ REGLA 4: Indicadores secundarios de FACTURA
-  else if (patrones.factura_encontrada && patrones.precios_encontrados > 2) {
-    tipo = 'factura'
-    confianza = 0.90
-    razonamiento = `Contiene términos de factura y ${patrones.precios_encontrados} precios`
-  }
-  
-  // ✅ REGLA 5: Indicadores secundarios de ALBARÁN
-  else if (patrones.indicadores_entrega.length > 1) {
-    tipo = 'albaran'
-    confianza = 0.80
-    razonamiento = `${patrones.indicadores_entrega.length} indicadores de entrega detectados`
-  }
-  
-  // ✅ REGLA 6: Análisis de contexto cuando hay ambos
+  // 📋 CASO 2: AMBOS PRESENTES - USAR CONTEXTO
   else if (patrones.albaran_encontrado && patrones.factura_encontrada) {
-    // Si hay más palabras de albarán que de factura → ALBARÁN
-    if (patrones.palabras_albaran.length > patrones.palabras_factura.length) {
+    // Si "albaran" está al INICIO → ALBARÁN
+    if (inicioTexto.includes('albaran')) {
       tipo = 'albaran'
-      confianza = 0.85
-      razonamiento = 'Contiene ambos términos, pero predominan indicadores de albarán'
-    } else {
+      confianza = 0.9
+      razonamiento = '"ALBARAN" al inicio supera términos de factura'
+    }
+    // Si "factura" está al INICIO → FACTURA
+    else if (inicioTexto.includes('factura')) {
+      tipo = 'factura'
+      confianza = 0.9
+      razonamiento = '"FACTURA" al inicio supera términos de albarán'
+    }
+    // Si no, usar indicadores financieros
+    else if (patrones.precios_encontrados > 8 || 
+             texto.includes('base imponible') || 
+             texto.includes('vencimiento')) {
       tipo = 'factura'
       confianza = 0.85
-      razonamiento = 'Contiene ambos términos, pero predominan indicadores de factura'
+      razonamiento = 'Términos mixtos pero evidencia financiera fuerte'
+    }
+    else {
+      tipo = 'albaran'
+      confianza = 0.8
+      razonamiento = 'Términos mixtos, priorizando albarán por contexto'
     }
   }
   
-  // ✅ REGLA 7: Default mejorado
+  // 📋 CASO 3: NINGÚN TÉRMINO ESPECÍFICO - ANALIZAR CONTEXTO
   else {
-    // Si hay muchos precios → probablemente factura
-    if (patrones.precios_encontrados > 5) {
+    if (patrones.precios_encontrados > 10 || 
+        texto.includes('total') || 
+        texto.includes('subtotal') ||
+        texto.includes('iva')) {
       tipo = 'factura'
-      confianza = 0.70
-      razonamiento = `Muchos precios (${patrones.precios_encontrados}) sugieren factura`
+      confianza = 0.7
+      razonamiento = `Sin términos específicos, pero evidencia financiera (${patrones.precios_encontrados} precios)`
     }
-    // Si hay pocos precios → podría ser albarán
-    else if (patrones.precios_encontrados <= 2) {
-      tipo = 'albaran'
-      confianza = 0.60
-      razonamiento = `Pocos precios (${patrones.precios_encontrados}) sugieren albarán`
-    }
-    // Default: factura
     else {
       tipo = 'factura'
-      confianza = 0.50
-      razonamiento = 'Sin indicadores claros, clasificando como factura por defecto'
+      confianza = 0.5
+      razonamiento = 'Sin términos específicos, defaulteando a factura'
     }
   }
   
@@ -4251,18 +4160,7 @@ function classifyDocument(fullText: string): {
     razonamiento
   }
   
-  // ✅ LOGGING DETALLADO PARA DEBUG
-  console.log('🎯 === CLASIFICACIÓN COMPLETADA ===')
-  console.log(`📋 Tipo detectado: ${tipo.toUpperCase()}`)
-  console.log(`📊 Confianza: ${Math.round(confianza * 100)}%`)
-  console.log(`💭 Razonamiento: ${razonamiento}`)
-  console.log('📄 Palabras encontradas:')
-  console.log(`  - Factura: ${patrones.palabras_factura.join(', ') || 'Ninguna'}`)
-  console.log(`  - Albarán: ${patrones.palabras_albaran.join(', ') || 'Ninguna'}`)
-  console.log(`  - Precios: ${patrones.precios_encontrados}`)
-  console.log(`  - Indicadores entrega: ${patrones.indicadores_entrega.join(', ') || 'Ninguno'}`)
-  console.log('🎯 ================================')
-  
+  console.log('🎯 Clasificación completada:', resultado)
   return resultado
 }
 
