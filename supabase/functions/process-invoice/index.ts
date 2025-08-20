@@ -4047,17 +4047,31 @@ function classifyDocument(fullText: string): {
     'shipping note', 'dispatch note'
   ]
   
-  console.log('🔍 Buscando palabras de albarán en:', texto.substring(0, 200) + '...')
+  // 🔍 BÚSQUEDA PRIORITARIA: Buscar al inicio del documento (primeros 300 chars)
+  const inicioTexto = texto.substring(0, 300)
+  console.log('🔍 Buscando palabras de albarán AL INICIO del documento:', inicioTexto.substring(0, 100) + '...')
   
+  let albaranEnInicio = false
   palabrasAlbaran.forEach(palabra => {
-    if (texto.includes(palabra)) {
-      console.log(`✅ PALABRA ALBARÁN ENCONTRADA: "${palabra}"`)
+    if (inicioTexto.includes(palabra)) {
+      console.log(`✅ PALABRA ALBARÁN ENCONTRADA AL INICIO: "${palabra}"`)
       patrones.albaran_encontrado = true
       patrones.palabras_albaran.push(palabra)
-    } else {
-      console.log(`❌ Palabra "${palabra}" NO encontrada`)
+      albaranEnInicio = true
     }
   })
+  
+  // 🔍 BÚSQUEDA GLOBAL si no se encontró al inicio
+  if (!albaranEnInicio) {
+    console.log('🔍 Buscando en todo el texto...')
+    palabrasAlbaran.forEach(palabra => {
+      if (texto.includes(palabra)) {
+        console.log(`✅ PALABRA ALBARÁN ENCONTRADA EN EL TEXTO: "${palabra}"`)
+        patrones.albaran_encontrado = true
+        patrones.palabras_albaran.push(palabra)
+      }
+    })
+  }
   
   // 📄 DETECTAR FACTURA - MEJORADO SEGÚN TUS ESPECIFICACIONES
   const palabrasFactura = [
@@ -4109,23 +4123,37 @@ function classifyDocument(fullText: string): {
     }
   })
   
-  // 🎯 LÓGICA DE CLASIFICACIÓN MEJORADA - SEGÚN TUS ESPECIFICACIONES
+  // 🎯 LÓGICA DE CLASIFICACIÓN MEJORADA - CON PRIORIDAD CORRECTA
   let tipo: 'factura' | 'albaran' | 'incierto' = 'incierto'
   let confianza = 0.5
   let razonamiento = ''
   
-  // ✅ REGLA 1 (ALTA PRIORIDAD): Si dice "FACTURA" claramente → FACTURA
-  if (texto.includes('factura') || texto.includes('invoice')) {
-    tipo = 'factura'
-    confianza = 0.98
-    razonamiento = 'Documento contiene la palabra "FACTURA" - Clasificación directa'
-  }
-  
-  // ✅ REGLA 2 (ALTA PRIORIDAD): Si dice "ALBARÁN" claramente → ALBARÁN
-  else if (texto.includes('albarán') || texto.includes('albaran') || texto.includes('albarana')) {
+  // ⭐ REGLA PRIORITARIA: Si "ALBARÁN" está al INICIO del documento → ALBARÁN (máxima prioridad)
+  if (albaranEnInicio) {
     tipo = 'albaran'
     confianza = 0.98
-    razonamiento = 'Documento contiene la palabra "ALBARÁN" - Clasificación directa'
+    razonamiento = `"${patrones.palabras_albaran[0]}" encontrado al INICIO del documento - ALBARÁN con máxima confianza`
+  }
+  
+  // ✅ REGLA 1: Si dice "ALBARÁN" en cualquier parte y NO hay "factura" al inicio → ALBARÁN
+  else if (patrones.albaran_encontrado && !inicioTexto.includes('factura')) {
+    tipo = 'albaran'
+    confianza = 0.95
+    razonamiento = `Contiene términos de albarán: "${patrones.palabras_albaran.join(', ')}" sin "factura" al inicio`
+  }
+  
+  // ✅ REGLA 2: Si dice "FACTURA" al inicio del documento → FACTURA
+  else if (inicioTexto.includes('factura') || inicioTexto.includes('invoice')) {
+    tipo = 'factura'
+    confianza = 0.95
+    razonamiento = 'Documento contiene "FACTURA" al inicio - Clasificación directa'
+  }
+  
+  // ✅ REGLA 3: Si dice "FACTURA" en cualquier parte → FACTURA
+  else if (texto.includes('factura') || texto.includes('invoice')) {
+    tipo = 'factura'
+    confianza = 0.90
+    razonamiento = 'Documento contiene la palabra "FACTURA" - Clasificación directa'
   }
   
   // ✅ REGLA 3: Si dice "ENTREGADO" o "PEDIDO" → Probablemente ALBARÁN
