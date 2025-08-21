@@ -5275,7 +5275,12 @@ function renderFacturasTable(data = window.facturasData || []) {
                 <span class="numero-factura">${factura.numero_factura || 'N/A'}</span>
             </td>
             <td class="proveedor-column">
-                <span class="proveedor-nombre">${factura.proveedor_nombre || 'N/A'}</span>
+                <div class="proveedor-info">
+                    <span class="proveedor-nombre">${factura.proveedor_nombre || 'N/A'}</span>
+                    ${factura.proveedor_nuevo ? `
+                        <span class="proveedor-nuevo-badge" title="Proveedor nuevo - Requiere confirmación">🆕</span>
+                    ` : ''}
+                </div>
             </td>
             <td class="fecha-column">
                 <span class="fecha-factura">${formatDate(factura.fecha_factura)}</span>
@@ -6805,11 +6810,6 @@ async function loadProductosInModal(productos) {
                     <td class="producto-precio">${formatCurrency(producto.precio || 0)}</td>
                     <td class="producto-descuento">${producto.descuento || '0%'}</td>
                     <td class="producto-total">${formatCurrency(total)}</td>
-                    <td class="producto-acciones">
-                        <button class="btn-edit-producto" onclick="editProducto('${producto.id || ''}')" title="Editar producto">
-                            ✏️
-                        </button>
-                    </td>
                 </tr>
             `;
         }).join('');
@@ -6903,119 +6903,11 @@ function renderProductosInModalWithConfidence(productos) {
                 <td class="producto-precio">${formatCurrency(producto.precio_unitario_sin_iva || 0)}</td>
                 <td class="producto-iva">${producto.tipo_iva || 21}%</td>
                 <td class="producto-total">${formatCurrency(producto.precio_total_linea_sin_iva || 0)}</td>
-                <td class="producto-acciones">
-                    <button class="btn-edit-producto" onclick="editProducto('${producto.id}')" title="Editar producto">
-                        ✏️
-                    </button>
-                </td>
             </tr>
         `;
     }).join('');
     
     console.log('✅ Productos renderizados con confianza cromática:', productos.length);
-}
-
-// 🆕 FUNCIÓN PARA EDITAR PRODUCTO
-function editProducto(productoId) {
-    try {
-        console.log('✏️ Editando producto:', productoId);
-        
-        // Buscar el producto en la tabla
-        const productoRow = document.querySelector(`tr[data-producto-id="${productoId}"]`);
-        if (!productoRow) {
-            console.error('❌ Producto no encontrado en la tabla');
-            return;
-        }
-        
-        // Convertir la fila en modo edición
-        const celdas = productoRow.querySelectorAll('td:not(.producto-acciones)');
-        celdas.forEach((celda, index) => {
-            const valorActual = celda.textContent.trim();
-            
-            // Crear input de edición
-            const input = document.createElement('input');
-            input.type = 'text';
-            input.value = valorActual;
-            input.className = 'edit-producto-input';
-            input.style.width = '100%';
-            input.style.padding = '4px';
-            input.style.border = '1px solid #d1d5db';
-            input.style.borderRadius = '4px';
-            
-            // Reemplazar contenido de la celda
-            celda.innerHTML = '';
-            celda.appendChild(input);
-            
-            // Enfocar el input
-            input.focus();
-        });
-        
-        // Cambiar botón de editar por guardar/cancelar
-        const accionesCell = productoRow.querySelector('.producto-acciones');
-        accionesCell.innerHTML = `
-            <button class="btn-save-producto" onclick="saveProducto('${productoId}')" title="Guardar cambios">
-                💾
-            </button>
-            <button class="btn-cancel-producto" onclick="cancelEditProducto('${productoId}')" title="Cancelar">
-                ❌
-            </button>
-        `;
-        
-        console.log('✅ Producto en modo edición');
-        
-    } catch (error) {
-        console.error('❌ Error editando producto:', error);
-    }
-}
-
-// 🆕 FUNCIÓN PARA GUARDAR CAMBIOS DE PRODUCTO
-async function saveProducto(productoId) {
-    try {
-        console.log('💾 Guardando producto:', productoId);
-        
-        // Recopilar datos editados
-        const productoRow = document.querySelector(`tr[data-producto-id="${productoId}"]`);
-        const inputs = productoRow.querySelectorAll('.edit-producto-input');
-        
-        const datosEditados = {
-            descripcion_original: inputs[1]?.value || '',
-            cantidad: parseFloat(inputs[3]?.value) || 0,
-            precio_unitario_sin_iva: parseFloat(inputs[4]?.value) || 0,
-            tipo_iva: parseFloat(inputs[5]?.value) || 21
-        };
-        
-        // Actualizar en base de datos
-        const { error } = await supabaseClient
-            .from('productos_extraidos')
-            .update(datosEditados)
-            .eq('id', productoId);
-            
-        if (error) {
-            throw new Error(`Error guardando producto: ${error.message}`);
-        }
-        
-        // Recargar productos
-        await loadProductsInModalFromDB();
-        
-        showNotification('Producto actualizado correctamente', 'success');
-        
-    } catch (error) {
-        console.error('❌ Error guardando producto:', error);
-        showNotification(`Error guardando producto: ${error.message}`, 'error');
-    }
-}
-
-// 🆕 FUNCIÓN PARA CANCELAR EDICIÓN DE PRODUCTO
-function cancelEditProducto(productoId) {
-    try {
-        console.log('❌ Cancelando edición de producto:', productoId);
-        
-        // Recargar productos sin guardar cambios
-        loadProductsInModalFromDB();
-        
-    } catch (error) {
-        console.error('❌ Error cancelando edición:', error);
-    }
 }
 
 function setModalEditMode(mode) {
@@ -8465,8 +8357,6 @@ async function loadProductsInModal(facturaId) {
         }
     }
 }
-
-// ✅ FUNCIÓN DUPLICADA ELIMINADA
 
 // ===== FUNCIONES PARA TABLA EXPANDIBLE DE PRODUCTOS =====
 
@@ -11027,4 +10917,254 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Hacer disponible el test
 window.testFormulasCalculo = testFormulasCalculo;
+
+// 🆕 SISTEMA DE PROVEEDORES NUEVOS
+// =================================
+
+// 🔍 DETECTAR PROVEEDORES NUEVOS AL CARGAR DATOS
+async function detectarProveedoresNuevos(facturas) {
+    try {
+        const proveedoresNuevos = facturas.filter(factura => factura.proveedor_nuevo);
+        
+        if (proveedoresNuevos.length > 0) {
+            console.log(`🆕 Se detectaron ${proveedoresNuevos.length} proveedores nuevos`);
+            
+            // Mostrar modal para el primer proveedor nuevo
+            const primerProveedor = proveedoresNuevos[0];
+            mostrarModalProveedorNuevo({
+                nombre: primerProveedor.proveedor_nombre,
+                cif: primerProveedor.proveedor_cif,
+                documento_id: primerProveedor.documento_id,
+                restaurante_id: primerProveedor.restaurante_id
+            });
+            
+            // Guardar lista de proveedores pendientes
+            window.proveedoresNuevosPendientes = proveedoresNuevos.slice(1);
+        }
+    } catch (error) {
+        console.error('❌ Error detectando proveedores nuevos:', error);
+    }
+}
+
+// 🎨 MOSTRAR MODAL DE PROVEEDOR NUEVO
+function mostrarModalProveedorNuevo(proveedorData) {
+    try {
+        // Llenar los campos del modal
+        document.getElementById('proveedorNombreOriginal').textContent = proveedorData.nombre || 'N/A';
+        document.getElementById('proveedorNombreNormalizado').value = normalizarNombreProveedor(proveedorData.nombre || '');
+        document.getElementById('proveedorCif').value = proveedorData.cif || '';
+        document.getElementById('proveedorDireccion').value = '';
+        document.getElementById('proveedorTelefono').value = '';
+        document.getElementById('proveedorEmail').value = '';
+        
+        // Seleccionar categoría por defecto basada en el nombre
+        const categoria = inferirCategoriaProveedor(proveedorData.nombre);
+        document.getElementById('proveedorCategoria').value = categoria;
+        
+        // Guardar datos para usar en confirmarProveedorNuevo
+        window.proveedorNuevoActual = proveedorData;
+        
+        // Mostrar el modal
+        const modal = new bootstrap.Modal(document.getElementById('modalProveedorNuevo'));
+        modal.show();
+        
+        console.log('🎨 Modal de proveedor nuevo mostrado:', proveedorData);
+        
+    } catch (error) {
+        console.error('❌ Error mostrando modal de proveedor nuevo:', error);
+    }
+}
+
+// 🔧 NORMALIZAR NOMBRE DEL PROVEEDOR
+function normalizarNombreProveedor(nombre) {
+    if (!nombre) return '';
+    
+    return nombre
+        .toLowerCase()
+        .replace(/\./g, '')           // Quitar puntos
+        .replace(/,/g, '')            // Quitar comas
+        .replace(/\s+/g, ' ')         // Normalizar espacios
+        .replace(/s\.l\.?/gi, 'sl')   // Normalizar S.L.
+        .replace(/s\.a\.?/gi, 'sa')   // Normalizar S.A.
+        .replace(/s\.c\.?/gi, 'sc')   // Normalizar S.C.
+        .replace(/s\.coop\.?/gi, 'scoop') // Normalizar S.COOP
+        .trim()
+        .split(' ')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1)) // Capitalizar primera letra
+        .join(' ');
+}
+
+// 🏷️ INFERIR CATEGORÍA DEL PROVEEDOR
+function inferirCategoriaProveedor(nombre) {
+    if (!nombre) return 'alimentacion';
+    
+    const nombreLower = nombre.toLowerCase();
+    
+    // Categorías específicas
+    if (nombreLower.includes('carniceria') || nombreLower.includes('carnes') || nombreLower.includes('matadero')) {
+        return 'carnes';
+    }
+    if (nombreLower.includes('pescaderia') || nombreLower.includes('pescados') || nombreLower.includes('mariscos')) {
+        return 'pescados';
+    }
+    if (nombreLower.includes('fruteria') || nombreLower.includes('frutas') || nombreLower.includes('verduras') || nombreLower.includes('hortalizas')) {
+        return 'verduras';
+    }
+    if (nombreLower.includes('lacteos') || nombreLower.includes('quesos') || nombreLower.includes('leche')) {
+        return 'lacteos';
+    }
+    if (nombreLower.includes('panaderia') || nombreLower.includes('pan') || nombreLower.includes('bolleria')) {
+        return 'panaderia';
+    }
+    if (nombreLower.includes('bebidas') || nombreLower.includes('vino') || nombreLower.includes('cerveza')) {
+        return 'bebidas';
+    }
+    if (nombreLower.includes('limpieza') || nombreLower.includes('detergentes') || nombreLower.includes('higiene')) {
+        return 'limpieza';
+    }
+    if (nombreLower.includes('logistica') || nombreLower.includes('transporte') || nombreLower.includes('envio')) {
+        return 'logistica';
+    }
+    if (nombreLower.includes('servicios') || nombreLower.includes('mantenimiento') || nombreLower.includes('reparacion')) {
+        return 'servicios';
+    }
+    if (nombreLower.includes('equipamiento') || nombreLower.includes('maquinaria') || nombreLower.includes('utensilios')) {
+        return 'equipamiento';
+    }
+    if (nombreLower.includes('condimentos') || nombreLower.includes('especias') || nombreLower.includes('salsas')) {
+        return 'condimentos';
+    }
+    
+    // Por defecto
+    return 'alimentacion';
+}
+
+// ✅ CONFIRMAR Y GUARDAR PROVEEDOR NUEVO
+async function confirmarProveedorNuevo() {
+    try {
+        if (!window.proveedorNuevoActual) {
+            throw new Error('No hay datos de proveedor para guardar');
+        }
+        
+        // Obtener datos del modal
+        const nombreNormalizado = document.getElementById('proveedorNombreNormalizado').value.trim();
+        const cif = document.getElementById('proveedorCif').value.trim();
+        const categoria = document.getElementById('proveedorCategoria').value;
+        const direccion = document.getElementById('proveedorDireccion').value.trim();
+        const telefono = document.getElementById('proveedorTelefono').value.trim();
+        const email = document.getElementById('proveedorEmail').value.trim();
+        
+        if (!nombreNormalizado) {
+            mostrarNotificacion('❌ El nombre del proveedor es obligatorio', 'error');
+            return;
+        }
+        
+        console.log('💾 Guardando proveedor nuevo:', {
+            nombre: nombreNormalizado,
+            cif: cif || null,
+            categoria: categoria,
+            direccion: direccion || null,
+            telefono: telefono || null,
+            email: email || null
+        });
+        
+        // 1. Guardar en la tabla proveedores
+        const { data: proveedorGuardado, error: insertError } = await supabase
+            .from('proveedores')
+            .insert({
+                restaurante_id: window.proveedorNuevoActual.restaurante_id,
+                nombre: nombreNormalizado,
+                cif: cif || null,
+                categoria_principal: categoria,
+                direccion_completa: direccion || null,
+                telefono: telefono || null,
+                email: email || null,
+                fecha_creacion: new Date().toISOString(),
+                fecha_ultima_factura: new Date().toISOString(),
+                numero_facturas: 1,
+                total_facturado: 0,
+                es_activo: true,
+                dias_pago: 30,
+                tipo_proveedor: 'distribuidor',
+                tipo_proveedor_especifico: categoria,
+                pais: 'España',
+                created_at: new Date().toISOString()
+            })
+            .select()
+            .single();
+        
+        if (insertError) {
+            console.error('❌ Error guardando proveedor:', insertError);
+            throw new Error(`Error guardando proveedor: ${insertError.message}`);
+        }
+        
+        console.log('✅ Proveedor guardado correctamente:', proveedorGuardado);
+        
+        // 2. Actualizar la factura/albarán para marcar que ya no es proveedor nuevo
+        const { error: updateError } = await supabase
+            .from('datos_extraidos_facturas')
+            .update({ 
+                proveedor_nuevo: false,
+                proveedor_id: proveedorGuardado.id,
+                proveedor_nombre: nombreNormalizado // Actualizar con nombre normalizado
+            })
+            .eq('documento_id', window.proveedorNuevoActual.documento_id);
+        
+        if (updateError) {
+            console.error('⚠️ Error actualizando factura (no crítico):', updateError);
+        } else {
+            console.log('✅ Factura actualizada correctamente');
+        }
+        
+        // 3. Cerrar modal
+        const modal = bootstrap.Modal.getInstance(document.getElementById('modalProveedorNuevo'));
+        modal.hide();
+        
+        // 4. Mostrar confirmación
+        mostrarNotificacion('✅ Proveedor guardado correctamente', 'success');
+        
+        // 5. Recargar datos del dashboard
+        await loadRealDataFromSupabase();
+        
+        // 6. Verificar si hay más proveedores nuevos pendientes
+        if (window.proveedoresNuevosPendientes && window.proveedoresNuevosPendientes.length > 0) {
+            const siguienteProveedor = window.proveedoresNuevosPendientes.shift();
+            setTimeout(() => {
+                mostrarModalProveedorNuevo(siguienteProveedor);
+            }, 1000); // Esperar 1 segundo antes de mostrar el siguiente
+        }
+        
+        // Limpiar datos
+        window.proveedorNuevoActual = null;
+        
+    } catch (error) {
+        console.error('❌ Error en confirmarProveedorNuevo:', error);
+        mostrarNotificacion(`❌ Error: ${error.message}`, 'error');
+    }
+}
+
+// 🔄 INTEGRAR CON LA CARGA DE DATOS EXISTENTE
+// Modificar la función loadRealDataFromSupabase para detectar proveedores nuevos
+const originalLoadRealDataFromSupabase = window.loadRealDataFromSupabase;
+
+window.loadRealDataFromSupabase = async function() {
+    try {
+        // Llamar a la función original
+        await originalLoadRealDataFromSupabase();
+        
+        // Después de cargar los datos, detectar proveedores nuevos
+        const facturas = window.facturasData || [];
+        await detectarProveedoresNuevos(facturas);
+        
+    } catch (error) {
+        console.error('❌ Error en loadRealDataFromSupabase modificada:', error);
+    }
+};
+
+// Hacer disponibles las funciones del sistema de proveedores
+window.detectarProveedoresNuevos = detectarProveedoresNuevos;
+window.mostrarModalProveedorNuevo = mostrarModalProveedorNuevo;
+window.normalizarNombreProveedor = normalizarNombreProveedor;
+window.inferirCategoriaProveedor = inferirCategoriaProveedor;
+window.confirmarProveedorNuevo = confirmarProveedorNuevo;
 

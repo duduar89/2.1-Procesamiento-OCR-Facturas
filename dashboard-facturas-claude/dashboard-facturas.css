@@ -94,6 +94,54 @@ body {
     -moz-osx-font-smoothing: grayscale;
 }
 
+/* ===== 🕐 RELOJ EN TIEMPO REAL ===== */
+.clock-container {
+    background: var(--bs-gradient-card);
+    border-radius: var(--bs-radius-lg);
+    padding: var(--bs-spacing-md);
+    margin: var(--bs-spacing-md) 0;
+    box-shadow: var(--bs-shadow-brand-sm);
+    border: 1px solid rgba(0, 212, 170, 0.1);
+    backdrop-filter: blur(20px);
+    text-align: center;
+}
+
+.clock-content {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--bs-spacing-md);
+    flex-wrap: wrap;
+}
+
+.clock-icon {
+    font-size: 1.5rem;
+    animation: pulse 2s infinite;
+}
+
+.clock-time {
+    font-family: var(--bs-font-family);
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--brand-turquoise);
+    background: var(--bs-gradient-primary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.clock-date {
+    font-family: var(--bs-font-family);
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--bs-gray-600);
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
+
 /* ===== ANIMACIONES ===== */
 @keyframes fadeInUp {
     from {
@@ -6889,4 +6937,82 @@ html {
     .modal-footer {
         padding: 16px;
     }
+}
+
+/* Modal de Proveedor */
+.proveedor-modal {
+    max-width: 700px;
+    width: 90%;
+}
+
+.proveedor-info-preview {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.info-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.info-row label {
+    min-width: 140px;
+    font-weight: 600;
+    color: var(--bs-navy);
+}
+
+.info-row input,
+.info-row select {
+    flex: 1;
+    padding: 8px 12px;
+    border: 1px solid rgba(0, 212, 170, 0.2);
+    border-radius: 8px;
+    font-size: 14px;
+}
+
+.info-row input:focus,
+.info-row select:focus {
+    outline: none;
+    border-color: var(--bs-turquoise);
+    box-shadow: 0 0 0 3px rgba(0, 212, 170, 0.1);
+}
+
+.proveedor-nombre-original {
+    background: var(--bs-light-gray);
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-family: monospace;
+    color: var(--bs-gray);
+    flex: 1;
+}
+
+/* Indicador de proveedor nuevo en la tabla */
+.proveedor-nuevo-badge {
+    display: inline-block;
+    background: var(--bs-turquoise);
+    color: white;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    margin-left: 8px;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.7; }
+    100% { opacity: 1; }
+}
+
+.proveedor-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.proveedor-nombre {
+    font-weight: 500;
 }

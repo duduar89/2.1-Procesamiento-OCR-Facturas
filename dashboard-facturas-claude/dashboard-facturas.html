@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestión de Facturas Empresarial</title>
+    <title id="pageTitle">Dashboard Facturas v1</title>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
@@ -2837,6 +2837,15 @@
             </div>
         </header>
 
+        <!-- 🕐 RELOJ EN TIEMPO REAL -->
+        <div class="clock-container">
+            <div class="clock-content">
+                <span class="clock-icon">🕐</span>
+                <span id="liveClock" class="clock-time">Cargando...</span>
+                <span class="clock-date" id="liveDate">Cargando...</span>
+            </div>
+        </div>
+
         <!-- 📧 INFORMACIÓN DE CONTACTO IMPORTANTE -->
         <section class="contact-info-section">
             <div class="contact-container">
@@ -3640,5 +3649,133 @@
             </div>
         </div>
     </div>
+
+    <!-- Modal de Confirmación de Proveedor Nuevo -->
+    <div id="modalProveedorNuevo" class="modal fade" tabindex="-1">
+        <div class="modal-dialog proveedor-modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">🆕 Proveedor Nuevo Detectado</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="proveedor-info-preview">
+                        <div class="info-row">
+                            <label>Nombre Original:</label>
+                            <div class="proveedor-nombre-original" id="proveedorNombreOriginal"></div>
+                        </div>
+                        <div class="info-row">
+                            <label>Nombre Normalizado:</label>
+                            <input type="text" id="proveedorNombreNormalizado" placeholder="Nombre limpio del proveedor">
+                        </div>
+                        <div class="info-row">
+                            <label>CIF/NIF:</label>
+                            <input type="text" id="proveedorCif" placeholder="CIF del proveedor">
+                        </div>
+                        <div class="info-row">
+                            <label>Categoría Principal:</label>
+                            <select id="proveedorCategoria">
+                                <option value="alimentacion">Alimentación</option>
+                                <option value="limpieza">Limpieza</option>
+                                <option value="logistica">Logística</option>
+                                <option value="servicios">Servicios</option>
+                                <option value="equipamiento">Equipamiento</option>
+                                <option value="bebidas">Bebidas</option>
+                                <option value="carnes">Carnes</option>
+                                <option value="pescados">Pescados</option>
+                                <option value="verduras">Verduras</option>
+                                <option value="frutas">Frutas</option>
+                                <option value="lacteos">Lácteos</option>
+                                <option value="panaderia">Panadería</option>
+                                <option value="condimentos">Condimentos</option>
+                            </select>
+                        </div>
+                        <div class="info-row">
+                            <label>Dirección:</label>
+                            <input type="text" id="proveedorDireccion" placeholder="Dirección del proveedor">
+                        </div>
+                        <div class="info-row">
+                            <label>Teléfono:</label>
+                            <input type="text" id="proveedorTelefono" placeholder="Teléfono del proveedor">
+                        </div>
+                        <div class="info-row">
+                            <label>Email:</label>
+                            <input type="email" id="proveedorEmail" placeholder="Email del proveedor">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" onclick="confirmarProveedorNuevo()">✅ Confirmar y Guardar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 🕐 SCRIPT DEL RELOJ EN TIEMPO REAL -->
+    <script>
+        // Función para actualizar el reloj
+        function updateClock() {
+            const now = new Date();
+            
+            // Formatear hora
+            const hours = now.getHours().toString().padStart(2, '0');
+            const minutes = now.getMinutes().toString().padStart(2, '0');
+            const seconds = now.getSeconds().toString().padStart(2, '0');
+            const timeString = `${hours}:${minutes}:${seconds}`;
+            
+            // Formatear fecha
+            const options = { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+            };
+            const dateString = now.toLocaleDateString('es-ES', options);
+            
+            // Actualizar elementos del DOM
+            const clockElement = document.getElementById('liveClock');
+            const dateElement = document.getElementById('liveDate');
+            
+            if (clockElement) clockElement.textContent = timeString;
+            if (dateElement) dateElement.textContent = dateString;
+        }
+        
+        // Función para actualizar el título dinámico
+        function updatePageTitle() {
+            const titleElement = document.getElementById('pageTitle');
+            if (titleElement) {
+                const now = new Date();
+                const timeString = now.toLocaleTimeString('es-ES', { 
+                    hour: '2-digit', 
+                    minute: '2-digit' 
+                });
+                titleElement.textContent = `Dashboard Facturas v1 - ${timeString}`;
+            }
+        }
+        
+        // Inicializar reloj y título
+        updateClock();
+        updatePageTitle();
+        
+        // Actualizar cada segundo
+        setInterval(() => {
+            updateClock();
+            updatePageTitle();
+        }, 1000);
+        
+        // Actualizar título cuando la página pierde el foco
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                const titleElement = document.getElementById('pageTitle');
+                if (titleElement) {
+                    titleElement.textContent = 'Dashboard Facturas v1';
+                }
+            } else {
+                updatePageTitle();
+            }
+        });
+    </script>
+
 </body>
 </html>

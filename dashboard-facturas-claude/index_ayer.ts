@@ -1681,7 +1681,8 @@ function extractProductsFromFullText(fullText) {
   lines.forEach((line, index)=>{
     const trimmedLine = line.trim();
     // Buscar líneas que parezcan productos
-    const isProductLine = /carne|meat|ternera|cerdo|pollo|beef|pork|chicken/i.test(trimmedLine) || // Contiene unidades de medida
+    const isProductLine = // Contiene palabras clave de productos cárnicos
+    /carne|meat|ternera|cerdo|pollo|beef|pork|chicken/i.test(trimmedLine) || // Contiene unidades de medida
     /\d+[,\.]?\d*\s*(kg|g|gramos?|kilogramos?|unidades?|uds?|piezas?)/i.test(trimmedLine) || // Contiene precios
     /\d+[,\.]\d{2}\s*€|€\s*\d+[,\.]\d{2}/i.test(trimmedLine) || // Línea larga con números y letras (descripción de producto)
     trimmedLine.length > 15 && /\d/.test(trimmedLine) && /[a-záéíóúñ]{3,}/i.test(trimmedLine);
@@ -1846,67 +1847,13 @@ function extractProductsFromFormParser(extractedResult) {
     return [];
   }
 }
-// 🔧 FUNCIÓN PARA NORMALIZAR NOMBRE DEL PROVEEDOR
-function normalizarNombreProveedor(nombre) {
-  if (!nombre) return '';
-  return nombre.toLowerCase().replace(/\./g, '') // Quitar puntos
-  .replace(/,/g, '') // Quitar comas
-  .replace(/\s+/g, ' ') // Normalizar espacios
-  .replace(/s\.l\.?/gi, 'sl') // Normalizar S.L.
-  .replace(/s\.a\.?/gi, 'sa') // Normalizar S.A.
-  .replace(/s\.c\.?/gi, 'sc') // Normalizar S.C.
-  .replace(/s\.coop\.?/gi, 'scoop') // Normalizar S.COOP
-  .trim().split(' ').map((word)=>word.charAt(0).toUpperCase() + word.slice(1)) // Capitalizar primera letra
-  .join(' ');
-}
-// 🏷️ FUNCIÓN PARA INFERIR CATEGORÍA DEL PROVEEDOR
-function inferirCategoriaProveedor(nombre) {
-  if (!nombre) return 'alimentacion';
-  const nombreLower = nombre.toLowerCase();
-  // Categorías específicas
-  if (nombreLower.includes('carniceria') || nombreLower.includes('carnes') || nombreLower.includes('matadero')) {
-    return 'carnes';
-  }
-  if (nombreLower.includes('pescaderia') || nombreLower.includes('pescados') || nombreLower.includes('mariscos')) {
-    return 'pescados';
-  }
-  if (nombreLower.includes('fruteria') || nombreLower.includes('frutas') || nombreLower.includes('verduras') || nombreLower.includes('hortalizas')) {
-    return 'verduras';
-  }
-  if (nombreLower.includes('lacteos') || nombreLower.includes('quesos') || nombreLower.includes('leche')) {
-    return 'lacteos';
-  }
-  if (nombreLower.includes('panaderia') || nombreLower.includes('pan') || nombreLower.includes('bolleria')) {
-    return 'panaderia';
-  }
-  if (nombreLower.includes('bebidas') || nombreLower.includes('vino') || nombreLower.includes('cerveza')) {
-    return 'bebidas';
-  }
-  if (nombreLower.includes('limpieza') || nombreLower.includes('detergentes') || nombreLower.includes('higiene')) {
-    return 'limpieza';
-  }
-  if (nombreLower.includes('logistica') || nombreLower.includes('transporte') || nombreLower.includes('envio')) {
-    return 'logistica';
-  }
-  if (nombreLower.includes('servicios') || nombreLower.includes('mantenimiento') || nombreLower.includes('reparacion')) {
-    return 'servicios';
-  }
-  if (nombreLower.includes('equipamiento') || nombreLower.includes('maquinaria') || nombreLower.includes('utensilios')) {
-    return 'equipamiento';
-  }
-  if (nombreLower.includes('condimentos') || nombreLower.includes('especias') || nombreLower.includes('salsas')) {
-    return 'condimentos';
-  }
-  // Por defecto
-  return 'alimentacion';
-}
 // 🔍 FUNCIÓN AUXILIAR PARA BUSCAR PROVEEDOR POR NOMBRE
 async function searchProveedorByName(nombreProveedor, restauranteId, supabaseClient) {
   console.log('🔍 === BUSCANDO PROVEEDOR POR NOMBRE ===');
   console.log(`📝 Nombre a buscar: "${nombreProveedor}"`);
   try {
     // Normalizar nombre para búsqueda más flexible
-    const nombreNormalizado = normalizarNombreProveedor(nombreProveedor);
+    const nombreNormalizado = nombreProveedor.toLowerCase().replace(/s\.?l\.?/gi, 'sl').replace(/s\.?a\.?/gi, 'sa').replace(/[.,\-\s]+/g, ' ').trim();
     console.log(`📝 Nombre normalizado: "${nombreNormalizado}"`);
     // 1. Buscar proveedor existente por nombre (búsqueda flexible)
     const { data: existingProveedores, error: searchError } = await supabaseClient.from('proveedores').select('id, nombre, numero_facturas').eq('restaurante_id', restauranteId).ilike('nombre', `%${nombreNormalizado.split(' ')[0]}%`) // Buscar por primera palabra
@@ -1927,14 +1874,10 @@ async function searchProveedorByName(nombreProveedor, restauranteId, supabaseCli
     }
     // 2. Si no existe, crear nuevo proveedor SIN CIF (evitar conflictos)
     console.log(`🆕 Creando nuevo proveedor sin CIF: ${nombreProveedor}`);
-    // 🏷️ INFERIR CATEGORÍA DEL PROVEEDOR
-    const categoriaInferida = inferirCategoriaProveedor(nombreNormalizado);
-    console.log(`🏷️ Categoría inferida: ${categoriaInferida}`);
     const nuevoProveedor = {
       id: crypto.randomUUID(),
       restaurante_id: restauranteId,
-      nombre: nombreNormalizado,
-      nombre_original: nombreProveedor,
+      nombre: nombreProveedor,
       cif: null,
       fecha_creacion: new Date().toISOString(),
       fecha_ultima_factura: new Date().toISOString().split('T')[0],
@@ -1943,8 +1886,7 @@ async function searchProveedorByName(nombreProveedor, restauranteId, supabaseCli
       es_activo: true,
       dias_pago: 30,
       tipo_proveedor: 'distribuidor',
-      tipo_proveedor_especifico: categoriaInferida,
-      categoria_principal: categoriaInferida,
+      tipo_proveedor_especifico: 'alimentacion',
       pais: 'España'
     };
     const { data: newProveedor, error: insertError } = await supabaseClient.from('proveedores').insert(nuevoProveedor).select('id').single();
@@ -2018,17 +1960,10 @@ async function processProveedorUpsert(nombreProveedor, cifProveedor, restaurante
     } else {
       // 2b. Crear nuevo proveedor
       console.log(`🆕 Creando nuevo proveedor: ${nombreProveedor} (${cifProveedor})`);
-      // 🆕 NORMALIZAR NOMBRE DEL PROVEEDOR
-      const nombreNormalizado = normalizarNombreProveedor(nombreProveedor);
-      console.log(`🔄 Nombre original: "${nombreProveedor}" → Normalizado: "${nombreNormalizado}"`);
-      // 🏷️ INFERIR CATEGORÍA DEL PROVEEDOR
-      const categoriaInferida = inferirCategoriaProveedor(nombreNormalizado);
-      console.log(`🏷️ Categoría inferida: ${categoriaInferida}`);
       const nuevoProveedor = {
         id: crypto.randomUUID(),
         restaurante_id: restauranteId,
-        nombre: nombreNormalizado,
-        nombre_original: nombreProveedor,
+        nombre: nombreProveedor,
         cif: cifProveedor,
         fecha_creacion: new Date().toISOString(),
         fecha_ultima_factura: new Date().toISOString().split('T')[0],
@@ -2037,8 +1972,7 @@ async function processProveedorUpsert(nombreProveedor, cifProveedor, restaurante
         es_activo: true,
         dias_pago: 30,
         tipo_proveedor: 'distribuidor',
-        tipo_proveedor_especifico: categoriaInferida,
-        categoria_principal: categoriaInferida,
+        tipo_proveedor_especifico: 'alimentacion',
         pais: 'España',
         alias: [],
         created_at: new Date().toISOString()
@@ -2200,7 +2134,7 @@ function levenshteinDistance(str1, str2) {
   return matrix[m][n];
 }
 // 🔄 FUNCIÓN PARA PROCESAR PRODUCTOS Y HACER UPSERT
-async function processProductsUpsert(productos, restauranteId, proveedorId, documentId, supabaseClient, proveedorNombre, numeroFactura, fechaFactura // ✅ NUEVO: Fecha de la factura
+async function processProductsUpsert(productos, restauranteId, proveedorId, documentId, supabaseClient, proveedorNombre, numeroFactura, fechaFactura// ✅ NUEVO: Fecha de la factura
 ) {
   console.log('🚀 === INICIANDO PROCESS PRODUCTS UPSERT ===');
   console.log('📦 Número de productos recibidos:', productos.length);
@@ -3231,9 +3165,12 @@ async function updateProductPriceStatistics(productoMaestroId, nuevoPrecio, peso
     console.error('❌ Error en updateProductPriceStatistics:', error);
   }
 }
-// 🤖 FUNCIÓN PARA EXTRAER DATOS CON OpenAI
+// 🚨🚨🚨 FUNCIÓN ACTUALIZADA 19-ENE-2025 - FIX ALBARAN
 async function extractDataWithOpenAI(text, documentType = 'factura', contextAnalysis) {
-  console.log('🤖 === INICIANDO EXTRACCIÓN CON OpenAI Y CONTEXTO ===');
+  console.log('🚨🚨🚨 === VERSION ACTUALIZADA - STOP INVENTING DATA ===');
+  console.log('📄 Tipo de documento:', documentType);
+  console.log('🚨 NUEVO: Si es ALBARAN CARGO → NO es factura');
+  console.log('🚨 NUEVO: NO inventar Distrib GODOVISI');
   const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
   if (!openaiApiKey) {
     throw new Error('OPENAI_API_KEY no encontrada en variables de entorno');
@@ -3263,10 +3200,12 @@ REGLAS OBLIGATORIAS:
   }
   // 🚨 PROMPT FIJO - SIN VARIABLES DINÁMICAS (para evitar problemas)
   console.log('🔍 === GENERANDO PROMPT FIJO ===');
+  console.log('📄 DocumentType recibido:', documentType);
   // 📋 DETERMINAR TIPO BASADO EN EL TEXTO DIRECTAMENTE  
   const esAlbaran = text.toLowerCase().substring(0, 200).includes('albaran');
-  const esTipoAlbaran = esAlbaran;
+  const esTipoAlbaran = documentType === 'albaran' || esAlbaran;
   console.log('📊 Análisis de tipo:', {
+    documentType_param: documentType,
     texto_contiene_albaran: esAlbaran,
     decision_final: esTipoAlbaran ? 'ALBARAN' : 'FACTURA'
   });
@@ -3295,23 +3234,30 @@ REGLAS OBLIGATORIAS:
 
 Eres un experto en extracción de datos comerciales españoles.
 
-⚠️ CRÍTICO - IDENTIFICACIÓN DE PROVEEDOR: 
-Esta es una factura de COMPRA de un restaurante. Identifica CORRECTAMENTE el PROVEEDOR:
+⚠️ CRÍTICO - IDENTIFICACIÓN DE PROVEEDOR:
+Este documento es de COMPRA de un restaurante. Identifica CORRECTAMENTE el PROVEEDOR:
 
-🏢 PROVEEDOR (quien VENDE/EMITE la factura):
-- Aparece en la parte SUPERIOR de la factura
+🏢 PROVEEDOR (quien EMITE/ENTREGA el documento):
+- Aparece en la parte SUPERIOR del documento
 - Incluye logo, nombre comercial y CIF/NIF del emisor
-- Suele tener textos como "Factura", "Invoice", número de factura cerca
-- Ejemplos: "DISTRIBUIDORA XYZ S.L. CIF: B12345678"
+- ⚠️ NUNCA uses nombres de secciones "Cliente:" como proveedor
+- ⚠️ NUNCA inventes nombres que no estén en el texto
+- ⚠️ Solo extrae nombres que estén LITERALMENTE en el texto
 
-🍽️ CLIENTE/RESTAURANTE (quien COMPRA/RECIBE la factura):
-- Aparece más abajo, en secciones como "Facturar a:", "Cliente:", "Destinatario:"
-- Puede aparecer con direcciones de entrega
-- NO es el proveedor, es el comprador
+🍽️ CLIENTE/RESTAURANTE (quien RECIBE el documento):
+- Aparece en secciones como "Cliente:", "Destinatario:", "Facturar a:"
+- Puede tener direcciones de entrega
+- NO es el proveedor, es el receptor
+- Suele aparecer en la parte inferior del documento
 
-REGLA: Si ves el mismo CIF/nombre en ambas posiciones, el PROVEEDOR es quien aparece ARRIBA con el logo/encabezado.
+⚠️ REGLAS CRÍTICAS UNIVERSALES:
+1. NO extraigas nombres de secciones "Cliente:" como proveedor
+2. NO inventes nombres que no estén en el texto
+3. Si no encuentras proveedor claro, pon null
+4. El proveedor debe estar LITERALMENTE en el texto
+5. Busca el proveedor en la parte SUPERIOR, no en secciones de cliente
 
-TEXTO DE LA FACTURA:
+TEXTO DEL DOCUMENTO:
 ${text}
 
 EXTRAE EXACTAMENTE ESTOS DATOS en formato JSON:
@@ -3684,7 +3630,6 @@ function extractCoordinatesFromOCR(extractedResult) {
 function classifyDocument(fullText) {
   console.log('🔍 === INICIANDO CLASIFICACIÓN DE DOCUMENTO ===');
   if (!fullText || fullText.length < 10) {
-    console.log('⚠️ Texto insuficiente para clasificar');
     return {
       tipo: 'factura',
       confianza: 0.3,
@@ -3695,6 +3640,8 @@ function classifyDocument(fullText) {
     };
   }
   const texto = fullText.toLowerCase();
+  const inicioTexto = texto.substring(0, 200) // Solo primeras líneas
+  ;
   const patrones = {
     albaran_encontrado: false,
     factura_encontrada: false,
@@ -3703,95 +3650,92 @@ function classifyDocument(fullText) {
     precios_encontrados: 0,
     indicadores_entrega: []
   };
-  // 📦 DETECTAR ALBARÁN
-  const palabrasAlbaran = [
-    'albarán',
+  // 🎯 TÉRMINOS ESPECÍFICOS Y NO AMBIGUOS
+  // 1️⃣ TÉRMINOS EXCLUSIVOS DE ALBARÁN (NO aparecen en facturas)
+  const terminosAlbaranExclusivos = [
     'albaran',
-    'delivery note',
+    'albarán',
+    'albaran cargo',
+    'albarán cargo',
     'nota de entrega',
-    'entrega',
-    'entregado',
-    'recepción',
-    'recibido'
+    'comprobante entrega',
+    'hoja de entrega',
+    'delivery note',
+    'packing slip'
   ];
-  console.log('🔍 Buscando palabras de albarán en:', texto.substring(0, 200) + '...');
-  palabrasAlbaran.forEach((palabra)=>{
-    if (texto.includes(palabra)) {
-      console.log(`✅ PALABRA ALBARÁN ENCONTRADA: "${palabra}"`);
-      patrones.albaran_encontrado = true;
-      patrones.palabras_albaran.push(palabra);
-    } else {
-      console.log(`❌ Palabra "${palabra}" NO encontrada`);
-    }
-  });
-  // 📄 DETECTAR FACTURA
-  const palabrasFactura = [
+  // 2️⃣ TÉRMINOS EXCLUSIVOS DE FACTURA (NO aparecen en albaranes)  
+  const terminosFacturaExclusivos = [
     'factura',
     'invoice',
-    'total factura',
+    'factura proforma',
+    'factura simplificada',
     'base imponible',
     'cuota iva',
+    'total factura',
+    'importe factura',
     'vencimiento',
-    'pagar'
+    'fecha vencimiento',
+    'condiciones pago'
   ];
-  console.log('🔍 Buscando palabras de factura...');
-  palabrasFactura.forEach((palabra)=>{
-    if (texto.includes(palabra)) {
-      console.log(`✅ PALABRA FACTURA ENCONTRADA: "${palabra}"`);
+  // 🔍 DETECTAR TÉRMINOS ESPECÍFICOS
+  terminosAlbaranExclusivos.forEach((termino)=>{
+    if (texto.includes(termino)) {
+      patrones.albaran_encontrado = true;
+      patrones.palabras_albaran.push(termino);
+      console.log(`✅ TÉRMINO ESPECÍFICO ALBARÁN: "${termino}"`);
+    }
+  });
+  terminosFacturaExclusivos.forEach((termino)=>{
+    if (texto.includes(termino)) {
       patrones.factura_encontrada = true;
-      patrones.palabras_factura.push(palabra);
-    } else {
-      console.log(`❌ Palabra "${palabra}" NO encontrada`);
+      patrones.palabras_factura.push(termino);
+      console.log(`✅ TÉRMINO ESPECÍFICO FACTURA: "${termino}"`);
     }
   });
-  // 💰 DETECTAR PRECIOS (indicador fuerte de factura)
-  const preciosEncontrados = texto.match(/\d+[,\.]\d{2}\s*€/g) || [];
-  patrones.precios_encontrados = preciosEncontrados.length;
-  // 🚚 DETECTAR INDICADORES DE ENTREGA
-  const indicadoresEntrega = [
-    'transportista',
-    'conductor',
-    'matrícula',
-    'conformidad',
-    'firma',
-    'estado entrega'
-  ];
-  indicadoresEntrega.forEach((indicador)=>{
-    if (texto.includes(indicador)) {
-      patrones.indicadores_entrega.push(indicador);
-    }
-  });
-  // 🎯 LÓGICA DE CLASIFICACIÓN
-  let tipo = 'incierto';
+  // 📊 CONTAR PRECIOS
+  patrones.precios_encontrados = (texto.match(/\d+[,\.]\d{2}\s*€/g) || []).length;
+  // 🎯 LÓGICA DE DIFERENCIACIÓN CONSERVADORA
+  let tipo = 'factura' // Default conservador
+  ;
   let confianza = 0.5;
   let razonamiento = '';
-  // REGLA 1: Si dice "albarán" y NO dice "factura" → ALBARÁN
+  // 📋 CASO 1: TÉRMINOS EXCLUSIVOS CLAROS
   if (patrones.albaran_encontrado && !patrones.factura_encontrada) {
     tipo = 'albaran';
     confianza = 0.95;
-    razonamiento = 'Contiene "albarán" y no contiene "factura"';
+    razonamiento = `Términos exclusivos de albarán: "${patrones.palabras_albaran.join(', ')}"`;
   } else if (patrones.factura_encontrada && !patrones.albaran_encontrado) {
     tipo = 'factura';
     confianza = 0.95;
-    razonamiento = 'Contiene "factura" y no contiene "albarán"';
+    razonamiento = `Términos exclusivos de factura: "${patrones.palabras_factura.join(', ')}"`;
   } else if (patrones.albaran_encontrado && patrones.factura_encontrada) {
-    tipo = 'factura';
-    confianza = 0.95;
-    razonamiento = 'Contiene "factura" y referencias a albaranes - FACTURA perfecta para cotejación';
+    // Si "albaran" está al INICIO → ALBARÁN
+    if (inicioTexto.includes('albaran')) {
+      tipo = 'albaran';
+      confianza = 0.9;
+      razonamiento = '"ALBARAN" al inicio supera términos de factura';
+    } else if (inicioTexto.includes('factura')) {
+      tipo = 'factura';
+      confianza = 0.9;
+      razonamiento = '"FACTURA" al inicio supera términos de albarán';
+    } else if (patrones.precios_encontrados > 8 || texto.includes('base imponible') || texto.includes('vencimiento')) {
+      tipo = 'factura';
+      confianza = 0.85;
+      razonamiento = 'Términos mixtos pero evidencia financiera fuerte';
+    } else {
+      tipo = 'albaran';
+      confianza = 0.8;
+      razonamiento = 'Términos mixtos, priorizando albarán por contexto';
+    }
   } else {
-    // Muchos precios → probablemente factura
-    if (patrones.precios_encontrados > 3) {
+    if (patrones.precios_encontrados > 10 || texto.includes('total') || texto.includes('subtotal') || texto.includes('iva')) {
       tipo = 'factura';
       confianza = 0.7;
-      razonamiento = `No contiene palabras clave, pero ${patrones.precios_encontrados} precios encontrados`;
-    } else if (patrones.indicadores_entrega.length > 1) {
-      tipo = 'albaran';
-      confianza = 0.6;
-      razonamiento = `No contiene palabras clave, pero ${patrones.indicadores_entrega.length} indicadores de entrega`;
+      razonamiento = `Sin términos específicos, pero evidencia financiera (${patrones.precios_encontrados} precios)`;
     } else {
       tipo = 'factura';
       confianza = 0.5;
-      razonamiento = 'Sin indicadores claros, defaulteando a factura';
+      razonamiento = 'Sin términos específicos, defaulteando a factura';
     }
   }
   const resultado = {
