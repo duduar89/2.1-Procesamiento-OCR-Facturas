@@ -11,6 +11,25 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+// AGREGAR esta función al inicio del archivo, después de los imports
+function calcularPeriodoAnterior(fechaInicio: string, fechaFin: string) {
+  const inicio = new Date(fechaInicio);
+  const fin = new Date(fechaFin);
+  
+  // Calcular días de diferencia
+  const diasDiferencia = Math.ceil((fin.getTime() - inicio.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+  
+  // Calcular período anterior
+  const finAnterior = new Date(inicio.getTime() - 24 * 60 * 60 * 1000);
+  const inicioAnterior = new Date(finAnterior.getTime() - (diasDiferencia - 1) * 24 * 60 * 60 * 1000);
+  
+  return {
+    fecha_inicio_anterior: inicioAnterior.toISOString().split('T')[0],
+    fecha_fin_anterior: finAnterior.toISOString().split('T')[0],
+    dias_periodo: diasDiferencia
+  };
+}
+
 // NUEVA FUNCIÓN: Obtener mapeo de categorías
 async function obtenerCategoriasMap(supabase: any, restauranteId: string) {
   const { data: categorias } = await supabase
@@ -39,7 +58,7 @@ serve(async (req) => {
     
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-    const { restaurante_id, fecha_inicio, fecha_fin, comparar_periodo } = await req.json()
+    const { restaurante_id, fecha_inicio, fecha_fin, tipo_rango } = await req.json()
 
     if (!restaurante_id || !fecha_inicio || !fecha_fin) {
       throw new Error('Faltan parámetros requeridos: restaurante_id, fecha_inicio, fecha_fin')
@@ -47,6 +66,15 @@ serve(async (req) => {
 
     console.log(`Obteniendo datos para restaurante: ${restaurante_id}`)
     console.log(`Período: ${fecha_inicio} hasta ${fecha_fin}`)
+
+    // NUEVO: Todas las consultas serán comparativas
+    const siempreComparativo = true;
+    const tipoRango = tipo_rango || 'custom';
+    console.log(`Modo comparativo activado para rango: ${tipoRango}`);
+
+    // Calcular período anterior
+    const periodoAnterior = calcularPeriodoAnterior(fecha_inicio, fecha_fin);
+    console.log(`Período anterior: ${periodoAnterior.fecha_inicio_anterior} hasta ${periodoAnterior.fecha_fin_anterior}`);
 
     // 1. OBTENER RESUMEN DE VENTAS
     const { data: ventasData, error: ventasError } = await supabase
@@ -75,6 +103,40 @@ serve(async (req) => {
 
     // Procesar métricas básicas
     const ventasList = ventasData || []
+
+    // NUEVO: Siempre obtener datos del período anterior
+    let ventasDataAnterior: any = null;
+    let ventasListAnterior: any[] = [];
+
+    console.log(`Obteniendo datos del período anterior: ${periodoAnterior.fecha_inicio_anterior} - ${periodoAnterior.fecha_fin_anterior}`);
+
+    const { data: ventasAnteriorData, error: ventasAnteriorError } = await supabase
+      .from('ventas_datos')
+      .select(`
+        id,
+        total_bruto,
+        total_neto,
+        total_impuestos,
+        descuentos,
+        propinas,
+        num_comensales,
+        metodo_pago,
+        seccion,
+        fecha_venta,
+        fecha_hora_completa
+      `)
+      .eq('restaurante_id', restaurante_id)
+      .gte('fecha_venta', periodoAnterior.fecha_inicio_anterior)
+      .lte('fecha_venta', periodoAnterior.fecha_fin_anterior);
+
+    if (!ventasAnteriorError) {
+      ventasDataAnterior = ventasAnteriorData;
+      ventasListAnterior = ventasAnteriorData || [];
+      console.log(`Datos del período anterior obtenidos: ${ventasListAnterior.length} ventas`);
+    } else {
+      console.error('Error obteniendo ventas del período anterior:', ventasAnteriorError);
+    }
+
     const totalVentasBruto = ventasList.reduce((sum, v) => sum + (parseFloat(v.total_bruto) || 0), 0)
     const totalVentasNeto = ventasList.reduce((sum, v) => sum + (parseFloat(v.total_neto) || 0), 0)
     const totalImpuestos = ventasList.reduce((sum, v) => sum + (parseFloat(v.total_impuestos) || 0), 0)
@@ -83,6 +145,89 @@ serve(async (req) => {
     const totalComensales = ventasList.reduce((sum, v) => sum + (v.num_comensales || 0), 0)
     const totalTickets = ventasList.length
     const ticketPromedio = totalTickets > 0 ? totalVentasNeto / totalTickets : 0
+
+    // NUEVO: Calcular métricas del período anterior
+    let metricas_anteriores: any = null;
+
+    if (ventasListAnterior.length > 0) {
+      // Calcular métricas del período anterior
+      const totalVentasNetoAnterior = ventasListAnterior.reduce((sum, v) => sum + (parseFloat(v.total_neto) || 0), 0);
+      const totalVentasBrutoAnterior = ventasListAnterior.reduce((sum, v) => sum + (parseFloat(v.total_bruto) || 0), 0);
+      const totalImpuestosAnterior = ventasListAnterior.reduce((sum, v) => sum + (parseFloat(v.total_impuestos) || 0), 0);
+      const totalDescuentosAnterior = ventasListAnterior.reduce((sum, v) => sum + (parseFloat(v.descuentos) || 0), 0);
+      const totalPropinasAnterior = ventasListAnterior.reduce((sum, v) => sum + (parseFloat(v.propinas) || 0), 0);
+      const totalComensalesAnterior = ventasListAnterior.reduce((sum, v) => sum + (v.num_comensales || 0), 0);
+      const totalTicketsAnterior = ventasListAnterior.length;
+      const ticketPromedioAnterior = totalTicketsAnterior > 0 ? totalVentasNetoAnterior / totalTicketsAnterior : 0;
+
+      metricas_anteriores = {
+        total_ventas: totalVentasNetoAnterior,
+        total_ventas_bruto: totalVentasBrutoAnterior,
+        total_impuestos: totalImpuestosAnterior,
+        total_descuentos: totalDescuentosAnterior,
+        total_propinas: totalPropinasAnterior,
+        total_tickets: totalTicketsAnterior,
+        ticket_promedio: ticketPromedioAnterior,
+        total_comensales: totalComensalesAnterior
+      };
+
+      console.log('Métricas del período anterior calculadas:', metricas_anteriores);
+    }
+
+    // Calcular comparativas
+    let comparativas = null;
+
+    if (siempreComparativo && metricas_anteriores) {
+      const calcularCambio = (actual, anterior) => {
+        if (anterior === 0) return actual > 0 ? 100 : 0;
+        return ((actual - anterior) / anterior) * 100;
+      };
+
+      comparativas = {
+        total_ventas: {
+          actual: totalVentasNeto,
+          anterior: metricas_anteriores.total_ventas,
+          cambio_pct: calcularCambio(totalVentasNeto, metricas_anteriores.total_ventas)
+        },
+        total_ventas_bruto: {
+          actual: totalVentasBruto,
+          anterior: metricas_anteriores.total_ventas_bruto,
+          cambio_pct: calcularCambio(totalVentasBruto, metricas_anteriores.total_ventas_bruto)
+        },
+        total_tickets: {
+          actual: totalTickets,
+          anterior: metricas_anteriores.total_tickets,
+          cambio_pct: calcularCambio(totalTickets, metricas_anteriores.total_tickets)
+        },
+        ticket_promedio: {
+          actual: ticketPromedio,
+          anterior: metricas_anteriores.ticket_promedio,
+          cambio_pct: calcularCambio(ticketPromedio, metricas_anteriores.ticket_promedio)
+        },
+        total_comensales: {
+          actual: totalComensales,
+          anterior: metricas_anteriores.total_comensales,
+          cambio_pct: calcularCambio(totalComensales, metricas_anteriores.total_comensales)
+        },
+        total_impuestos: {
+          actual: totalImpuestos,
+          anterior: metricas_anteriores.total_impuestos,
+          cambio_pct: calcularCambio(totalImpuestos, metricas_anteriores.total_impuestos)
+        },
+        total_descuentos: {
+          actual: totalDescuentos,
+          anterior: metricas_anteriores.total_descuentos,
+          cambio_pct: calcularCambio(totalDescuentos, metricas_anteriores.total_descuentos)
+        },
+        total_propinas: {
+          actual: totalPropinas,
+          anterior: metricas_anteriores.total_propinas,
+          cambio_pct: calcularCambio(totalPropinas, metricas_anteriores.total_propinas)
+        }
+      };
+
+      console.log('Comparativas calculadas:', comparativas);
+    }
 
     // 2. PROCESAR MÉTODOS DE PAGO
     const metodosPago = {
@@ -257,7 +402,7 @@ serve(async (req) => {
 
     // 8. CALCULAR CRECIMIENTO VS PERÍODO ANTERIOR
     let crecimientoVsAnterior = 0
-    if (comparar_periodo) {
+    if (siempreComparativo) {
       try {
         const diasRango = Math.ceil((new Date(fecha_fin).getTime() - new Date(fecha_inicio).getTime()) / (1000 * 60 * 60 * 24))
         const fechaInicioAnterior = new Date(new Date(fecha_inicio).getTime() - diasRango * 24 * 60 * 60 * 1000)
@@ -283,6 +428,7 @@ serve(async (req) => {
 
     // 9. CONSTRUIR RESPUESTA
     const dashboardData = {
+      // Mantener estructura existente
       resumen: {
         total_ventas: totalVentasNeto,
         total_ventas_bruto: totalVentasBruto,
@@ -300,13 +446,23 @@ serve(async (req) => {
       productos_top: productosTop,
       categorias_ventas: categoriasFinal,
       ultimo_sync: new Date().toISOString(),
-      // Estadísticas de datos para debug
       stats: {
         ventas_procesadas: ventasList.length,
         lineas_procesadas: lineasList.length,
         productos_unicos: productosTop.length,
         categorias_encontradas: categoriasFinal.length
-      }
+      },
+      
+      // CAMPOS COMPARATIVOS ACTUALIZADOS:
+      es_comparativo: siempreComparativo,
+      tipo_rango: tipoRango,
+      periodo_anterior: {
+        fecha_inicio: periodoAnterior.fecha_inicio_anterior,
+        fecha_fin: periodoAnterior.fecha_fin_anterior,
+        dias_periodo: periodoAnterior.dias_periodo
+      },
+      metricas_anteriores: metricas_anteriores,
+      comparativas: comparativas
     }
 
     console.log('Datos del dashboard generados correctamente')
