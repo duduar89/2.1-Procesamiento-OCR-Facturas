@@ -124,7 +124,10 @@ serve(async (req) => {
 
     // =================================================================
     // PASO 1: CREAR VISTA LÓGICA CON DATOS PRIORIZADOS (ANTI-DUPLICADOS)
+    // AJUSTE: Para negocios que cierran después de medianoche, extender 1 día
     // =================================================================
+    
+    // CAMBIO: NO extender fechas en RPC, obtener datos exactos y filtrar después
     const rpc_params = {
       p_restaurante_id: restaurante_id,
       p_fecha_inicio: fecha_inicio,
@@ -135,6 +138,13 @@ serve(async (req) => {
 
     const { data: ventasData, error: ventasError } = await supabase
       .rpc('get_prioritized_sales_data', rpc_params);
+    
+    console.log(`📊 DATOS RECIBIDOS - Período actual (${fecha_inicio} a ${fecha_fin}):`);
+    console.log(`   - Total registros: ${ventasData?.length || 0}`);
+    if (ventasData && ventasData.length > 0) {
+      console.log(`   - Fechas encontradas:`, [...new Set(ventasData.map(v => v.fecha_venta))].sort());
+      console.log(`   - Sistemas origen:`, [...new Set(ventasData.map(v => v.sistema_origen))]);
+    }
 
     if (ventasError) {
       console.error('Error llamando a RPC get_prioritized_sales_data (current):', ventasError);
@@ -143,7 +153,10 @@ serve(async (req) => {
     
     // =================================================================
     // PASO 2: OBTENER DATOS PRIORIZADOS DEL PERIODO ANTERIOR
+    // AJUSTE: También extender el período anterior para ventas nocturnas
     // =================================================================
+    
+    // CAMBIO: NO extender fechas en RPC, obtener datos exactos del período anterior
     const rpc_params_anterior = {
       p_restaurante_id: restaurante_id,
       p_fecha_inicio: periodoAnterior.fecha_inicio_anterior,
@@ -154,6 +167,13 @@ serve(async (req) => {
 
     const { data: ventasAnteriorData, error: ventasAnteriorError } = await supabase
       .rpc('get_prioritized_sales_data', rpc_params_anterior);
+      
+    console.log(`📊 DATOS RECIBIDOS - Período anterior (${periodoAnterior.fecha_inicio_anterior} a ${periodoAnterior.fecha_fin_anterior}):`);
+    console.log(`   - Total registros: ${ventasAnteriorData?.length || 0}`);
+    if (ventasAnteriorData && ventasAnteriorData.length > 0) {
+      console.log(`   - Fechas encontradas:`, [...new Set(ventasAnteriorData.map(v => v.fecha_venta))].sort());
+      console.log(`   - Sistemas origen:`, [...new Set(ventasAnteriorData.map(v => v.sistema_origen))]);
+    }
 
     if (ventasAnteriorError) {
       console.error('Error llamando a RPC get_prioritized_sales_data (anterior):', ventasAnteriorError);
@@ -161,10 +181,34 @@ serve(async (req) => {
     }
 
     // Procesar métricas básicas
-    const ventasList = ventasData || [];
-    const ventasListAnterior = ventasAnteriorData || [];
+    let ventasList = ventasData || [];
+    let ventasListAnterior = ventasAnteriorData || [];
 
-    // NUEVO: Todas las consultas ahora usan `ventasList` y `ventasListAnterior` que ya están priorizadas.
+    // TEMPORALMENTE: NO filtrar, usar datos tal como vienen para diagnosticar
+    const ventasOriginales = ventasList.length;
+    const ventasAnterioresOriginales = ventasListAnterior.length;
+    
+    console.log(`🚨 MODO DIAGNÓSTICO - SIN FILTROS:`);
+    console.log(`   - Datos actuales: ${ventasList.length} registros`);
+    console.log(`   - Datos anteriores: ${ventasListAnterior.length} registros`);
+    
+    // DIAGNÓSTICO DETALLADO: Mostrar todos los tickets del 22 agosto
+    if (fecha_inicio === '2025-08-22' && fecha_fin === '2025-08-22') {
+      console.log(`🔍 DETALLE DE TICKETS DEL 22 AGOSTO:`);
+      ventasList.forEach((venta, index) => {
+        console.log(`   ${index + 1}. ID: ${venta.id_externo} | Ref: ${venta.referencia_externa} | Total: €${venta.total_bruto} | Hora: ${venta.fecha_hora_completa}`);
+      });
+    }
+
+    console.log(`🕐 ANÁLISIS DE FILTRADO:`);
+    console.log(`   - Originales: ${ventasOriginales} actuales, ${ventasAnterioresOriginales} anteriores`);
+    console.log(`   - Filtradas: ${ventasList.length} actuales, ${ventasListAnterior.length} anteriores`);
+    console.log(`🔍 DESGLOSE DE FILTRADO ACTUAL:`);
+    console.log(`   - Período solicitado: ${fecha_inicio} a ${fecha_fin}`);
+    console.log(`🔍 DESGLOSE DE FILTRADO ANTERIOR:`);
+    console.log(`   - Período anterior: ${periodoAnterior.fecha_inicio_anterior} a ${periodoAnterior.fecha_fin_anterior}`);
+
+    // NUEVO: Todas las consultas ahora usan `ventasList` y `ventasListAnterior` que ya están priorizadas y filtradas.
     
     const totalVentasBruto = ventasList.reduce((sum, v) => sum + (parseFloat(v.total_bruto) || 0), 0)
     const totalVentasNeto = ventasList.reduce((sum, v) => sum + (parseFloat(v.total_neto) || 0), 0)
@@ -173,7 +217,7 @@ serve(async (req) => {
     const totalPropinas = ventasList.reduce((sum, v) => sum + (parseFloat(v.propinas) || 0), 0)
     const totalComensales = ventasList.reduce((sum, v) => sum + (v.num_comensales || 0), 0)
     const totalTickets = ventasList.length
-    const ticketPromedio = totalTickets > 0 ? totalVentasNeto / totalTickets : 0
+    const ticketPromedio = totalTickets > 0 ? totalVentasBruto / totalTickets : 0
 
     // NUEVO: Calcular métricas del período anterior
     let metricas_anteriores: any = null;
@@ -187,7 +231,7 @@ serve(async (req) => {
       const totalPropinasAnterior = ventasListAnterior.reduce((sum, v) => sum + (parseFloat(v.propinas) || 0), 0);
       const totalComensalesAnterior = ventasListAnterior.reduce((sum, v) => sum + (v.num_comensales || 0), 0);
       const totalTicketsAnterior = ventasListAnterior.length;
-      const ticketPromedioAnterior = totalTicketsAnterior > 0 ? totalVentasNetoAnterior / totalTicketsAnterior : 0;
+      const ticketPromedioAnterior = totalTicketsAnterior > 0 ? totalVentasBrutoAnterior / totalTicketsAnterior : 0;
 
       metricas_anteriores = {
         total_ventas: totalVentasNetoAnterior,
