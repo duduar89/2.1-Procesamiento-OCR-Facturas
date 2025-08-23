@@ -11,23 +11,69 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-// AGREGAR esta función al inicio del archivo, después de los imports
+// FUNCIÓN CORREGIDA: Calcular período anterior con zona horaria española
 function calcularPeriodoAnterior(fechaInicio: string, fechaFin: string) {
-  const inicio = new Date(fechaInicio);
-  const fin = new Date(fechaFin);
+  console.log(`📅 Calculando período anterior para: ${fechaInicio} - ${fechaFin}`);
   
-  // Calcular días de diferencia
+  // Crear fechas en zona horaria local (no UTC) para evitar problemas de medianoche
+  const inicio = new Date(fechaInicio + 'T12:00:00'); // Mediodía para evitar problemas de zona horaria
+  const fin = new Date(fechaFin + 'T12:00:00');
+  
+  // Calcular días de diferencia (incluyendo ambos extremos)
   const diasDiferencia = Math.ceil((fin.getTime() - inicio.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+  console.log(`📊 Días en el período actual: ${diasDiferencia}`);
   
-  // Calcular período anterior
-  const finAnterior = new Date(inicio.getTime() - 24 * 60 * 60 * 1000);
-  const inicioAnterior = new Date(finAnterior.getTime() - (diasDiferencia - 1) * 24 * 60 * 60 * 1000);
+  // DETECCIÓN INTELIGENTE: ¿Es un rango semanal?
+  const esSemanal = detectarRangoSemanal(inicio, fin, diasDiferencia);
   
-  return {
+  let inicioAnterior: Date;
+  let finAnterior: Date;
+  
+  if (esSemanal) {
+    console.log(`🗓️ Detectado rango SEMANAL - calculando mismos días de semana anterior`);
+    // Para rangos semanales: retroceder exactamente 7 días (mismos días de la semana anterior)
+    // Si esta semana es Lun-Vie, semana anterior debe ser Lun-Vie también
+    inicioAnterior = new Date(inicio.getTime() - 7 * 24 * 60 * 60 * 1000);
+    finAnterior = new Date(fin.getTime() - 7 * 24 * 60 * 60 * 1000);
+    
+    console.log(`📊 Semana actual: ${inicio.toDateString()} - ${fin.toDateString()}`);
+    console.log(`📊 Semana anterior: ${inicioAnterior.toDateString()} - ${finAnterior.toDateString()}`);
+  } else {
+    console.log(`📅 Rango ESTÁNDAR - aplicando lógica por días consecutivos`);
+    // Para otros rangos: lógica estándar
+    inicioAnterior = new Date(inicio.getTime() - diasDiferencia * 24 * 60 * 60 * 1000);
+    finAnterior = new Date(inicioAnterior.getTime() + (diasDiferencia - 1) * 24 * 60 * 60 * 1000);
+  }
+  
+  const resultado = {
     fecha_inicio_anterior: inicioAnterior.toISOString().split('T')[0],
     fecha_fin_anterior: finAnterior.toISOString().split('T')[0],
     dias_periodo: diasDiferencia
   };
+  
+  console.log(`📅 Período anterior calculado: ${resultado.fecha_inicio_anterior} - ${resultado.fecha_fin_anterior}`);
+  return resultado;
+}
+
+// FUNCIÓN AUXILIAR: Detectar si es un rango semanal
+function detectarRangoSemanal(inicio: Date, fin: Date, diasDiferencia: number): boolean {
+  const inicioDay = inicio.getDay(); // 0=Domingo, 1=Lunes, etc.
+  const finDay = fin.getDay();
+  
+  // Convertir domingo=0 a domingo=7 para facilitar cálculos
+  const inicioLunes = inicioDay === 0 ? 7 : inicioDay;
+  const finLunes = finDay === 0 ? 7 : finDay;
+  
+  // Es semanal si:
+  // 1. Empieza en Lunes (1) 
+  // 2. Tiene entre 4-7 días
+  // 3. O es claramente un patrón semanal
+  const empiezaEnLunes = inicioLunes === 1;
+  const rangoSemanal = diasDiferencia >= 4 && diasDiferencia <= 7;
+  
+  console.log(`🔍 Detección semanal: inicio=${inicioLunes} (${inicioLunes===1?'Lunes':'No-Lunes'}), días=${diasDiferencia}, rango=${rangoSemanal}`);
+  
+  return empiezaEnLunes && rangoSemanal;
 }
 
 // NUEVA FUNCIÓN: Obtener mapeo de categorías
@@ -76,67 +122,50 @@ serve(async (req) => {
     const periodoAnterior = calcularPeriodoAnterior(fecha_inicio, fecha_fin);
     console.log(`Período anterior: ${periodoAnterior.fecha_inicio_anterior} hasta ${periodoAnterior.fecha_fin_anterior}`);
 
-    // 1. OBTENER RESUMEN DE VENTAS
+    // =================================================================
+    // PASO 1: CREAR VISTA LÓGICA CON DATOS PRIORIZADOS (ANTI-DUPLICADOS)
+    // =================================================================
+    const rpc_params = {
+      p_restaurante_id: restaurante_id,
+      p_fecha_inicio: fecha_inicio,
+      p_fecha_fin: fecha_fin
+    };
+    
+    console.log("RPC Params (Current):", rpc_params);
+
     const { data: ventasData, error: ventasError } = await supabase
-      .from('ventas_datos')
-      .select(`
-        id,
-        total_bruto,
-        total_neto,
-        total_impuestos,
-        descuentos,
-        propinas,
-        num_comensales,
-        metodo_pago,
-        seccion,
-        fecha_venta,
-        fecha_hora_completa
-      `)
-      .eq('restaurante_id', restaurante_id)
-      .gte('fecha_venta', fecha_inicio)
-      .lte('fecha_venta', fecha_fin)
+      .rpc('get_prioritized_sales_data', rpc_params);
 
     if (ventasError) {
-      console.error('Error obteniendo ventas:', ventasError)
-      throw new Error('Error obteniendo datos de ventas')
+      console.error('Error llamando a RPC get_prioritized_sales_data (current):', ventasError);
+      throw new Error('Error obteniendo datos de ventas priorizados');
+    }
+    
+    // =================================================================
+    // PASO 2: OBTENER DATOS PRIORIZADOS DEL PERIODO ANTERIOR
+    // =================================================================
+    const rpc_params_anterior = {
+      p_restaurante_id: restaurante_id,
+      p_fecha_inicio: periodoAnterior.fecha_inicio_anterior,
+      p_fecha_fin: periodoAnterior.fecha_fin_anterior
+    };
+    
+    console.log("RPC Params (Anterior):", rpc_params_anterior);
+
+    const { data: ventasAnteriorData, error: ventasAnteriorError } = await supabase
+      .rpc('get_prioritized_sales_data', rpc_params_anterior);
+
+    if (ventasAnteriorError) {
+      console.error('Error llamando a RPC get_prioritized_sales_data (anterior):', ventasAnteriorError);
+      // No lanzar error, puede que no haya datos anteriores
     }
 
     // Procesar métricas básicas
-    const ventasList = ventasData || []
+    const ventasList = ventasData || [];
+    const ventasListAnterior = ventasAnteriorData || [];
 
-    // NUEVO: Siempre obtener datos del período anterior
-    let ventasDataAnterior: any = null;
-    let ventasListAnterior: any[] = [];
-
-    console.log(`Obteniendo datos del período anterior: ${periodoAnterior.fecha_inicio_anterior} - ${periodoAnterior.fecha_fin_anterior}`);
-
-    const { data: ventasAnteriorData, error: ventasAnteriorError } = await supabase
-      .from('ventas_datos')
-      .select(`
-        id,
-        total_bruto,
-        total_neto,
-        total_impuestos,
-        descuentos,
-        propinas,
-        num_comensales,
-        metodo_pago,
-        seccion,
-        fecha_venta,
-        fecha_hora_completa
-      `)
-      .eq('restaurante_id', restaurante_id)
-      .gte('fecha_venta', periodoAnterior.fecha_inicio_anterior)
-      .lte('fecha_venta', periodoAnterior.fecha_fin_anterior);
-
-    if (!ventasAnteriorError) {
-      ventasDataAnterior = ventasAnteriorData;
-      ventasListAnterior = ventasAnteriorData || [];
-      console.log(`Datos del período anterior obtenidos: ${ventasListAnterior.length} ventas`);
-    } else {
-      console.error('Error obteniendo ventas del período anterior:', ventasAnteriorError);
-    }
-
+    // NUEVO: Todas las consultas ahora usan `ventasList` y `ventasListAnterior` que ya están priorizadas.
+    
     const totalVentasBruto = ventasList.reduce((sum, v) => sum + (parseFloat(v.total_bruto) || 0), 0)
     const totalVentasNeto = ventasList.reduce((sum, v) => sum + (parseFloat(v.total_neto) || 0), 0)
     const totalImpuestos = ventasList.reduce((sum, v) => sum + (parseFloat(v.total_impuestos) || 0), 0)
@@ -229,7 +258,7 @@ serve(async (req) => {
       console.log('Comparativas calculadas:', comparativas);
     }
 
-    // 2. PROCESAR MÉTODOS DE PAGO
+    // 2. PROCESAR MÉTODOS DE PAGO (Usa ventasList ya filtrado)
     const metodosPago = {
       efectivo: 0,
       tarjeta: 0,
@@ -266,7 +295,7 @@ serve(async (req) => {
       }
     })
 
-    // 3. VENTAS POR DÍA
+    // 3. VENTAS POR DÍA (Usa ventasList ya filtrado)
     const ventasPorDiaMap = new Map()
     ventasList.forEach(venta => {
       const fecha = venta.fecha_venta
@@ -280,7 +309,7 @@ serve(async (req) => {
       ventas
     })).sort((a, b) => a.fecha.localeCompare(b.fecha))
 
-    // 4. VENTAS POR HORA
+    // 4. VENTAS POR HORA (Usa ventasList ya filtrado)
     const ventasPorHoraMap = new Map()
     
     ventasList.forEach(venta => {
@@ -311,7 +340,9 @@ serve(async (req) => {
     const ventasPorHora = Array.from(ventasPorHoraMap.values())
       .sort((a, b) => a.hora - b.hora)
 
-    // 5. OBTENER PRODUCTOS Y LÍNEAS DE VENTA
+    // 5. OBTENER PRODUCTOS Y LÍNEAS DE VENTA (Filtrado por venta_id de ventas priorizadas)
+    const ventaIds = ventasList.map(v => v.id);
+
     const { data: lineasData, error: lineasError } = await supabase
       .from('ventas_lineas')
       .select(`
@@ -322,9 +353,7 @@ serve(async (req) => {
         precio_total,
         venta_id
       `)
-      .eq('restaurante_id', restaurante_id)
-      .gte('fecha_venta', fecha_inicio)
-      .lte('fecha_venta', fecha_fin)
+      .in('venta_id', ventaIds) // <-- MODIFICADO: Usar solo IDs de ventas priorizadas
 
     if (lineasError) {
       console.error('Error obteniendo líneas de venta:', lineasError)
@@ -404,21 +433,12 @@ serve(async (req) => {
     let crecimientoVsAnterior = 0
     if (siempreComparativo) {
       try {
-        const diasRango = Math.ceil((new Date(fecha_fin).getTime() - new Date(fecha_inicio).getTime()) / (1000 * 60 * 60 * 24))
-        const fechaInicioAnterior = new Date(new Date(fecha_inicio).getTime() - diasRango * 24 * 60 * 60 * 1000)
-        const fechaFinAnterior = new Date(new Date(fecha_inicio).getTime() - 24 * 60 * 60 * 1000)
-
-        const { data: ventasAnteriores } = await supabase
-          .from('ventas_datos')
-          .select('total_neto')
-          .eq('restaurante_id', restaurante_id)
-          .gte('fecha_venta', fechaInicioAnterior.toISOString().split('T')[0])
-          .lte('fecha_venta', fechaFinAnterior.toISOString().split('T')[0])
-
-        if (ventasAnteriores && ventasAnteriores.length > 0) {
-          const totalAnterior = ventasAnteriores.reduce((sum, v) => sum + (parseFloat(v.total_neto) || 0), 0)
+        // ✅ USAR LOS DATOS YA CALCULADOS EN LUGAR DE HACER UNA NUEVA CONSULTA
+        if (metricas_anteriores) {
+          const totalAnterior = metricas_anteriores.total_ventas || 0;
           if (totalAnterior > 0) {
-            crecimientoVsAnterior = ((totalVentasNeto - totalAnterior) / totalAnterior) * 100
+            crecimientoVsAnterior = ((totalVentasNeto - totalAnterior) / totalAnterior) * 100;
+            console.log(`📈 Crecimiento calculado: ${totalVentasNeto} vs ${totalAnterior} = ${crecimientoVsAnterior.toFixed(2)}%`);
           }
         }
       } catch (error) {

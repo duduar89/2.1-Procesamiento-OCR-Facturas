@@ -232,16 +232,131 @@ body {
 .metric-card {
     background: linear-gradient(135deg, #ffffff, #fafbfc);
     backdrop-filter: blur(15px);
-    border: 1px solid rgba(0, 212, 170, 0.08);
+    border: 1px solid rgba(16, 185, 129, 0.1);
     border-radius: 14px;
     padding: 20px 16px;
     text-align: center;
     position: relative;
     overflow: hidden;
-    box-shadow: 
-        0 2px 8px rgba(0, 212, 170, 0.06),
-        0 1px 3px rgba(0, 0, 0, 0.04);
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.06), 
+                0 1px 3px rgba(0, 0, 0, 0.04);
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Tarjetas Importantes - Destacadas (VENTAS BRUTAS, TICKETS, TICKET PROMEDIO) */
+.metric-card:first-child,
+.metric-card:nth-child(4),
+.metric-card:nth-child(5) {
+    background: linear-gradient(135deg, #10b981, #059669);
+    border: 2px solid #10b981;
+    box-shadow: 0 10px 25px rgba(16, 185, 129, 0.25), 
+                0 4px 10px rgba(0, 0, 0, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    transform: scale(1.08);
+    position: relative;
+    z-index: 10;
+}
+
+/* Efecto de brillo animado para tarjetas importantes */
+.metric-card:first-child::after,
+.metric-card:nth-child(4)::after,
+.metric-card:nth-child(5)::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: linear-gradient(
+        45deg,
+        transparent 30%,
+        rgba(255, 255, 255, 0.1) 50%,
+        transparent 70%
+    );
+    animation: shine 3s infinite;
+}
+
+@keyframes shine {
+    0% { transform: translateX(-100%) translateY(-100%); }
+    100% { transform: translateX(100%) translateY(100%); }
+}
+
+.metric-card:first-child .metric-icon,
+.metric-card:nth-child(4) .metric-icon,
+.metric-card:nth-child(5) .metric-icon {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    font-size: 24px;
+    animation: pulse 2s infinite;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+}
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.2); opacity: 0.8; }
+}
+
+.metric-card:first-child .metric-value,
+.metric-card:nth-child(4) .metric-value,
+.metric-card:nth-child(5) .metric-value {
+    color: #ffffff !important;
+    font-size: 42px;
+    font-weight: 700;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    -webkit-text-fill-color: #ffffff !important;
+    background: none !important;
+    background-clip: unset !important;
+}
+
+.metric-card:first-child .metric-label,
+.metric-card:nth-child(4) .metric-label,
+.metric-card:nth-child(5) .metric-label {
+    color: rgba(255, 255, 255, 0.95);
+    font-weight: 600;
+    font-size: 14px;
+    letter-spacing: 0.5px;
+}
+
+.metric-card:first-child .metric-change,
+.metric-card:nth-child(4) .metric-change,
+.metric-card:nth-child(5) .metric-change {
+    background: rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+    font-weight: 600;
+    padding: 6px 12px;
+    border-radius: 20px;
+    backdrop-filter: blur(10px);
+}
+
+.metric-card:first-child::before,
+.metric-card:nth-child(4)::before,
+.metric-card:nth-child(5)::before {
+    background: radial-gradient(circle at 30% 50%, rgba(255, 255, 255, 0.3), transparent);
+}
+
+.metric-card:first-child:hover,
+.metric-card:nth-child(4):hover,
+.metric-card:nth-child(5):hover {
+    transform: scale(1.08) translateY(-4px);
+    box-shadow: 0 15px 35px rgba(16, 185, 129, 0.35), 
+                0 5px 15px rgba(0, 0, 0, 0.15);
+}
+
+/* Tarjeta de Ventas Netas - Secundaria */
+.metric-card:nth-child(2) {
+    opacity: 0.85;
+    transform: scale(0.95);
+}
+
+.metric-card:nth-child(2) .metric-value {
+    font-size: 28px;
+    color: #64748b;
+}
+
+.metric-card:nth-child(2) .metric-label {
+    font-size: 12px;
+    color: #94a3b8;
 }
 
 .metric-card::before {
@@ -259,10 +374,7 @@ body {
 .metric-value {
     font-size: 28px;
     font-weight: 700;
-    background: var(--gradient-primary);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    color: var(--text-primary);
     margin-bottom: 8px;
     font-family: 'Inter', sans-serif;
     line-height: 1.2;
@@ -324,7 +436,31 @@ body {
     background: linear-gradient(135deg, #ffffff, #f8fafc);
     border-radius: 16px;
     padding: 20px;
-    border: 1px solid rgba(0, 212, 170, 0.1);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.08), 
+                0 2px 6px rgba(0, 0, 0, 0.05);
+    transition: all 0.3s ease;
+    border: 1px solid rgba(16, 185, 129, 0.1);
+}
+
+.chart-container:hover {
+    box-shadow: 0 8px 20px rgba(16, 185, 129, 0.12), 
+                0 4px 10px rgba(0, 0, 0, 0.08);
+    transform: translateY(-2px);
+}
+
+/* Asegurar que los canvas tengan dimensiones correctas */
+.chart-container canvas {
+    width: 100% !important;
+    height: 100% !important;
+    max-width: 100%;
+    max-height: 100%;
+}
+
+/* Estilos específicos para el gráfico de productos */
+#products-chart {
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 300px;
 }
 
 /* Tables con estilo Brain Stormers */
@@ -1385,6 +1521,27 @@ tr:hover {
     max-height: 300px;
 }
 
+/* Estilos específicos para métodos de pago - más pequeño y colores de marca */
+#payment-chart {
+    max-height: 280px !important;
+    max-width: 280px !important;
+    margin: 0 auto;
+}
+
+.chart-container:has(#payment-chart) {
+    height: 320px !important;
+    padding: 20px;
+    background: linear-gradient(135deg, #ffffff, #f8fafc);
+    border: 1px solid rgba(16, 185, 129, 0.1);
+    box-shadow: 0 8px 20px rgba(16, 185, 129, 0.08), 
+                0 4px 10px rgba(0, 0, 0, 0.05);
+}
+
+.chart-container:has(#payment-chart):hover {
+    box-shadow: var(--shadow-hover);
+    transform: translateY(-3px);
+}
+
 /* Responsive design for heatmap */
 @media (max-width: 768px) {
     .heatmap-grid {
@@ -1626,3 +1783,742 @@ tr:hover {
     gap: 24px;
     margin-bottom: 32px;
 }
+
+/* ========================================
+   ESTILOS PARA COMPARATIVAS HOY VS AYER
+   ======================================== */
+
+/* Indicadores de cambio mejorados */
+.metric-change {
+    font-size: 10px;
+    margin-top: 10px;
+    padding: 6px 8px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-family: 'Inter', sans-serif;
+    text-align: center;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    line-height: 1.2;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    min-height: 36px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+}
+
+.metric-change.positive {
+    background: linear-gradient(135deg, #dcfce7, #bbf7d0);
+    color: #15803d;
+    border: 2px solid rgba(34, 197, 94, 0.3);
+}
+
+.metric-change.positive::before {
+    content: '';
+    font-size: 12px;
+}
+
+.metric-change.negative {
+    background: linear-gradient(135deg, #fef2f2, #fee2e2);
+    color: #dc2626;
+    border: 2px solid rgba(239, 68, 68, 0.3);
+}
+
+/* SOBRESCRIBIR: Tarjetas estrella con cambios POSITIVOS en VERDE */
+.metric-card:first-child .metric-change.positive,
+.metric-card:nth-child(4) .metric-change.positive,
+.metric-card:nth-child(5) .metric-change.positive {
+    background: linear-gradient(135deg, #dcfce7, #bbf7d0) !important;
+    color: #15803d !important;
+    border: 2px solid rgba(34, 197, 94, 0.3) !important;
+}
+
+/* SOBRESCRIBIR: Tarjetas estrella con cambios NEGATIVOS en ROJO */
+.metric-card:first-child .metric-change.negative,
+.metric-card:nth-child(4) .metric-change.negative,
+.metric-card:nth-child(5) .metric-change.negative {
+    background: linear-gradient(135deg, #fef2f2, #fee2e2) !important;
+    color: #dc2626 !important;
+    border: 2px solid rgba(239, 68, 68, 0.3) !important;
+}
+
+.metric-change.negative::before {
+    content: '';
+    font-size: 12px;
+}
+
+/* Hover effects */
+.metric-change:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Animación de entrada */
+.metric-change {
+    animation: slideInChange 0.5s ease-out;
+}
+
+@keyframes slideInChange {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Indicador de modo comparativo */
+.comparative-mode-banner {
+    background: var(--gradient-primary);
+    color: white;
+    padding: 12px 24px;
+    border-radius: 16px;
+    margin-bottom: 24px;
+    text-align: center;
+    font-weight: 700;
+    font-size: 14px;
+    box-shadow: var(--shadow-card);
+    border: 1px solid rgba(0, 212, 170, 0.2);
+    animation: pulseGlow 2s infinite;
+}
+
+.comparative-mode-banner::before {
+    content: '⚡ ';
+    font-size: 16px;
+    margin-right: 8px;
+}
+
+@keyframes pulseGlow {
+    0%, 100% { 
+        box-shadow: 0 0 20px rgba(0, 212, 170, 0.3); 
+    }
+    50% { 
+        box-shadow: 0 0 30px rgba(0, 212, 170, 0.5); 
+    }
+}
+
+/* Botón "Hoy" activo en modo comparativo */
+.btn.comparative-active {
+    background: var(--gradient-accent);
+    color: white;
+    box-shadow: 0 8px 25px rgba(38, 208, 206, 0.4);
+    transform: translateY(-2px);
+    position: relative;
+    overflow: hidden;
+}
+
+.btn.comparative-active::after {
+    content: '🔥';
+    position: absolute;
+    top: -2px;
+    right: -2px;
+    font-size: 12px;
+    animation: bounce 1s infinite;
+}
+
+@keyframes bounce {
+    0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+    40% { transform: translateY(-3px); }
+    60% { transform: translateY(-2px); }
+}
+
+/* Cards en modo comparativo */
+.metric-card.comparative {
+    border: 2px solid rgba(0, 212, 170, 0.2);
+    background: linear-gradient(135deg, #ffffff, rgba(0, 212, 170, 0.02));
+    position: relative;
+    overflow: hidden;
+}
+
+.metric-card.comparative::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: var(--gradient-primary);
+    opacity: 1;
+}
+
+.metric-card.comparative .metric-value {
+    font-size: 32px;
+    margin-bottom: 12px;
+}
+
+/* Efectos de hover mejorados para modo comparativo */
+.metric-card.comparative:hover {
+    transform: translateY(-6px) scale(1.02);
+    box-shadow: 
+        0 15px 40px rgba(0, 212, 170, 0.2),
+        0 8px 20px rgba(0, 0, 0, 0.1);
+    border-color: rgba(0, 212, 170, 0.4);
+}
+
+/* Loading específico para comparativas */
+.comparative-loading {
+    background: linear-gradient(90deg, 
+        rgba(0, 212, 170, 0.1) 0%, 
+        rgba(0, 212, 170, 0.3) 50%, 
+        rgba(0, 212, 170, 0.1) 100%);
+    background-size: 200% 100%;
+    animation: shimmerComparative 1.5s infinite;
+    border-radius: 8px;
+    padding: 8px 16px;
+    color: var(--brand-turquoise);
+    font-weight: 600;
+}
+
+@keyframes shimmerComparative {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+}
+
+.comparative-loading::before {
+    content: '⚖️ ';
+    margin-right: 8px;
+}
+
+/* Tooltips explicativos */
+.metric-tooltip {
+    position: relative;
+    cursor: help;
+}
+
+.metric-tooltip::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 120%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--brand-dark);
+    color: white;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+    z-index: 1000;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.metric-tooltip:hover::after {
+    opacity: 1;
+}
+
+/* Responsive específico para comparativas */
+@media (max-width: 768px) {
+    .metric-change {
+        font-size: 10px;
+        padding: 4px 8px;
+        margin-top: 6px;
+    }
+    
+    .metric-change::before {
+        font-size: 10px;
+    }
+    
+    .comparative-mode-banner {
+        padding: 8px 16px;
+        font-size: 12px;
+        margin-bottom: 16px;
+    }
+    
+    .metric-card.comparative .metric-value {
+        font-size: 24px;
+    }
+}
+
+/* ========================================
+   DRAG & DROP ZONE - SISTEMA INTELIGENTE
+   ======================================== */
+
+.drag-drop-zone {
+    border: 3px dashed rgba(0, 212, 170, 0.3);
+    border-radius: 16px;
+    padding: 40px 20px;
+    text-align: center;
+    background: linear-gradient(135deg, rgba(0, 212, 170, 0.02), rgba(20, 184, 166, 0.02));
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+    margin-top: 20px;
+    min-height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.drag-drop-zone.drag-over {
+    border-color: var(--brand-turquoise);
+    background: linear-gradient(135deg, rgba(0, 212, 170, 0.08), rgba(20, 184, 166, 0.08));
+    transform: scale(1.02);
+    box-shadow: 0 12px 40px rgba(0, 212, 170, 0.2);
+}
+
+.drag-drop-zone.drag-over::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(0, 212, 170, 0.1), transparent);
+    animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+    0% { left: -100%; }
+    100% { left: 100%; }
+}
+
+.drag-drop-content {
+    transition: all 0.3s ease;
+    width: 100%;
+}
+
+.drag-drop-zone.drag-over .drag-drop-content {
+    transform: translateY(-5px);
+}
+
+.drag-drop-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+    transition: all 0.3s ease;
+    display: block;
+}
+
+.drag-drop-zone.drag-over .drag-drop-icon {
+    transform: scale(1.2) rotate(5deg);
+}
+
+.drag-drop-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--brand-dark);
+    margin-bottom: 12px;
+    background: var(--gradient-primary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    display: block;
+}
+
+.drag-drop-subtitle {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin-bottom: 20px;
+    line-height: 1.5;
+}
+
+.drag-drop-browse {
+    color: var(--brand-turquoise);
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    background: rgba(0, 212, 170, 0.1);
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: 2px solid rgba(0, 212, 170, 0.2);
+    transition: all 0.3s ease;
+    display: inline-block;
+    margin: 0 4px;
+}
+
+.drag-drop-browse:hover {
+    color: var(--brand-turquoise-dark);
+    background: rgba(0, 212, 170, 0.15);
+    border-color: rgba(0, 212, 170, 0.4);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 212, 170, 0.2);
+}
+
+.drag-drop-formats {
+    font-size: 12px;
+    color: var(--text-secondary);
+    background: rgba(0, 212, 170, 0.05);
+    padding: 8px 16px;
+    border-radius: 20px;
+    display: inline-block;
+    border: 1px solid rgba(0, 212, 170, 0.1);
+    margin-top: 16px;
+}
+
+/* Estados de la zona drag & drop */
+.drag-drop-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    padding: 40px 20px;
+}
+
+.loading-text {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--brand-turquoise);
+}
+
+.drag-drop-result {
+    text-align: left;
+    background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+    border: 1px solid rgba(34, 197, 94, 0.2);
+    border-radius: 12px;
+    padding: 24px;
+    margin-top: 16px;
+}
+
+.result-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid rgba(34, 197, 94, 0.2);
+}
+
+.result-icon {
+    font-size: 24px;
+}
+
+.result-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: #166534;
+}
+
+.result-details {
+    margin-bottom: 20px;
+}
+
+.result-detail-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(34, 197, 94, 0.1);
+}
+
+.result-detail-item:last-child {
+    border-bottom: none;
+}
+
+.result-detail-label {
+    font-weight: 600;
+    color: #166534;
+}
+
+.result-detail-value {
+    color: #15803d;
+    font-weight: 500;
+}
+
+.result-actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.result-actions .btn {
+    flex: 1;
+    min-width: 140px;
+}
+
+/* Headers preview */
+.headers-preview {
+    background: rgba(255, 255, 255, 0.7);
+    border-radius: 8px;
+    padding: 12px;
+    margin: 12px 0;
+    border: 1px solid rgba(34, 197, 94, 0.2);
+}
+
+.headers-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.header-tag {
+    background: var(--gradient-primary);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .drag-drop-zone {
+        padding: 30px 15px;
+    }
+    
+    .drag-drop-icon {
+        font-size: 36px;
+    }
+    
+    .drag-drop-title {
+        font-size: 18px;
+    }
+    
+    .result-actions {
+        flex-direction: column;
+    }
+    
+    .result-actions .btn {
+        width: 100%;
+    }
+}
+
+/* ========================================
+   DRAG & DROP ZONE COMPACTA - CUADRADA
+   ======================================== */
+
+.drag-drop-zone-compact {
+    border: 3px dashed rgba(0, 212, 170, 0.3);
+    border-radius: 12px;
+    padding: 40px 30px;
+    text-align: center;
+    background: linear-gradient(135deg, rgba(0, 212, 170, 0.02), rgba(20, 184, 166, 0.02));
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+    margin-top: 20px;
+    width: 100%;
+    max-width: 700px;
+    min-height: 280px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.drag-drop-zone-compact.drag-over {
+    border-color: var(--brand-turquoise);
+    background: linear-gradient(135deg, rgba(0, 212, 170, 0.08), rgba(20, 184, 166, 0.08));
+    transform: scale(1.05);
+    box-shadow: 0 8px 25px rgba(0, 212, 170, 0.2);
+}
+
+.drag-drop-zone-compact.drag-over::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(0, 212, 170, 0.1), transparent);
+    animation: shimmer 1.5s infinite;
+}
+
+.drag-drop-zone-compact .drag-drop-content {
+    transition: all 0.3s ease;
+    width: 100%;
+}
+
+.drag-drop-zone-compact.drag-over .drag-drop-content {
+    transform: translateY(-3px);
+}
+
+.drag-drop-zone-compact .drag-drop-icon {
+    font-size: 56px;
+    margin-bottom: 16px;
+    transition: all 0.3s ease;
+}
+
+.drag-drop-zone-compact.drag-over .drag-drop-icon {
+    transform: scale(1.15) rotate(3deg);
+}
+
+.drag-drop-zone-compact .drag-drop-title {
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--brand-dark);
+    margin-bottom: 10px;
+    background: var(--gradient-primary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.drag-drop-zone-compact .drag-drop-subtitle {
+    font-size: 15px;
+    color: var(--text-secondary);
+    margin-bottom: 16px;
+}
+
+.drag-drop-zone-compact .drag-drop-formats {
+    font-size: 13px;
+    color: var(--text-secondary);
+    background: rgba(0, 212, 170, 0.05);
+    padding: 6px 12px;
+    border-radius: 16px;
+    display: inline-block;
+    border: 1px solid rgba(0, 212, 170, 0.1);
+}
+
+/* Estados de la zona drag & drop compacta */
+.drag-drop-zone-compact .drag-drop-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 20px;
+    width: 100%;
+}
+
+.drag-drop-zone-compact .loading-text {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--brand-turquoise);
+}
+
+.drag-drop-zone-compact .drag-drop-result {
+    text-align: left;
+    background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+    border: 1px solid rgba(34, 197, 94, 0.2);
+    border-radius: 12px;
+    padding: 32px;
+    margin-top: 20px;
+    width: 100%;
+    font-size: 15px;
+    min-height: 500px;
+    max-height: 800px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+}
+
+.drag-drop-zone-compact .result-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid rgba(34, 197, 94, 0.2);
+}
+
+.drag-drop-zone-compact .result-icon {
+    font-size: 24px;
+}
+
+.drag-drop-zone-compact .result-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #166534;
+}
+
+.drag-drop-zone-compact .result-details {
+    margin-bottom: 24px;
+    line-height: 1.8;
+    font-size: 15px;
+    flex: 1;
+    overflow-y: auto;
+    max-height: 550px;
+}
+
+.drag-drop-zone-compact .result-actions {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 2px solid rgba(34, 197, 94, 0.2);
+    flex-shrink: 0;
+}
+
+.drag-drop-zone-compact .result-actions .btn {
+    font-size: 16px;
+    padding: 14px 28px;
+    border-radius: 10px;
+    font-weight: 500;
+    min-width: 180px;
+    text-align: center;
+}
+
+/* Responsive para móviles */
+@media (max-width: 768px) {
+    .drag-drop-zone-compact {
+        width: 100%;
+        max-width: 280px;
+        height: 180px;
+        padding: 20px 12px;
+    }
+    
+    .drag-drop-zone-compact .drag-drop-icon {
+        font-size: 28px;
+    }
+    
+    .drag-drop-zone-compact .drag-drop-title {
+        font-size: 14px;
+    }
+    
+    .drag-drop-zone-compact .drag-drop-result {
+        min-height: 250px;
+        max-height: 400px;
+        padding: 20px;
+        font-size: 13px;
+    }
+    
+    .drag-drop-zone-compact .result-actions .btn {
+        font-size: 13px;
+        padding: 10px 16px;
+    }
+}
+ 
+ / *   = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = 
+       I N D I C A D O R   D E   A U T O - S I N C R O N I Z A C I � N 
+       = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =   * / 
+ 
+ . a u t o - s y n c - i n d i c a t o r   { 
+         d i s p l a y :   f l e x ; 
+         f l e x - d i r e c t i o n :   c o l u m n ; 
+         a l i g n - i t e m s :   f l e x - e n d ; 
+         g a p :   4 p x ; 
+         m a r g i n - l e f t :   1 6 p x ; 
+         f o n t - s i z e :   1 1 p x ; 
+         c o l o r :   v a r ( - - t e x t - s e c o n d a r y ) ; 
+ } 
+ 
+ . s y n c - s t a t u s   { 
+         d i s p l a y :   f l e x ; 
+         a l i g n - i t e m s :   c e n t e r ; 
+         g a p :   6 p x ; 
+ } 
+ 
+ . s y n c - d o t   { 
+         w i d t h :   8 p x ; 
+         h e i g h t :   8 p x ; 
+         b o r d e r - r a d i u s :   5 0 % ; 
+         b a c k g r o u n d :   # 1 0 b 9 8 1 ; 
+         a n i m a t i o n :   p u l s e   2 s   i n f i n i t e ; 
+ } 
+ 
+ . s y n c - d o t . i n a c t i v e   { 
+         b a c k g r o u n d :   # 9 4 a 3 b 8 ; 
+         a n i m a t i o n :   n o n e ; 
+ } 
+ 
+ . s y n c - d o t . s y n c i n g   { 
+         b a c k g r o u n d :   # f 5 9 e 0 b ; 
+         a n i m a t i o n :   s p i n   1 s   l i n e a r   i n f i n i t e ; 
+ } 
+ 
+ . n e x t - s y n c   { 
+         f o n t - s i z e :   1 0 p x ; 
+         o p a c i t y :   0 . 7 ; 
+         f o n t - s t y l e :   i t a l i c ; 
+ } 
+ 
+ @ k e y f r a m e s   s p i n   { 
+         f r o m   {   t r a n s f o r m :   r o t a t e ( 0 d e g ) ;   } 
+         t o   {   t r a n s f o r m :   r o t a t e ( 3 6 0 d e g ) ;   } 
+ }  
+ 

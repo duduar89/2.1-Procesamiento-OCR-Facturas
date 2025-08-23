@@ -1,0 +1,10 @@
+{
+    "tasks": {
+      "start": "deno run --allow-all index.ts"
+    },
+    "imports": {
+      "supabase": "https://esm.sh/@supabase/supabase-js@2",
+      "csv-parse": "https://deno.land/x/csv@v0.8.0/mod.ts",
+      "xlsx": "https://cdn.skypack.dev/xlsx@0.18.5"
+    }
+  }

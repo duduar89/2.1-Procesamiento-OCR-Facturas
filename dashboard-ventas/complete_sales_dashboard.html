@@ -6,6 +6,21 @@
     <title>Panel de Ventas - Restaurante</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/date-fns/2.29.3/index.min.js"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script>
+        // Inicializar Supabase para usar la autenticación existente
+        console.log('Supabase object:', window.supabase);
+        
+        // Verificar si createClient está disponible
+        if (window.supabase && window.supabase.createClient) {
+            const supabaseClient = window.supabase.createClient('https://yurqgcpgwsgdnxnpyxes.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl1cnFnY3Bnd3NnZG54bnB5eGVzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5MjgzODIsImV4cCI6MjA3MDUwNDM4Mn0.iOPGaCYvtE9EQgkl7ytKAymvKKQzsfwlPUyM5ChDiRg');
+            // Hacer la variable disponible globalmente
+            window.supabase = supabaseClient;
+            console.log('Supabase client initialized:', supabaseClient);
+        } else {
+            console.error('Supabase createClient no está disponible');
+        }
+    </script>
     <link rel="stylesheet" href="complete_sales_dashboard.css">
 </head>
 <body>
@@ -24,6 +39,20 @@
                 <button class="btn btn-primary" onclick="syncData()">
                     <span id="sync-btn-text">Sincronizar</span>
                 </button>
+                
+                <!-- Indicador de Auto-Sincronización -->
+                <div class="auto-sync-indicator" id="auto-sync-indicator">
+                    <div class="sync-status" id="sync-status">
+                        <span class="sync-dot"></span>
+                        <span id="sync-text">Última sync: --:--</span>
+                    </div>
+                    <div class="next-sync" id="next-sync-info">
+                        Próxima: --:--
+                    </div>
+                    <button class="btn btn-sm" onclick="showSyncDiagnostic()" style="margin-top: 5px; font-size: 10px;">
+                        🔍 Diagnóstico
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -62,6 +91,9 @@
                     </button>
                 </div>
                 
+                <!-- Información de Período (TEMPORAL para debugging) -->
+                <div id="periodo-info"></div>
+                
                 <!-- Custom Date Picker (Hidden by default) -->
                 <div class="custom-date-picker" id="custom-date-picker" style="display: none;">
                     <div class="date-inputs-container">
@@ -88,73 +120,105 @@
                 </div>
             </div>
 
+            <!-- Carga Masiva de Ventas - DRAG & DROP COMPACTO -->
+            <div class="card">
+                <div class="card-title">Carga Masiva de Ventas</div>
+                <div class="text-sm text-gray-600" style="margin-bottom: 20px;">
+                    Arrastra CSV, Excel o JSON para análisis automático de ventas
+                </div>
+                
+                <!-- ZONA DE DRAG & DROP COMPACTA -->
+                <div class="drag-drop-zone-compact" id="drag-drop-zone-compact">
+                    <div class="drag-drop-content">
+                        <div class="drag-drop-icon">📁</div>
+                        <div class="drag-drop-title">Arrastra tu archivo aquí</div>
+                        <div class="drag-drop-subtitle">
+                            O <span class="drag-drop-browse" onclick="triggerFileSelect()">buscar archivo</span>
+                        </div>
+                        <div class="drag-drop-formats">
+                            CSV, Excel, JSON
+                        </div>
+                    </div>
+                    
+                    <!-- ESTADO DE CARGA -->
+                    <div class="drag-drop-loading" id="drag-loading-compact" style="display: none;">
+                        <div class="spinner"></div>
+                        <div class="loading-text">Analizando archivo...</div>
+                    </div>
+                    
+                    <!-- RESULTADO DEL ANÁLISIS -->
+                    <div class="drag-drop-result" id="drag-result-compact" style="display: none;">
+                        <div class="result-header">
+                            <span class="result-icon">✅</span>
+                            <span class="result-title">Archivo analizado correctamente</span>
+                        </div>
+                        <div class="result-details" id="result-details-compact">
+                            <!-- Se llena dinámicamente -->
+                        </div>
+                        <div class="result-actions">
+                            <button class="btn btn-primary" onclick="importAnalyzedData()">
+                                📊 Importar Datos
+                            </button>
+                            <button class="btn btn-secondary" onclick="resetDragDrop()">
+                                🔄 Nuevo Archivo
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Input oculto -->
+                <input type="file" id="file-input-compact" style="display: none;" 
+                       accept=".csv,.xlsx,.xls,.json" onchange="handleFileSelect(this)">
+            </div>
+
             <!-- Metrics Grid -->
-            <div class="metrics-grid">
+                    <div class="metrics-grid">
+            <div class="metric-card">
+                <div class="metric-icon">⭐</div>
+                <div class="metric-value" id="total-ventas-bruto">€0</div>
+                <div class="metric-label">VENTAS BRUTAS</div>
+                <div class="metric-change" id="change-total-ventas-bruto"></div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value" id="total-ventas">€0</div>
+                <div class="metric-label">Ventas Netas</div>
+                <div class="metric-change" id="change-ventas"></div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value" id="total-impuestos">€0</div>
+                <div class="metric-label">Total Impuestos</div>
+                <div class="metric-change" id="change-total-impuestos"></div>
+            </div>
                 <div class="metric-card">
-                    <div class="metric-value" id="total-ventas">€0</div>
-                    <div class="metric-label">Ventas Netas</div>
-                    <div class="metric-change" id="change-ventas"></div>
-                </div>
-                <div class="metric-card">
-                    <div class="metric-value" id="total-ventas-bruto">€0</div>
-                    <div class="metric-label">Ventas Brutas</div>
-                </div>
-                <div class="metric-card">
-                    <div class="metric-value" id="total-impuestos">€0</div>
-                    <div class="metric-label">Total Impuestos</div>
-                </div>
-                <div class="metric-card">
+                    <div class="metric-icon">⭐</div>
                     <div class="metric-value" id="total-tickets">0</div>
-                    <div class="metric-label">Tickets</div>
+                    <div class="metric-label">TICKETS</div>
+                    <div class="metric-change" id="change-total-tickets"></div>
                 </div>
                 <div class="metric-card">
+                    <div class="metric-icon">⭐</div>
                     <div class="metric-value" id="ticket-promedio">€0</div>
-                    <div class="metric-label">Ticket Promedio</div>
+                    <div class="metric-label">TICKET PROMEDIO</div>
+                    <div class="metric-change" id="change-ticket-promedio"></div>
                 </div>
                 <div class="metric-card">
                     <div class="metric-value" id="total-comensales">0</div>
                     <div class="metric-label">Comensales</div>
+                    <div class="metric-change" id="change-total-comensales"></div>
                 </div>
                 <div class="metric-card">
                     <div class="metric-value" id="total-descuentos">€0</div>
                     <div class="metric-label">Descuentos</div>
+                    <div class="metric-change" id="change-total-descuentos"></div>
                 </div>
                 <div class="metric-card">
                     <div class="metric-value" id="total-propinas">€0</div>
                     <div class="metric-label">Propinas</div>
+                    <div class="metric-change" id="change-total-propinas"></div>
                 </div>
             </div>
 
-            <!-- Simplificar el widget de clima -->
-            <div class="weather-sales-widget">
-                <div class="weather-header">
-                    <div class="weather-title">Clima & Ventas</div>
-                    <div class="weather-current">
-                        <span class="weather-icon">☀️</span>
-                        <span class="weather-temp">22°C Soleado</span>
-                    </div>
-                </div>
-                
-                <div class="weather-impact">
-                    <div class="impact-grid">
-                        <div class="impact-item">
-                            <div class="impact-weather">☀️</div>
-                            <div class="impact-sales">€450</div>
-                            <div class="impact-change">Días soleados</div>
-                        </div>
-                        <div class="impact-item">
-                            <div class="impact-weather">☁️</div>
-                            <div class="impact-sales">€380</div>
-                            <div class="impact-change">Días nublados</div>
-                        </div>
-                        <div class="impact-item">
-                            <div class="impact-weather">🌧️</div>
-                            <div class="impact-sales">€320</div>
-                            <div class="impact-change">Días de lluvia</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+
 
             <!-- Charts Grid -->
             <div class="charts-grid">
@@ -162,7 +226,26 @@
                     <div class="card-title">Ventas por Día</div>
                     <div class="chart-container">
                         <canvas id="sales-chart"></canvas>
-                    </div>
+    complete_sales_dashboard.js:2101  POST https://yurqgcpgwsgdnxnpyxes.supabase.co/functions/v1/intelligent-import-sales 500 (Internal Server Error)
+processFile @ complete_sales_dashboard.js:2101
+await in processFile
+handleFileSelect @ complete_sales_dashboard.js:2055
+onchange @ complete_sales_dashboard.html:156Understand this error
+complete_sales_dashboard.js:2113 📥 Response status: 500
+complete_sales_dashboard.js:2114 📥 Response headers: Headers {}
+complete_sales_dashboard.js:2118 ❌ Error response: {"success":false,"error":"Error procesando archivo: Error procesando archivo Excel"}
+processFile @ complete_sales_dashboard.js:2118
+await in processFile
+handleFileSelect @ complete_sales_dashboard.js:2055
+onchange @ complete_sales_dashboard.html:156Understand this error
+complete_sales_dashboard.js:2137 ❌ Error procesando archivo: Error: Error del servidor (500): {"success":false,"error":"Error procesando archivo: Error procesando archivo Excel"}
+    at processFile (complete_sales_dashboard.js:2119:19)
+processFile @ complete_sales_dashboard.js:2137
+await in processFile
+handleFileSelect @ complete_sales_dashboard.js:2055
+onchange @ complete_sales_dashboard.html:156Understand this error
+complete_sales_dashboard.js:2259 ❌ Mostrando estado de error: Error del servidor (500): {"success":false,"error":"Error procesando archivo: Error procesando archivo Excel"}
+complete_sales_dashboard.js:2277 ✅ Estado de error aplicado correctamente                </div>
                 </div>
                 <div class="card">
                     <div class="card-title">Métodos de Pago</div>
@@ -175,7 +258,7 @@
             <!-- Hourly Charts Grid -->
             <div class="charts-grid">
                 <div class="card">
-                    <div class="card-title">Ventas por Hora</div>
+                    <div class="card-title">Ventas vs Ticket Medio</div>
                     <div class="chart-container">
                         <canvas id="hourly-sales-chart"></canvas>
                     </div>
@@ -298,65 +381,22 @@
             <div class="config-section">
                 <div class="card">
                     <div class="card-title">Configuración de Integraciones</div>
-                    
-                    <!-- Numier Integration -->
-                    <div class="integration-card" id="numier-integration">
-                        <div class="integration-header">
-                            <div>
-                                <div class="integration-name">Numier POS</div>
-                                <div class="text-sm text-gray-600">Integración con software Numier</div>
-                            </div>
-                            <div class="status" id="numier-status">Desconectado</div>
-                        </div>
-                        
-                        <div id="numier-config">
-                            <div class="form-group">
-                                <label class="form-label">API Key</label>
-                                <input type="password" id="numier-api-key" class="form-input" placeholder="Introduce tu API Key de Numier">
-                            </div>
-                            
-                            <div class="form-group">
-                                <label class="form-label">TPV IDs (separados por comas)</label>
-                                <input type="text" id="numier-tpv-ids" class="form-input" placeholder="ej: 9763,9764">
-                            </div>
-                            
-                            <div class="form-group">
-                                <label class="form-label">URL Base (opcional)</label>
-                                <input type="text" id="numier-base-url" class="form-input" 
-                                       value="https://www.numier.com/api/public/index.php/api" 
-                                       placeholder="URL base de la API">
-                            </div>
-                            
-                            <button class="btn btn-primary" onclick="setupNumier()">
-                                <span id="setup-btn-text">Configurar Integración</span>
-                            </button>
-                        </div>
-                        
-                        <div class="sync-status" id="numier-sync-status" style="display: none;">
-                            <span>✓</span>
-                            <span>Última sincronización: <span id="numier-last-sync">Nunca</span></span>
-                        </div>
-                    </div>
+                    <p>Configuración de integraciones y conexiones del sistema.</p>
+                </div>
+            </div>
+        </div>
+    </div>
 
-                    <!-- Manual Upload -->
-                    <div class="integration-card">
-                        <div class="integration-header">
-                            <div>
-                                <div class="integration-name">Carga Manual</div>
-                                <div class="text-sm text-gray-600">Subir datos mediante CSV/Excel</div>
-                            </div>
-                            <div class="status success">Disponible</div>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label class="form-label">Subir archivo de ventas</label>
-                            <input type="file" id="manual-file" class="form-input" accept=".csv,.xlsx">
-                        </div>
-                        
-                        <button class="btn btn-secondary" onclick="uploadManualData()">
-                            Subir Datos
-                        </button>
-                    </div>
+    <!-- Modal de Diagnóstico de Sincronización -->
+    <div id="sync-diagnostic-modal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 800px;">
+            <div class="modal-header">
+                <h2>🔍 Diagnóstico de Sincronización</h2>
+                <span class="close" onclick="closeSyncDiagnostic()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div id="diagnostic-content">
+                    <div class="loading">Cargando diagnóstico...</div>
                 </div>
             </div>
         </div>
