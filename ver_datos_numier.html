@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visualizador de Datos Numier TPV</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            background: #fafafa;
+        }
+        
+        .section h3 {
+            color: #34495e;
+            margin-top: 0;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+        
+        button {
+            padding: 12px 24px;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.3s;
+        }
+        
+        button:hover {
+            background: #2980b9;
+        }
+        
+        button:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        
+        input, select {
+            width: 100%;
+            max-width: 300px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        .results {
+            margin-top: 20px;
+            padding: 15px;
+            background: white;
+            border-radius: 6px;
+            border-left: 4px solid #27ae60;
+        }
+        
+        .error {
+            background: #fff5f5;
+            border-left-color: #e74c3c;
+            color: #c0392b;
+        }
+        
+        .loading {
+            background: #f0f8ff;
+            border-left-color: #f39c12;
+            color: #d68910;
+        }
+        
+        pre {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 15px;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-size: 12px;
+            line-height: 1.4;
+        }
+        
+        .table-responsive {
+            overflow-x: auto;
+            margin-top: 15px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+        }
+        
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        th {
+            background: #3498db;
+            color: white;
+            font-weight: 600;
+        }
+        
+        tr:hover {
+            background: #f8f9fa;
+        }
+        
+        .metric-card {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            margin: 10px;
+            border-radius: 10px;
+            min-width: 200px;
+            text-align: center;
+        }
+        
+        .metric-value {
+            font-size: 28px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .metric-label {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        
+        .seccion-badge {
+            background: #27ae60;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        
+        .seccion-badge:empty,
+        .seccion-badge[data-seccion="Sin sección"] {
+            background: #95a5a6;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏪 Visualizador de Datos Numier TPV</h1>
+        
+        <!-- Configuración -->
+        <div class="section">
+            <h3>⚙️ Configuración</h3>
+            <div class="form-group">
+                <label for="restaurante_id">ID del Restaurante:</label>
+                <select id="restaurante_id">
+                    <option value="2852b1af-38d8-43ec-8872-2b2921d5a231">Correlimos Huelva SL</option>
+                    <option value="550e8400-e29b-41d4-a716-446655440001">Bar Manolo S.L.</option>
+                    <option value="550e8400-e29b-41d4-a716-446655440002">Restaurante Paco S.L.</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="fecha_inicio">Fecha Inicio:</label>
+                <input type="date" id="fecha_inicio" value="2025-01-24">
+            </div>
+            
+            <div class="form-group">
+                <label for="fecha_fin">Fecha Fin:</label>
+                <input type="date" id="fecha_fin" value="2025-01-25">
+            </div>
+        </div>
+
+        <!-- Acciones de Prueba -->
+        <div class="section">
+            <h3>🧪 Probar API Numier</h3>
+            <div class="button-group">
+                <button onclick="testNumierAPI()">🔍 Test API Numier</button>
+                <button onclick="sincronizarDatos()">🔄 Sincronizar Datos</button>
+                <button onclick="verUltimosDatos()">📊 Ver Últimos Datos</button>
+            </div>
+            <div id="test-results" class="results" style="display: none;"></div>
+        </div>
+
+        <!-- Ver Datos en Base de Datos -->
+        <div class="section">
+            <h3>💾 Datos en Base de Datos</h3>
+            <div class="button-group">
+                <button onclick="consultarVentasDatos()">📈 Ver Ventas Datos</button>
+                <button onclick="consultarVentasLineas()">📋 Ver Líneas de Venta</button>
+                <button onclick="consultarResumenDiario()">📅 Resumen Diario</button>
+                <button onclick="consultarVentasPorSeccion()">🏠 Ventas por Sección</button>
+                <button onclick="consultarProductos()">🛍️ Ver Productos</button>
+            </div>
+            <div id="database-results" class="results" style="display: none;"></div>
+        </div>
+
+        <!-- Métricas Rápidas -->
+        <div class="section">
+            <h3>📊 Métricas Rápidas</h3>
+            <div id="metrics-container"></div>
+            <button onclick="calcularMetricas()">🔢 Calcular Métricas</button>
+        </div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://ucchhjdatbukbzjxdxpf.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVjY2hqZGF0YnVrYnpqeGR4cGYiLCJyb2xlIjoiYW5vbiIsImlhdCI6MTcyNDI0NjU4MSwiZXhwIjoyMDM5ODIyNTgxfQ.s9HK8vSW2uKhp0b4Q7Hel7YW_nFMr-vYxIwEHVmvGjU';
+
+        function showResults(elementId, content, isError = false) {
+            const element = document.getElementById(elementId);
+            element.style.display = 'block';
+            element.className = `results ${isError ? 'error' : ''}`;
+            element.innerHTML = content;
+        }
+
+        function showLoading(elementId, message = 'Cargando...') {
+            const element = document.getElementById(elementId);
+            element.style.display = 'block';
+            element.className = 'results loading';
+            element.innerHTML = `⏳ ${message}`;
+        }
+
+        async function testNumierAPI() {
+            const restauranteId = document.getElementById('restaurante_id').value;
+            const fechaInicio = document.getElementById('fecha_inicio').value;
+            const fechaFin = document.getElementById('fecha_fin').value;
+
+            showLoading('test-results', 'Probando API de Numier...');
+
+            try {
+                const response = await fetch(`${SUPABASE_URL}/functions/v1/test-numier-api`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                    },
+                    body: JSON.stringify({
+                        restaurante_id: restauranteId,
+                        fecha_inicio: fechaInicio,
+                        fecha_fin: fechaFin
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    showResults('test-results', `
+                        <h4>✅ Prueba de API Exitosa</h4>
+                        <p><strong>Total de registros encontrados:</strong> ${data.total_records}</p>
+                        <p><strong>Configuración:</strong> ${data.resultados.length} TPV(s) probados</p>
+                        
+                        <div class="table-responsive">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>TPV ID</th>
+                                        <th>Estado</th>
+                                        <th>Registros</th>
+                                        <th>Tiempo (ms)</th>
+                                        <th>Muestra</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${data.resultados.map(r => `
+                                        <tr>
+                                            <td>${r.tpv_id}</td>
+                                            <td>${r.success ? '✅ OK' : '❌ Error'}</td>
+                                            <td>${r.records_found || 0}</td>
+                                            <td>${r.response_time || 'N/A'}</td>
+                                            <td>${r.sample_record ? 
+                                                `${r.sample_record.Serie}-${r.sample_record.Number}` : 
+                                                'Sin datos'}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <h5>📝 Respuesta completa:</h5>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `);
+                } else {
+                    showResults('test-results', `
+                        <h4>❌ Error en la prueba</h4>
+                        <p>${data.error}</p>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `, true);
+                }
+            } catch (error) {
+                showResults('test-results', `
+                    <h4>❌ Error de conexión</h4>
+                    <p>${error.message}</p>
+                `, true);
+            }
+        }
+
+        async function sincronizarDatos() {
+            const restauranteId = document.getElementById('restaurante_id').value;
+            const fechaInicio = document.getElementById('fecha_inicio').value;
+            const fechaFin = document.getElementById('fecha_fin').value;
+
+            showLoading('test-results', 'Sincronizando datos de Numier...');
+
+            try {
+                const response = await fetch(`${SUPABASE_URL}/functions/v1/sync-numier-data`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                    },
+                    body: JSON.stringify({
+                        restaurante_id: restauranteId,
+                        fecha_inicio: fechaInicio,
+                        fecha_fin: fechaFin,
+                        endpoints: ['sales', 'products']
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    showResults('test-results', `
+                        <h4>✅ Sincronización Completada</h4>
+                        <p><strong>Mensaje:</strong> ${data.message}</p>
+                        <p><strong>Período:</strong> ${data.fecha_inicio} - ${data.fecha_fin}</p>
+                        
+                        <div class="table-responsive">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Endpoint</th>
+                                        <th>Estado</th>
+                                        <th>Procesados</th>
+                                        <th>Exitosos</th>
+                                        <th>Errores</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${data.resultados.map(r => `
+                                        <tr>
+                                            <td>${r.endpoint}</td>
+                                            <td>${r.estado === 'completado' ? '✅' : 
+                                                  r.estado === 'parcial' ? '⚠️' : '❌'} ${r.estado}</td>
+                                            <td>${r.procesados}</td>
+                                            <td>${r.exitosos}</td>
+                                            <td>${r.errores}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    `);
+                } else {
+                    showResults('test-results', `
+                        <h4>❌ Error en la sincronización</h4>
+                        <p>${data.error}</p>
+                    `, true);
+                }
+            } catch (error) {
+                showResults('test-results', `
+                    <h4>❌ Error de conexión</h4>
+                    <p>${error.message}</p>
+                `, true);
+            }
+        }
+
+        async function consultarVentasDatos() {
+            const restauranteId = document.getElementById('restaurante_id').value;
+            
+            showLoading('database-results', 'Consultando ventas en base de datos...');
+
+            try {
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/ventas_datos?restaurante_id=eq.${restauranteId}&order=fecha_venta.desc&limit=10`, {
+                    headers: {
+                        'apikey': SUPABASE_ANON_KEY,
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                    }
+                });
+
+                const data = await response.json();
+                
+                if (data.length > 0) {
+                    showResults('database-results', `
+                        <h4>📈 Últimas 10 Ventas en Base de Datos</h4>
+                        <div class="table-responsive">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Fecha</th>
+                                        <th>ID Externo</th>
+                                        <th>TPV</th>
+                                        <th>Sección</th>
+                                        <th>Total Bruto</th>
+                                        <th>Comensales</th>
+                                        <th>Ticket Medio</th>
+                                        <th>Sistema</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${data.map(v => `
+                                        <tr>
+                                            <td>${v.fecha_venta}</td>
+                                            <td>${v.id_externo}</td>
+                                            <td>${v.tpv_nombre || v.tpv_id}</td>
+                                            <td><span class="seccion-badge">${v.seccion || 'Sin sección'}</span></td>
+                                            <td>€${parseFloat(v.total_bruto || 0).toFixed(2)}</td>
+                                            <td>${v.num_comensales || 0}</td>
+                                            <td>€${parseFloat(v.ticket_medio || 0).toFixed(2)}</td>
+                                            <td>${v.sistema_origen}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    `);
+                } else {
+                    showResults('database-results', `
+                        <h4>ℹ️ Sin Datos</h4>
+                        <p>No se encontraron ventas para este restaurante.</p>
+                    `);
+                }
+            } catch (error) {
+                showResults('database-results', `
+                    <h4>❌ Error consultando ventas</h4>
+                    <p>${error.message}</p>
+                `, true);
+            }
+        }
+
+        async function consultarVentasPorSeccion() {
+            const restauranteId = document.getElementById('restaurante_id').value;
+            const fechaInicio = document.getElementById('fecha_inicio').value;
+            const fechaFin = document.getElementById('fecha_fin').value;
+            
+            showLoading('database-results', 'Analizando ventas por sección...');
+
+            try {
+                // Consulta las ventas agrupadas por sección
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/ventas_datos?restaurante_id=eq.${restauranteId}&fecha_venta=gte.${fechaInicio}&fecha_venta=lte.${fechaFin}&sistema_origen=eq.numier&order=fecha_venta.desc`, {
+                    headers: {
+                        'apikey': SUPABASE_ANON_KEY,
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                    }
+                });
+
+                const data = await response.json();
+                
+                if (data.length > 0) {
+                    // Agrupar datos por sección
+                    const ventasPorSeccion = data.reduce((acc, venta) => {
+                        const seccion = venta.seccion || 'Sin sección';
+                        if (!acc[seccion]) {
+                            acc[seccion] = {
+                                seccion: seccion,
+                                tickets: 0,
+                                totalBruto: 0,
+                                totalComensales: 0,
+                                ventas: []
+                            };
+                        }
+                        acc[seccion].tickets++;
+                        acc[seccion].totalBruto += parseFloat(venta.total_bruto || 0);
+                        acc[seccion].totalComensales += parseInt(venta.num_comensales || 0);
+                        acc[seccion].ventas.push(venta);
+                        return acc;
+                    }, {});
+
+                    const secciones = Object.values(ventasPorSeccion);
+                    const totalGeneral = secciones.reduce((sum, s) => sum + s.totalBruto, 0);
+
+                    showResults('database-results', `
+                        <h4>🏠 Análisis de Ventas por Sección</h4>
+                        <p><strong>Período:</strong> ${fechaInicio} - ${fechaFin}</p>
+                        
+                        <div style="margin-bottom: 20px;">
+                            ${secciones.map(s => `
+                                <div class="metric-card">
+                                    <div class="metric-value">${s.seccion}</div>
+                                    <div class="metric-label">€${s.totalBruto.toFixed(2)} (${s.tickets} tickets)</div>
+                                </div>
+                            `).join('')}
+                        </div>
+                        
+                        <div class="table-responsive">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Sección</th>
+                                        <th>Num Tickets</th>
+                                        <th>Total Ventas</th>
+                                        <th>% del Total</th>
+                                        <th>Ticket Promedio</th>
+                                        <th>Total Comensales</th>
+                                        <th>Comensales/Ticket</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${secciones.sort((a, b) => b.totalBruto - a.totalBruto).map(s => {
+                                        const porcentaje = ((s.totalBruto / totalGeneral) * 100).toFixed(1);
+                                        const ticketPromedio = (s.totalBruto / s.tickets).toFixed(2);
+                                        const comensalesPorTicket = (s.totalComensales / s.tickets).toFixed(1);
+                                        return `
+                                            <tr>
+                                                <td><span class="seccion-badge">${s.seccion}</span></td>
+                                                <td>${s.tickets}</td>
+                                                <td>€${s.totalBruto.toFixed(2)}</td>
+                                                <td>${porcentaje}%</td>
+                                                <td>€${ticketPromedio}</td>
+                                                <td>${s.totalComensales}</td>
+                                                <td>${comensalesPorTicket}</td>
+                                            </tr>
+                                        `;
+                                    }).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <h5>📊 Detalles por Sección:</h5>
+                        ${secciones.map(s => `
+                            <details style="margin: 10px 0;">
+                                <summary style="font-weight: bold; cursor: pointer;">
+                                    <span class="seccion-badge">${s.seccion}</span> 
+                                    - ${s.tickets} tickets (€${s.totalBruto.toFixed(2)})
+                                </summary>
+                                <div style="margin-top: 10px;">
+                                    <div class="table-responsive">
+                                        <table style="font-size: 12px;">
+                                            <thead>
+                                                <tr>
+                                                    <th>Fecha</th>
+                                                    <th>Ticket</th>
+                                                    <th>TPV</th>
+                                                    <th>Total</th>
+                                                    <th>Comensales</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                ${s.ventas.slice(0, 10).map(v => `
+                                                    <tr>
+                                                        <td>${v.fecha_venta}</td>
+                                                        <td>${v.id_externo}</td>
+                                                        <td>${v.tpv_nombre || v.tpv_id}</td>
+                                                        <td>€${parseFloat(v.total_bruto || 0).toFixed(2)}</td>
+                                                        <td>${v.num_comensales || 0}</td>
+                                                    </tr>
+                                                `).join('')}
+                                                ${s.ventas.length > 10 ? `
+                                                    <tr><td colspan="5" style="text-align: center; font-style: italic;">
+                                                        ... y ${s.ventas.length - 10} tickets más
+                                                    </td></tr>
+                                                ` : ''}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </details>
+                        `).join('')}
+                    `);
+                } else {
+                    showResults('database-results', `
+                        <h4>ℹ️ Sin Datos por Sección</h4>
+                        <p>No se encontraron ventas para el período especificado.</p>
+                    `);
+                }
+            } catch (error) {
+                showResults('database-results', `
+                    <h4>❌ Error consultando ventas por sección</h4>
+                    <p>${error.message}</p>
+                `, true);
+            }
+        }
+
+        async function consultarResumenDiario() {
+            const restauranteId = document.getElementById('restaurante_id').value;
+            
+            showLoading('database-results', 'Calculando resumen diario...');
+
+            try {
+                // Consulta SQL usando RPC
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_resumen_ventas_diario`, {
+                    method: 'POST',
+                    headers: {
+                        'apikey': SUPABASE_ANON_KEY,
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        p_restaurante_id: restauranteId,
+                        p_fecha_inicio: document.getElementById('fecha_inicio').value,
+                        p_fecha_fin: document.getElementById('fecha_fin').value
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (data.length > 0) {
+                    const totalVentas = data.reduce((sum, d) => sum + parseFloat(d.total_bruto), 0);
+                    const totalTickets = data.reduce((sum, d) => sum + parseInt(d.num_tickets), 0);
+                    
+                    showResults('database-results', `
+                        <h4>📅 Resumen Diario de Ventas</h4>
+                        <div style="margin-bottom: 20px;">
+                            <div class="metric-card">
+                                <div class="metric-value">€${totalVentas.toFixed(2)}</div>
+                                <div class="metric-label">Total Período</div>
+                            </div>
+                            <div class="metric-card">
+                                <div class="metric-value">${totalTickets}</div>
+                                <div class="metric-label">Total Tickets</div>
+                            </div>
+                            <div class="metric-card">
+                                <div class="metric-value">€${(totalVentas/totalTickets).toFixed(2)}</div>
+                                <div class="metric-label">Ticket Promedio</div>
+                            </div>
+                        </div>
+                        
+                        <div class="table-responsive">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Fecha</th>
+                                        <th>Num Tickets</th>
+                                        <th>Total Bruto</th>
+                                        <th>Total Neto</th>
+                                        <th>Ticket Promedio</th>
+                                        <th>Total Comensales</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${data.map(d => `
+                                        <tr>
+                                            <td>${d.fecha_venta}</td>
+                                            <td>${d.num_tickets}</td>
+                                            <td>€${parseFloat(d.total_bruto).toFixed(2)}</td>
+                                            <td>€${parseFloat(d.total_neto).toFixed(2)}</td>
+                                            <td>€${parseFloat(d.ticket_promedio).toFixed(2)}</td>
+                                            <td>${d.total_comensales}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    `);
+                } else {
+                    showResults('database-results', `
+                        <h4>ℹ️ Sin Datos</h4>
+                        <p>No se encontraron datos para el período especificado.</p>
+                    `);
+                }
+            } catch (error) {
+                showResults('database-results', `
+                    <h4>❌ Error consultando resumen</h4>
+                    <p>${error.message}</p>
+                `, true);
+            }
+        }
+
+        // Al cargar la página, establecer fechas por defecto
+        document.addEventListener('DOMContentLoaded', function() {
+            const hoy = new Date();
+            const ayer = new Date();
+            ayer.setDate(hoy.getDate() - 1);
+            
+            document.getElementById('fecha_fin').value = hoy.toISOString().split('T')[0];
+            document.getElementById('fecha_inicio').value = ayer.toISOString().split('T')[0];
+        });
+    </script>
+</body>
+</html>

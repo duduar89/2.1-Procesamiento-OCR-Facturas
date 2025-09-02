@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test - Datos en Base de Datos</title>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .btn:hover {
+            background: #0056b3;
+        }
+        .data-display {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            overflow-x: auto;
+        }
+        pre {
+            margin: 0;
+            white-space: pre-wrap;
+        }
+        .success { color: #28a745; }
+        .error { color: #dc3545; }
+        .warning { color: #ffc107; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Test: Datos en Base de Datos</h1>
+        
+        <div>
+            <button class="btn" onclick="checkDatesWithData()">📅 Ver Fechas con Datos</button>
+            <button class="btn" onclick="checkTodayData()">📊 Verificar Datos de Hoy</button>
+            <button class="btn" onclick="checkRecentDates()">⏰ Últimos 7 Días</button>
+            <button class="btn" onclick="checkTodayByHour()">🕒 Hoy por Horas</button>
+            <button class="btn" onclick="clearResults()">🧹 Limpiar</button>
+        </div>
+
+        <div id="results" class="data-display">
+            <h4>📋 Resultados:</h4>
+            <pre id="results-content">Esperando consulta...</pre>
+        </div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://yurqgcpgwsgdnxnpyxes.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl1cnFnY3Bnd3NnZG54bnB5eGVzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5MjgzODIsImV4cCI6MjA3MDUwNDM4Mn0.iOPGaCYvtE9EQgkl7ytKAymvKKQzsfwlPUyM5ChDiRg';
+        const RESTAURANT_ID = '2852b1af-38d8-43ec-8872-2b2921d5a231';
+
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        function log(message, type = 'info') {
+            const now = new Date().toLocaleTimeString();
+            const resultsContent = document.getElementById('results-content');
+            const className = type === 'error' ? 'error' : type === 'success' ? 'success' : type === 'warning' ? 'warning' : '';
+            resultsContent.innerHTML += `<span class="${className}">[${now}] ${message}</span>\n`;
+            resultsContent.scrollTop = resultsContent.scrollHeight;
+            console.log(message);
+        }
+
+        function clearResults() {
+            document.getElementById('results-content').innerHTML = 'Resultados limpiados...\n';
+        }
+
+        async function checkDatesWithData() {
+            log('🔍 Consultando fechas con datos...', 'info');
+            
+            try {
+                const { data, error } = await supabase
+                    .from('ventas_datos')
+                    .select('fecha_venta, COUNT(*) as total_registros')
+                    .eq('restaurante_id', RESTAURANT_ID)
+                    .group('fecha_venta')
+                    .order('fecha_venta', { ascending: false })
+                    .limit(20);
+
+                if (error) {
+                    log(`❌ Error: ${error.message}`, 'error');
+                    return;
+                }
+
+                log(`✅ Encontradas ${data.length} fechas con datos:`, 'success');
+                data.forEach(item => {
+                    log(`   📅 ${item.fecha_venta}: ${item.total_registros} registros`);
+                });
+
+                if (data.length === 0) {
+                    log('⚠️ No se encontraron datos en la tabla ventas_datos', 'warning');
+                }
+
+            } catch (error) {
+                log(`❌ Error en consulta: ${error.message}`, 'error');
+            }
+        }
+
+        async function checkTodayData() {
+            const hoy = new Date().toISOString().split('T')[0];
+            log(`🔍 Verificando datos para hoy (${hoy})...`, 'info');
+            
+            try {
+                const { data, error } = await supabase
+                    .from('ventas_datos')
+                    .select('*')
+                    .eq('restaurante_id', RESTAURANT_ID)
+                    .eq('fecha_venta', hoy)
+                    .order('fecha_hora_completa');
+
+                if (error) {
+                    log(`❌ Error: ${error.message}`, 'error');
+                    return;
+                }
+
+                log(`📊 Registros encontrados para hoy: ${data.length}`, data.length > 0 ? 'success' : 'warning');
+                
+                if (data.length > 0) {
+                    let totalVentas = 0;
+                    let totalTickets = data.length;
+                    
+                    data.forEach((venta, index) => {
+                        const total = parseFloat(venta.total_neto) || 0;
+                        totalVentas += total;
+                        
+                        if (index < 5) { // Mostrar solo los primeros 5
+                            log(`   🎫 ${venta.fecha_hora_completa}: €${total} (${venta.sistema_origen})`);
+                        }
+                    });
+                    
+                    if (data.length > 5) {
+                        log(`   ... y ${data.length - 5} registros más`);
+                    }
+                    
+                    const ticketMedio = totalVentas / totalTickets;
+                    log(`💰 Total ventas: €${totalVentas.toFixed(2)}`, 'success');
+                    log(`🎫 Total tickets: ${totalTickets}`, 'success');
+                    log(`📊 Ticket medio: €${ticketMedio.toFixed(2)}`, 'success');
+                } else {
+                    log('❌ No hay datos para hoy. El gráfico estará vacío.', 'error');
+                }
+
+            } catch (error) {
+                log(`❌ Error en consulta: ${error.message}`, 'error');
+            }
+        }
+
+        async function checkRecentDates() {
+            log('🔍 Verificando últimos 7 días...', 'info');
+            
+            try {
+                const hoy = new Date();
+                const hace7dias = new Date(hoy);
+                hace7dias.setDate(hoy.getDate() - 7);
+                
+                const fechaInicio = hace7dias.toISOString().split('T')[0];
+                const fechaFin = hoy.toISOString().split('T')[0];
+                
+                log(`📅 Rango: ${fechaInicio} a ${fechaFin}`);
+
+                const { data, error } = await supabase
+                    .from('ventas_datos')
+                    .select('fecha_venta, sistema_origen, COUNT(*) as total, SUM(total_neto::float) as ventas_total')
+                    .eq('restaurante_id', RESTAURANT_ID)
+                    .gte('fecha_venta', fechaInicio)
+                    .lte('fecha_venta', fechaFin)
+                    .group('fecha_venta, sistema_origen')
+                    .order('fecha_venta', { ascending: false });
+
+                if (error) {
+                    log(`❌ Error: ${error.message}`, 'error');
+                    return;
+                }
+
+                if (data.length > 0) {
+                    log(`✅ Datos encontrados en ${data.length} combinaciones fecha-sistema:`, 'success');
+                    data.forEach(item => {
+                        log(`   📅 ${item.fecha_venta} (${item.sistema_origen}): ${item.total} tickets, €${parseFloat(item.ventas_total || 0).toFixed(2)}`);
+                    });
+                } else {
+                    log('❌ No hay datos en los últimos 7 días', 'error');
+                }
+
+            } catch (error) {
+                log(`❌ Error en consulta: ${error.message}`, 'error');
+            }
+        }
+
+        async function checkTodayByHour() {
+            const hoy = new Date().toISOString().split('T')[0];
+            log(`🕒 Analizando datos de hoy por horas (${hoy})...`, 'info');
+            
+            try {
+                const { data, error } = await supabase
+                    .from('ventas_datos')
+                    .select('fecha_hora_completa, total_neto, sistema_origen, ticket_medio')
+                    .eq('restaurante_id', RESTAURANT_ID)
+                    .eq('fecha_venta', hoy)
+                    .order('fecha_hora_completa');
+
+                if (error) {
+                    log(`❌ Error: ${error.message}`, 'error');
+                    return;
+                }
+
+                if (data.length === 0) {
+                    log('❌ No hay datos para hoy por horas', 'error');
+                    return;
+                }
+
+                // Agrupar por hora
+                const ventasPorHora = new Map();
+                
+                data.forEach(venta => {
+                    if (venta.fecha_hora_completa) {
+                        try {
+                            const fechaHora = new Date(venta.fecha_hora_completa);
+                            const hora = fechaHora.getHours();
+                            const total = parseFloat(venta.total_neto) || 0;
+                            
+                            if (!ventasPorHora.has(hora)) {
+                                ventasPorHora.set(hora, {
+                                    hora,
+                                    hora_formato: `${hora.toString().padStart(2, '0')}:00`,
+                                    ventas: 0,
+                                    cantidad_tickets: 0
+                                });
+                            }
+                            
+                            const horaData = ventasPorHora.get(hora);
+                            horaData.ventas += total;
+                            horaData.cantidad_tickets += 1;
+                        } catch (err) {
+                            log(`⚠️ Error procesando fecha: ${venta.fecha_hora_completa}`, 'warning');
+                        }
+                    }
+                });
+
+                const horasArray = Array.from(ventasPorHora.values()).sort((a, b) => a.hora - b.hora);
+                
+                log(`✅ Datos agrupados por ${horasArray.length} horas:`, 'success');
+                horasArray.forEach(h => {
+                    const ticketMedio = h.cantidad_tickets > 0 ? h.ventas / h.cantidad_tickets : 0;
+                    log(`   🕒 ${h.hora_formato}: €${h.ventas.toFixed(2)} / ${h.cantidad_tickets} tickets = €${ticketMedio.toFixed(2)} ticket medio`);
+                });
+
+                if (horasArray.length > 0) {
+                    log('✅ Estos datos SÍ deberían aparecer en el gráfico', 'success');
+                } else {
+                    log('❌ Sin datos agrupados por hora', 'error');
+                }
+
+            } catch (error) {
+                log(`❌ Error en consulta: ${error.message}`, 'error');
+            }
+        }
+
+        // Verificar conexión al cargar
+        window.addEventListener('load', async () => {
+            log('🚀 Conectando a Supabase...', 'info');
+            try {
+                const { data, error } = await supabase
+                    .from('ventas_datos')
+                    .select('COUNT(*)')
+                    .eq('restaurante_id', RESTAURANT_ID)
+                    .limit(1);
+                
+                if (error) {
+                    log(`❌ Error de conexión: ${error.message}`, 'error');
+                } else {
+                    log('✅ Conexión a Supabase OK', 'success');
+                }
+            } catch (err) {
+                log(`❌ Error: ${err.message}`, 'error');
+            }
+        });
+    </script>
+</body>
+</html>

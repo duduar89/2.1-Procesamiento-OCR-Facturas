@@ -1,0 +1,412 @@
+/* ========================================
+   DASHBOARD DIARIO - DARK MODE
+   Mismo patrón que Análisis Semanal
+   ======================================== */
+
+/* ========================================
+   SELECTOR DE PERÍODO - DARK MODE
+   ======================================== */
+.modern-date-selector {
+    background: linear-gradient(135deg, #1a2b3c 0%, #2d4a6b 100%) !important;
+    border: 1px solid #00D4AA !important;
+    border-radius: 12px !important;
+    padding: 20px !important;
+    margin: 20px 0 !important;
+    box-shadow: 0 8px 32px rgba(0, 212, 170, 0.15) !important;
+    transition: all 0.3s ease !important;
+}
+
+.modern-date-selector:hover {
+    box-shadow: 0 12px 40px rgba(0, 212, 170, 0.25) !important;
+    transform: translateY(-2px) !important;
+}
+
+.date-selector-header h3 {
+    color: #ffffff !important;
+    font-size: 18px !important;
+    font-weight: 700 !important;
+    margin: 0 0 16px 0 !important;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3) !important;
+}
+
+.active-range {
+    color: #00D4AA !important;
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    background: rgba(0, 212, 170, 0.1) !important;
+    padding: 8px 16px !important;
+    border-radius: 20px !important;
+    border: 1px solid rgba(0, 212, 170, 0.3) !important;
+}
+
+.quick-ranges {
+    display: flex !important;
+    gap: 12px !important;
+    flex-wrap: wrap !important;
+    margin-bottom: 16px !important;
+}
+
+.range-btn {
+    background: rgba(255, 255, 255, 0.1) !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    color: #e2e8f0 !important;
+    padding: 10px 20px !important;
+    border-radius: 8px !important;
+    font-weight: 600 !important;
+    transition: all 0.3s ease !important;
+    cursor: pointer !important;
+}
+
+.range-btn:hover {
+    background: rgba(255, 255, 255, 0.15) !important;
+    border-color: rgba(255, 255, 255, 0.3) !important;
+    transform: translateY(-1px) !important;
+}
+
+.range-btn.active {
+    background: #00D4AA !important;
+    border-color: #00D4AA !important;
+    color: #ffffff !important;
+    box-shadow: 0 4px 16px rgba(0, 212, 170, 0.4) !important;
+}
+
+#periodo-info {
+    color: #94a3b8 !important;
+    font-size: 13px !important;
+    margin-top: 12px !important;
+    padding: 8px 12px !important;
+    background: rgba(255, 255, 255, 0.05) !important;
+    border-radius: 6px !important;
+    border-left: 3px solid #00D4AA !important;
+}
+
+/* ========================================
+   WIDGET DE CLIMA - DARK MODE
+   ======================================== */
+.weather-sales-widget {
+    background: linear-gradient(135deg, #1a2b3c 0%, #2d4a6b 100%) !important;
+    border: 1px solid #00D4AA !important;
+    border-radius: 12px !important;
+    padding: 20px !important;
+    margin: 20px 0 !important;
+    box-shadow: 0 8px 32px rgba(0, 212, 170, 0.15) !important;
+    transition: all 0.3s ease !important;
+}
+
+.weather-sales-widget:hover {
+    box-shadow: 0 12px 40px rgba(0, 212, 170, 0.25) !important;
+    transform: translateY(-2px) !important;
+}
+
+.weather-header {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    margin-bottom: 16px !important;
+    padding-bottom: 12px !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+.weather-title {
+    display: flex !important;
+    align-items: center !important;
+    font-size: 18px !important;
+    font-weight: 700 !important;
+    color: #ffffff !important;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3) !important;
+}
+
+.weather-icon-title {
+    font-size: 20px !important;
+    margin-right: 10px !important;
+}
+
+.weather-city {
+    font-size: 14px !important;
+    opacity: 0.8 !important;
+    color: #00D4AA !important;
+    font-weight: 600 !important;
+    margin-left: 12px !important;
+}
+
+.weather-actions .btn {
+    background: rgba(255, 255, 255, 0.1) !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    color: #e2e8f0 !important;
+    padding: 8px 12px !important;
+    border-radius: 6px !important;
+    transition: all 0.3s ease !important;
+}
+
+.weather-actions .btn:hover {
+    background: rgba(255, 255, 255, 0.15) !important;
+    border-color: rgba(255, 255, 255, 0.3) !important;
+}
+
+/* ========================================
+   ESTADO DEL CLIMA - DARK MODE
+   ======================================== */
+.weather-status {
+    display: flex !important;
+    gap: 20px !important;
+    margin-bottom: 16px !important;
+    padding: 16px !important;
+    background: rgba(255, 255, 255, 0.05) !important;
+    border-radius: 10px !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2) !important;
+}
+
+.weather-main {
+    display: flex !important;
+    align-items: center !important;
+    gap: 16px !important;
+    flex: 1 !important;
+}
+
+.weather-temp-main {
+    font-size: 28px !important;
+    font-weight: 700 !important;
+    color: #ffffff !important;
+    line-height: 1 !important;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3) !important;
+}
+
+.weather-temp-feels {
+    font-size: 12px !important;
+    color: #94a3b8 !important;
+    margin-top: 4px !important;
+}
+
+.weather-icon-main {
+    font-size: 36px !important;
+    margin: 0 12px !important;
+}
+
+.weather-description {
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    color: #00D4AA !important;
+    text-transform: capitalize !important;
+}
+
+/* ========================================
+   DETALLES DEL CLIMA - DARK MODE
+   ======================================== */
+.weather-details {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)) !important;
+    gap: 12px !important;
+    padding: 12px !important;
+    background: rgba(0, 212, 170, 0.1) !important;
+    border-radius: 8px !important;
+    border: 1px solid rgba(0, 212, 170, 0.2) !important;
+}
+
+.weather-detail-item {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    text-align: center !important;
+    padding: 8px !important;
+    background: rgba(255, 255, 255, 0.05) !important;
+    border-radius: 6px !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+.weather-detail-icon {
+    font-size: 16px !important;
+    margin-bottom: 4px !important;
+}
+
+.weather-detail-label {
+    font-size: 11px !important;
+    color: #94a3b8 !important;
+    margin-bottom: 2px !important;
+    font-weight: 500 !important;
+}
+
+.weather-detail-value {
+    font-size: 13px !important;
+    color: #ffffff !important;
+    font-weight: 600 !important;
+}
+
+/* ========================================
+   IMPACTO EN VENTAS - DARK MODE
+   ======================================== */
+.weather-impact {
+    margin-bottom: 16px !important;
+    padding: 16px !important;
+    background: rgba(255, 255, 255, 0.05) !important;
+    border-radius: 10px !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+.impact-header {
+    display: flex !important;
+    align-items: center !important;
+    margin-bottom: 12px !important;
+    padding-bottom: 8px !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+.impact-icon {
+    font-size: 18px !important;
+    margin-right: 10px !important;
+}
+
+.impact-title {
+    color: #ffffff !important;
+    font-size: 16px !important;
+    font-weight: 600 !important;
+}
+
+.impact-content {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+}
+
+.impact-badge {
+    background: #00D4AA !important;
+    color: #ffffff !important;
+    padding: 6px 12px !important;
+    border-radius: 20px !important;
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    border: 1px solid rgba(0, 212, 170, 0.3) !important;
+    box-shadow: 0 2px 8px rgba(0, 212, 170, 0.3) !important;
+}
+
+/* ========================================
+   PREDICCIÓN - DARK MODE
+   ======================================== */
+.weather-forecast {
+    padding: 16px !important;
+    background: rgba(255, 255, 255, 0.05) !important;
+    border-radius: 10px !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+.forecast-header {
+    display: flex !important;
+    align-items: center !important;
+    margin-bottom: 12px !important;
+    padding-bottom: 8px !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+.forecast-icon {
+    font-size: 18px !important;
+    margin-right: 10px !important;
+}
+
+.forecast-title {
+    color: #ffffff !important;
+    font-size: 16px !important;
+    font-weight: 600 !important;
+}
+
+.forecast-timeline {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)) !important;
+    gap: 12px !important;
+}
+
+.forecast-day {
+    background: rgba(255, 255, 255, 0.05) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-radius: 8px !important;
+    padding: 12px !important;
+    text-align: center !important;
+    transition: all 0.3s ease !important;
+}
+
+.forecast-day:hover {
+    background: rgba(255, 255, 255, 0.08) !important;
+    transform: translateY(-2px) !important;
+}
+
+.forecast-date {
+    color: #94a3b8 !important;
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    margin-bottom: 8px !important;
+}
+
+.forecast-temp {
+    color: #ffffff !important;
+    font-size: 16px !important;
+    font-weight: 700 !important;
+    margin-bottom: 4px !important;
+}
+
+.forecast-rain {
+    color: #00D4AA !important;
+    font-size: 11px !important;
+    margin-bottom: 6px !important;
+}
+
+.forecast-description {
+    color: #94a3b8 !important;
+    font-size: 11px !important;
+    font-weight: 500 !important;
+}
+
+.forecast-icon-weather {
+    font-size: 20px !important;
+    margin: 8px 0 !important;
+}
+
+/* ========================================
+   ESTADOS DE CARGA - DARK MODE
+   ======================================== */
+.weather-loading {
+    display: flex !important;
+    align-items: center !important;
+    gap: 12px !important;
+    color: #94a3b8 !important;
+    font-size: 14px !important;
+}
+
+.spinner-small {
+    width: 16px !important;
+    height: 16px !important;
+    border: 2px solid rgba(0, 212, 170, 0.3) !important;
+    border-top: 2px solid #00D4AA !important;
+    border-radius: 50% !important;
+    animation: spin 1s linear infinite !important;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* ========================================
+   RESPONSIVE - DARK MODE
+   ======================================== */
+@media (max-width: 768px) {
+    .weather-status {
+        flex-direction: column !important;
+        gap: 16px !important;
+    }
+    
+    .weather-details {
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+    
+    .forecast-timeline {
+        grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)) !important;
+    }
+    
+    .quick-ranges {
+        flex-direction: column !important;
+    }
+    
+    .range-btn {
+        width: 100% !important;
+        text-align: center !important;
+    }
+}

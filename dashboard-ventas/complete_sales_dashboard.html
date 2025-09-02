@@ -21,13 +21,249 @@
             console.error('Supabase createClient no está disponible');
         }
     </script>
+    <link rel="stylesheet" href="estilos-nuevos.css">
     <link rel="stylesheet" href="complete_sales_dashboard.css">
+            <link rel="stylesheet" href="weather-styles.css">
+    <link rel="stylesheet" href="period-tabs.css">
+    <link rel="stylesheet" href="metric-cards-gradient.css">
+    <link rel="stylesheet" href="weekly-analysis-styles.css">
+    <link rel="stylesheet" href="dashboard-diario-dark.css">
+    
+    <!-- Estilos para tarjetas compactas y elegantes -->
+    <style>
+        /* Header principal mejorado */
+        .weekly-analysis-header-modern {
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 30px;
+            border: 1px solid #e2e8f0;
+        }
+        
+        .header-title-section {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        
+        .header-icon-gradient {
+            font-size: 32px;
+            background: linear-gradient(135deg, #10b981 0%, #3b82f6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .header-text .main-title {
+            font-size: 28px;
+            font-weight: 700;
+            color: #1e293b;
+            margin: 0 0 8px 0;
+        }
+        
+        .header-text .main-subtitle {
+            font-size: 14px;
+            color: #64748b;
+            margin: 0;
+            font-weight: 400;
+        }
+        
+        /* ESTILOS SOLO PARA LOS PORCENTAJES DEL ANÁLISIS DIARIO */
+        #diario-section .comparison-change {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
+            font-weight: 700 !important;
+            padding: 6px 12px !important;
+            border-radius: 8px !important;
+            font-size: 13px !important;
+            letter-spacing: -0.01em !important;
+            transition: all 0.3s ease !important;
+            min-width: 90px !important;
+            text-align: center !important;
+            /* ESTILOS POR DEFECTO - se ven siempre */
+            color: #64748b !important;
+            background: rgba(100, 116, 139, 0.1) !important;
+            border: 1px solid rgba(100, 116, 139, 0.2) !important;
+        }
+        
+        /* Colores para los porcentajes del análisis diario */
+        #diario-section .comparison-change.positive {
+            color: #00D4AA;
+            background: rgba(0, 212, 170, 0.1);
+            text-shadow: 0 0 8px rgba(0, 212, 170, 0.2);
+            border: 1px solid rgba(0, 212, 170, 0.2);
+        }
+        
+        #diario-section .comparison-change.negative {
+            color: #FF4500 !important;
+            background: rgba(255, 69, 0, 0.4) !important;
+            text-shadow: 0 0 12px rgba(255, 69, 0, 0.4) !important;
+            border: 1px solid #FF4500 !important;
+            font-weight: 800 !important;
+            animation: pulse-neon-diario 2s ease-in-out infinite;
+        }
+        
+        #diario-section .comparison-change.neutral {
+            color: #64748b;
+            background: rgba(100, 116, 139, 0.1);
+            border: 1px solid rgba(100, 116, 139, 0.2);
+        }
+        
+        /* Animación solo para análisis diario */
+        @keyframes pulse-neon-diario {
+            0%, 100% {
+                text-shadow: 0 0 8px rgba(255, 69, 0, 0.4);
+                box-shadow: 0 0 0 0 rgba(255, 69, 0, 0.4);
+            }
+            50% {
+                text-shadow: 0 0 16px rgba(255, 69, 0, 0.4), 0 0 24px rgba(255, 69, 0, 0.3);
+                box-shadow: 0 0 8px 2px rgba(255, 69, 0, 0.2);
+            }
+        }
+
+        /* Estilos para el header con controles integrados */
+        .weekly-analysis-header-modern {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #ffffff;
+            padding: 20px 25px;
+            border-radius: 16px;
+            border: 1px solid #e5e7eb;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+        }
+        
+        .header-title-section {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .header-period-controls {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .quick-ranges {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .range-btn {
+            background: transparent;
+            border: 1px solid #d1d5db;
+            color: #374151;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .range-btn:hover {
+            background: #f3f4f6;
+            border-color: #9ca3af;
+        }
+        
+        .range-btn.active {
+            background: #08c999;
+            border-color: #08c999;
+            color: white;
+            box-shadow: 0 1px 3px 0 rgba(8, 201, 153, 0.3);
+        }
+        
+        .day-navigation-compact {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .current-day-display {
+            background: #08c999;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 15px;
+            font-weight: 600;
+            font-size: 12px;
+            min-width: 80px;
+            text-align: center;
+        }
+        
+        /* Responsive para pantallas pequeñas */
+        @media (max-width: 768px) {
+            .weekly-analysis-header-modern {
+                flex-direction: column;
+                gap: 15px;
+                text-align: center;
+            }
+            
+            .header-period-controls {
+                margin-left: 0;
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+        }
+
+        /* Estilos para la primera fila de gráficos (2 columnas) */
+        .charts-first-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        /* Estilos para la segunda fila de gráficos (matriz de ventas - ancho completo) */
+        .charts-second-row {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        /* Responsive para los nuevos gráficos */
+        @media (max-width: 768px) {
+            .charts-first-row {
+                grid-template-columns: 1fr;
+                gap: 15px;
+            }
+            
+            .charts-second-row {
+                gap: 15px;
+            }
+            
+            /* Reducir altura en móviles */
+            .charts-first-row .chart-content {
+                height: 250px !important;
+            }
+            
+            .charts-second-row .chart-content {
+                height: 300px !important;
+            }
+        }
+    </style>
 </head>
 <body>
+    <!-- Botón de toggle modo noche -->
+    <button class="theme-toggle" id="themeToggle">Modo Noche</button>
+    
     <div class="container">
         <!-- Header -->
         <div class="header">
-            <h1>Panel de Ventas</h1>
+            <div class="header-title-section" style="display: flex; align-items: center; gap: 15px;">
+                <h1>Panel de Ventas</h1>
+                <!-- ✅ NUEVO: Icono de carpeta para carga masiva -->
+                <button class="btn btn-sm btn-outline" onclick="showCargaMasivaModal()" title="Carga Masiva de Ventas" style="
+                    padding: 6px 10px;
+                    font-size: 12px;
+                    border-radius: 6px;
+                    background: rgba(59, 130, 246, 0.1);
+                    border: 1px solid rgba(59, 130, 246, 0.3);
+                    color: #3b82f6;
+                    transition: all 0.2s ease;
+                ">
+                    📁 Carga Masiva
+                </button>
+            </div>
             <div class="header-actions">
                 <a href="../dashboard-facturas-claude/dashboard-facturas.html" class="btn btn-secondary">
                     📋 Volver a Facturas
@@ -58,194 +294,266 @@
 
         <!-- Navigation -->
         <div class="nav-tabs">
-            <button class="nav-tab active" onclick="showSection('dashboard')">Dashboard</button>
-            <button class="nav-tab" onclick="showSection('products')">Productos</button>
-            <button class="nav-tab" onclick="showSection('analytics')">Análisis</button>
-            <button class="nav-tab" onclick="showSection('config')">Configuración</button>
+            <button class="nav-tab active" onclick="showSection('diario', event)">
+                📊 Análisis Diario
+            </button>
+            <button class="nav-tab" onclick="showSection('semanal', event)">
+                📈 Análisis Semanal
+            </button>
+            <button class="nav-tab" onclick="showSection('periodos', event)">
+                📆 Mensual y Anual
+            </button>
+            <!-- Pestañas existentes -->
+            <button class="nav-tab" onclick="showSection('products', event)">
+                🛒 Productos
+            </button>
+            <button class="nav-tab" onclick="showSection('config', event)">
+                ⚙️ Configuración
+            </button>
         </div>
 
         <!-- Dashboard Section -->
-        <div id="dashboard-section" class="content-section active">
-            <!-- Modern Date Range Selector -->
-            <div class="modern-date-selector">
-                <div class="date-selector-header">
-                    <h3>Seleccionar Período</h3>
-                    <div class="active-range" id="active-range-display">
-                        Últimos 7 días
+        <div id="diario-section" class="content-section active">
+            <!-- HEADER PRINCIPAL MEJORADO - ESTILO ANÁLISIS SEMANAL -->
+            <div class="weekly-analysis-header-modern" style="margin-bottom: 20px;">
+                <div class="header-title-section">
+                    <div class="header-icon-gradient"></div>
+                    <div class="header-text">
+                        <h1 class="main-title">Análisis diario</h1>
+                        <p class="main-subtitle">Métricas en tiempo real y análisis de rendimiento diario</p>
                     </div>
                 </div>
                 
-                <!-- Quick Range Buttons -->
-                <div class="quick-ranges">
-                    <button class="range-btn active" data-range="today" onclick="setQuickRange('today')">
-                        <span>Hoy</span>
-                    </button>
-                    <button class="range-btn" data-range="week" onclick="setQuickRange('week')">
-                        <span>Esta Semana</span>
-                    </button>
-                    <button class="range-btn" data-range="month" onclick="setQuickRange('month')">
-                        <span>Este Mes</span>
-                    </button>
-                    <button class="range-btn" data-range="custom" onclick="toggleCustomDatePicker()">
-                        <span>Personalizado</span>
-                    </button>
-                </div>
-                
-                <!-- Información de Período (TEMPORAL para debugging) -->
-                <div id="periodo-info"></div>
-                
-                <!-- Custom Date Picker (Hidden by default) -->
-                <div class="custom-date-picker" id="custom-date-picker" style="display: none;">
-                    <div class="date-inputs-container">
-                        <div class="date-input-group">
-                            <label>Desde</label>
-                            <input type="date" id="fecha-inicio" class="modern-date-input">
-                        </div>
-                        <div class="date-range-connector">
-                            <span>→</span>
-                        </div>
-                        <div class="date-input-group">
-                            <label>Hasta</label>
-                            <input type="date" id="fecha-fin" class="modern-date-input">
-                        </div>
-                    </div>
-                    <div class="date-actions">
-                        <button class="btn btn-secondary" onclick="cancelCustomRange()">
-                            Cancelar
+                <!-- Botones de período integrados en el header -->
+                <div class="header-period-controls" style="
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                    margin-left: auto;
+                ">
+                    <!-- Quick Range Buttons -->
+                    <div class="quick-ranges" style="
+                        display: flex;
+                        gap: 8px;
+                        margin-right: 15px;
+                    ">
+                        <button class="range-btn active" data-range="today" onclick="setQuickRange('today')" style="
+                            padding: 6px 12px;
+                            font-size: 12px;
+                            border-radius: 6px;
+                        ">
+                            <span>Hoy</span>
                         </button>
-                        <button class="btn btn-primary" onclick="applyCustomRange()">
-                            Aplicar Rango
+                        <button class="range-btn" data-range="yesterday" onclick="setQuickRange('yesterday')" style="
+                            padding: 6px 12px;
+                            font-size: 12px;
+                            border-radius: 6px;
+                        ">
+                            <span>Ayer</span>
+                        </button>
+                        <button class="range-btn" data-range="before-yesterday" onclick="setQuickRange('before-yesterday')" style="
+                            padding: 6px 12px;
+                            font-size: 12px;
+                            border-radius: 6px;
+                        ">
+                            <span>Antes de ayer</span>
+                        </button>
+                        <button class="range-btn" data-range="custom" onclick="toggleCustomDatePicker()" style="
+                            padding: 6px 12px;
+                            font-size: 12px;
+                            border-radius: 6px;
+                        ">
+                            <span>Personalizado</span>
                         </button>
                     </div>
-                </div>
-            </div>
-
-            <!-- Carga Masiva de Ventas - DRAG & DROP COMPACTO -->
-            <div class="card">
-                <div class="card-title">Carga Masiva de Ventas</div>
-                <div class="text-sm text-gray-600" style="margin-bottom: 20px;">
-                    Arrastra CSV, Excel o JSON para análisis automático de ventas
-                </div>
-                
-                <!-- ZONA DE DRAG & DROP COMPACTA -->
-                <div class="drag-drop-zone-compact" id="drag-drop-zone-compact">
-                    <div class="drag-drop-content">
-                        <div class="drag-drop-icon">📁</div>
-                        <div class="drag-drop-title">Arrastra tu archivo aquí</div>
-                        <div class="drag-drop-subtitle">
-                            O <span class="drag-drop-browse" onclick="triggerFileSelect()">buscar archivo</span>
-                        </div>
-                        <div class="drag-drop-formats">
-                            CSV, Excel, JSON
+                    
+                    <!-- Inputs de fecha ocultos para el JavaScript -->
+                    <div style="display: none;">
+                        <input type="date" id="fecha-inicio">
+                        <input type="date" id="fecha-fin">
+                        <div id="active-range-display"></div>
+                    </div>
+                    
+                    <!-- Selector de fecha personalizada -->
+                    <div id="custom-date-picker" style="display: none; margin-top: 10px;">
+                        <div style="display: flex; gap: 10px; align-items: center;">
+                            <input type="date" id="custom-fecha-inicio" style="padding: 4px 8px; font-size: 11px; border-radius: 4px; border: 1px solid #d1d5db;">
+                            <span style="font-size: 11px; color: #6b7280;">a</span>
+                            <input type="date" id="custom-fecha-fin" style="padding: 4px 8px; font-size: 11px; border-radius: 4px; border: 1px solid #d1d5db;">
+                            <button onclick="applyCustomRange()" style="padding: 4px 8px; font-size: 11px; background: #10b981; color: white; border: none; border-radius: 4px; cursor: pointer;">Aplicar</button>
+                            <button onclick="cancelCustomRange()" style="padding: 4px 8px; font-size: 11px; background: #6b7280; color: white; border: none; border-radius: 4px; cursor: pointer;">Cancelar</button>
                         </div>
                     </div>
                     
-                    <!-- ESTADO DE CARGA -->
-                    <div class="drag-drop-loading" id="drag-loading-compact" style="display: none;">
-                        <div class="spinner"></div>
-                        <div class="loading-text">Analizando archivo...</div>
+                    <!-- Navegación de días compacta -->
+                    <div class="day-navigation-compact" style="
+                        display: flex;
+                        align-items: center;
+                        gap: 8px;
+                    ">
+                        <button class="btn btn-sm btn-secondary" onclick="navigateDay(-1)" title="Día anterior" style="
+                            padding: 4px 8px;
+                            font-size: 11px;
+                        ">
+                            ←
+                        </button>
+                        <div class="current-day-display" style="
+                            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                            color: white;
+                            padding: 4px 12px;
+                            border-radius: 15px;
+                            font-weight: 600;
+                            font-size: 12px;
+                            min-width: 80px;
+                            text-align: center;
+                        " id="current-day-display">
+                            Hoy
+                        </div>
+                        <button class="btn btn-sm btn-secondary" onclick="navigateDay(1)" title="Día siguiente" style="
+                            padding: 4px 8px;
+                            font-size: 11px;
+                        ">
+                            →
+                        </button>
                     </div>
-                    
-                    <!-- RESULTADO DEL ANÁLISIS -->
-                    <div class="drag-drop-result" id="drag-result-compact" style="display: none;">
-                        <div class="result-header">
-                            <span class="result-icon">✅</span>
-                            <span class="result-title">Archivo analizado correctamente</span>
-                        </div>
-                        <div class="result-details" id="result-details-compact">
-                            <!-- Se llena dinámicamente -->
-                        </div>
-                        <div class="result-actions">
-                            <button class="btn btn-primary" onclick="importAnalyzedData()">
-                                📊 Importar Datos
-                            </button>
-                            <button class="btn btn-secondary" onclick="resetDragDrop()">
-                                🔄 Nuevo Archivo
-                            </button>
+                </div>
+            </div>
+
+            <!-- =============================================
+                 LAYOUT VERTICAL: TARJETAS DE VENTAS ARRIBA, CLIMA Y CARGA ABAJO
+                 ============================================= -->
+            
+            <!-- PRIMERA FILA: TARJETAS DE VENTAS (horizontal) - ESTILO ANÁLISIS SEMANAL -->
+            <div class="weekly-metrics-compact" style="margin-bottom: 30px;">
+                <div class="compact-metric-card">
+                    <div class="compact-metric-header">
+                        <div class="metric-icon">💰</div>
+                        <div class="metric-title">Ventas Brutas</div>
+                    </div>
+                    <div class="metric-main-value" id="total-ventas-bruto">€0</div>
+                    <div class="metric-comparisons-compact">
+                        <div class="comparison-compact">
+                            <span class="comparison-label">vs día anterior</span>
+                            <div class="comparison-value" id="comparison-ventas-bruto">--</div>
+                            <div class="comparison-percentage" id="percentage-ventas-bruto">--</div>
                         </div>
                     </div>
                 </div>
                 
-                <!-- Input oculto -->
-                <input type="file" id="file-input-compact" style="display: none;" 
-                       accept=".csv,.xlsx,.xls,.json" onchange="handleFileSelect(this)">
-            </div>
-
-            <!-- Metrics Grid -->
-                    <div class="metrics-grid">
-            <div class="metric-card">
-                <div class="metric-icon">⭐</div>
-                <div class="metric-value" id="total-ventas-bruto">€0</div>
-                <div class="metric-label">VENTAS BRUTAS</div>
-                <div class="metric-change" id="change-total-ventas-bruto"></div>
-            </div>
-            <div class="metric-card">
-                <div class="metric-value" id="total-ventas">€0</div>
-                <div class="metric-label">Ventas Netas</div>
-                <div class="metric-change" id="change-ventas"></div>
-            </div>
-            <div class="metric-card">
-                <div class="metric-value" id="total-impuestos">€0</div>
-                <div class="metric-label">Total Impuestos</div>
-                <div class="metric-change" id="change-total-impuestos"></div>
-            </div>
-                <div class="metric-card">
-                    <div class="metric-icon">⭐</div>
-                    <div class="metric-value" id="total-tickets">0</div>
-                    <div class="metric-label">TICKETS</div>
-                    <div class="metric-change" id="change-total-tickets"></div>
+                <div class="compact-metric-card">
+                    <div class="compact-metric-header">
+                        <div class="metric-icon">💵</div>
+                        <div class="metric-title">Ventas Netas</div>
+                    </div>
+                    <div class="metric-main-value" id="total-ventas">€0</div>
+                    <div class="metric-comparisons-compact">
+                        <div class="comparison-compact">
+                            <span class="comparison-label">vs día anterior</span>
+                            <div class="comparison-value" id="comparison-ventas">--</div>
+                            <div class="comparison-percentage" id="percentage-ventas">--</div>
+                        </div>
+                    </div>
                 </div>
-                <div class="metric-card">
-                    <div class="metric-icon">⭐</div>
-                    <div class="metric-value" id="ticket-promedio">€0</div>
-                    <div class="metric-label">TICKET PROMEDIO</div>
-                    <div class="metric-change" id="change-ticket-promedio"></div>
+                
+                <div class="compact-metric-card">
+                    <div class="compact-metric-header">
+                        <div class="metric-icon">🎫</div>
+                        <div class="metric-title">Total Tickets</div>
+                    </div>
+                    <div class="metric-main-value" id="total-tickets">0</div>
+                    <div class="metric-comparisons-compact">
+                        <div class="comparison-compact">
+                            <span class="comparison-label">vs día anterior</span>
+                            <div class="comparison-value" id="comparison-tickets">--</div>
+                            <div class="comparison-percentage" id="percentage-tickets">--</div>
+                        </div>
+                    </div>
                 </div>
-                <div class="metric-card">
-                    <div class="metric-value" id="total-comensales">0</div>
-                    <div class="metric-label">Comensales</div>
-                    <div class="metric-change" id="change-total-comensales"></div>
-                </div>
-                <div class="metric-card">
-                    <div class="metric-value" id="total-descuentos">€0</div>
-                    <div class="metric-label">Descuentos</div>
-                    <div class="metric-change" id="change-total-descuentos"></div>
-                </div>
-                <div class="metric-card">
-                    <div class="metric-value" id="total-propinas">€0</div>
-                    <div class="metric-label">Propinas</div>
-                    <div class="metric-change" id="change-total-propinas"></div>
+                
+                <div class="compact-metric-card">
+                    <div class="compact-metric-header">
+                        <div class="metric-icon">💵</div>
+                        <div class="metric-title">Ticket Medio</div>
+                    </div>
+                    <div class="metric-main-value" id="ticket-promedio">€0</div>
+                    <div class="metric-comparisons-compact">
+                        <div class="comparison-compact">
+                            <span class="comparison-label">vs día anterior</span>
+                            <div class="comparison-value" id="comparison-ticket-medio">--</div>
+                            <div class="comparison-percentage" id="percentage-ticket-medio">--</div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
+                            <!-- SEGUNDA FILA: SOLO CLIMA (ultra compacto) -->
+            <div style="display: grid; grid-template-columns: 1fr; gap: 8px; margin-bottom: 15px;">
+                
+                <!-- WIDGET DE CLIMA ULTRA COMPACTO -->
+                <div class="weather-sales-widget" id="weather-widget">
+                    <div class="weather-header">
+                        <div class="weather-title">
+                            <span class="weather-icon-title"></span>
+                            <span>Clima & Ventas</span>
+                            <span class="weather-city" id="weather-city">Huelva</span>
+                        </div>
+                        <div class="weather-actions">
+                            <button class="weather-refresh-btn" onclick="refreshWeatherData()" title="Actualizar clima">
+                                <span id="weather-refresh-icon">↻</span>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Estado del clima actual - ULTRA COMPACTO -->
+                    <div class="weather-status" id="weather-status" style="display: none;">
+                        <div class="weather-main-horizontal">
+                            <div class="weather-temp-container">
+                                <div class="weather-temp-main" id="weather-temp">--°C</div>
+                                <div class="weather-temp-feels" id="weather-feels">Sensación: --°C</div>
+                            </div>
+                            <div class="weather-icon-main" id="weather-icon">🌤️</div>
+                            <div class="weather-description" id="weather-description">Cargando...</div>
+                            <div class="weather-details-horizontal">
+                                <div class="weather-detail-item">
+                                    <span class="weather-detail-icon">💧</span>
+                                    <span class="weather-detail-value" id="weather-humidity">--%</span>
+                                </div>
+                                <div class="weather-detail-item">
+                                    <span class="weather-detail-icon">💨</span>
+                                    <span class="weather-detail-value" id="weather-wind">-- m/s</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- PREVISIÓN SEMANAL ULTRA COMPACTA -->
+                        <div class="weather-weekly-forecast" id="weather-weekly-forecast" style="display: none;">
+                            <div class="forecast-title">📅 Previsión Semanal</div>
+                            <div class="forecast-days" id="forecast-days">
+                                <!-- Se llena dinámicamente con JavaScript -->
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Footer ultra compacto -->
+                    <div class="weather-footer" id="weather-footer" style="display: none;">
+                        <div class="weather-last-update">
+                            <span class="update-icon">⏰</span>
+                            <span class="update-text" id="weather-last-update">Actualizado: --</span>
+                        </div>
+                    </div>
+                </div>
 
+                <!-- ✅ ELIMINADO: Panel de carga masiva redundante -->
+                <!-- Ahora solo existe el modal accesible desde el icono de carpeta en el header -->
+            </div>
 
             <!-- Charts Grid -->
             <div class="charts-grid">
                 <div class="card">
-                    <div class="card-title">Ventas por Día</div>
+                    <div class="card-title">Ventas por Hora</div>
                     <div class="chart-container">
                         <canvas id="sales-chart"></canvas>
-    complete_sales_dashboard.js:2101  POST https://yurqgcpgwsgdnxnpyxes.supabase.co/functions/v1/intelligent-import-sales 500 (Internal Server Error)
-processFile @ complete_sales_dashboard.js:2101
-await in processFile
-handleFileSelect @ complete_sales_dashboard.js:2055
-onchange @ complete_sales_dashboard.html:156Understand this error
-complete_sales_dashboard.js:2113 📥 Response status: 500
-complete_sales_dashboard.js:2114 📥 Response headers: Headers {}
-complete_sales_dashboard.js:2118 ❌ Error response: {"success":false,"error":"Error procesando archivo: Error procesando archivo Excel"}
-processFile @ complete_sales_dashboard.js:2118
-await in processFile
-handleFileSelect @ complete_sales_dashboard.js:2055
-onchange @ complete_sales_dashboard.html:156Understand this error
-complete_sales_dashboard.js:2137 ❌ Error procesando archivo: Error: Error del servidor (500): {"success":false,"error":"Error procesando archivo: Error procesando archivo Excel"}
-    at processFile (complete_sales_dashboard.js:2119:19)
-processFile @ complete_sales_dashboard.js:2137
-await in processFile
-handleFileSelect @ complete_sales_dashboard.js:2055
-onchange @ complete_sales_dashboard.html:156Understand this error
-complete_sales_dashboard.js:2259 ❌ Mostrando estado de error: Error del servidor (500): {"success":false,"error":"Error procesando archivo: Error procesando archivo Excel"}
-complete_sales_dashboard.js:2277 ✅ Estado de error aplicado correctamente                </div>
+                    </div>
                 </div>
                 <div class="card">
                     <div class="card-title">Métodos de Pago</div>
@@ -255,15 +563,15 @@ complete_sales_dashboard.js:2277 ✅ Estado de error aplicado correctamente     
                 </div>
             </div>
             
-            <!-- Hourly Charts Grid -->
-            <div class="charts-grid">
-                <div class="card">
+            <!-- Hourly Charts Grid - Half Page Each -->
+            <div class="charts-grid-half-page">
+                <div class="card half-page-card">
                     <div class="card-title">Ventas vs Ticket Medio</div>
                     <div class="chart-container">
                         <canvas id="hourly-sales-chart"></canvas>
                     </div>
                 </div>
-                <div class="card">
+                <div class="card half-page-card">
                     <div class="card-title">Tickets por Hora</div>
                     <div class="chart-container">
                         <canvas id="hourly-tickets-chart"></canvas>
@@ -271,31 +579,35 @@ complete_sales_dashboard.js:2277 ✅ Estado de error aplicado correctamente     
                 </div>
             </div>
 
-            <!-- Sales Heatmap -->
-            <div class="card">
-                <div class="card-title">Mapa de Calor de Ventas por Hora</div>
+            <!-- Tickets Heatmap -->
+            <div class="card" style="display: none;">
+                <div class="card-title">Mapa de Calor de Tickets por Hora</div>
                 <div class="heatmap-container" id="sales-heatmap-container">
                     <!-- Se llena dinámicamente con JavaScript -->
                 </div>
             </div>
 
             <!-- Top Products Table -->
-            <div class="card">
-                <div class="card-title">Productos Más Vendidos</div>
-                <div class="table-container">
-                    <table>
+            <div class="products-table-section">
+                <div class="table-container" style="width: 100%; margin-bottom: 30px;">
+                    <div class="table-header-info">
+                        <span class="scroll-indicator">📜 Desplázate para ver más productos</span>
+                    </div>
+                    <table class="products-table">
                         <thead>
                             <tr>
                                 <th>Producto</th>
                                 <th>Categoría</th>
-                                <th>Cantidad</th>
-                                <th>Importe</th>
-                                <th>Veces Vendido</th>
+                                <th>Ventas Actuales</th>
+                                <th>Ventas Anteriores</th>
+                                <th>Popularidad</th>
+                                <th>Diferencia (€)</th>
+                                <th>Diferencia (%)</th>
                             </tr>
                         </thead>
                         <tbody id="products-table">
                             <tr>
-                                <td colspan="5" class="loading">
+                                <td colspan="7" class="loading">
                                     <div class="spinner"></div>
                                     Cargando productos...
                                 </td>
@@ -304,35 +616,409 @@ complete_sales_dashboard.js:2277 ✅ Estado de error aplicado correctamente     
                     </table>
                 </div>
             </div>
+
+
+
+            <!-- Primera línea: Ranking de Productos y Peso por Categorías -->
+            <div class="charts-first-row" style="
+                display: grid; 
+                grid-template-columns: 1fr 1fr; 
+                gap: 20px; 
+                margin-bottom: 20px;
+            ">
+                
+                <!-- Ranking de Productos -->
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <h3 class="chart-title">🏆 Ranking de Productos</h3>
+                        <p class="chart-subtitle">Top 8 productos por ventas</p>
+                        <button class="comparison-toggle-btn" onclick="toggleRankingComparison()" style="
+                            background: rgba(0, 212, 170, 0.1);
+                            border: 1px solid rgba(0, 212, 170, 0.3);
+                            color: #00D4AA;
+                            padding: 4px 8px;
+                            border-radius: 4px;
+                            font-size: 11px;
+                            cursor: pointer;
+                            margin-left: 10px;
+                            transition: all 0.2s ease;
+                        " id="ranking-comparison-btn">
+                            📊 Comparar con ayer
+                        </button>
+                    </div>
+                    <div class="chart-content" style="height: 380px;">
+                        <canvas id="ranking-products-chart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Gráfico de Peso por Categorías -->
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <h3 class="chart-title">📊 Peso por Categorías</h3>
+                        <p class="chart-subtitle">Distribución de ventas por categoría</p>
+                        <button class="comparison-toggle-btn" onclick="toggleCategoryComparison()" style="
+                            background: rgba(255, 107, 53, 0.1);
+                            border: 1px solid rgba(255, 107, 53, 0.3);
+                            color: #FF6B35;
+                            padding: 4px 8px;
+                            border-radius: 4px;
+                            font-size: 11px;
+                            cursor: pointer;
+                            margin-left: 10px;
+                            transition: all 0.2s ease;
+                        " id="category-comparison-btn">
+                            📊 Comparar con ayer
+                        </button>
+                    </div>
+                    <div class="chart-content" style="height: 380px;">
+                        <canvas id="category-weight-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Segunda línea: Matriz de Ventas (ancho completo) -->
+            <div class="charts-second-row" style="
+                display: grid; 
+                grid-template-columns: 1fr; 
+                gap: 20px; 
+                margin-bottom: 30px;
+            ">
+                <!-- Matriz de Ventas vs Popularidad -->
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <h3 class="chart-title">📈 Matriz de Ventas vs Popularidad</h3>
+                        <p class="chart-subtitle">Dispersión de productos: ventas actuales vs unidades vendidas</p>
+                    </div>
+                    <div class="chart-content" style="height: 400px;">
+                        <canvas id="sales-matrix-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+
         </div>
 
-        <!-- Últimos Tickets - NUEVO -->
-        <div class="card">
-            <div class="card-title">Últimos 5 Tickets Sincronizados</div>
-            <div class="table-container">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Fecha/Hora</th>
-                            <th>ID Ticket</th>
-                            <th>Sección</th>
-                            <th>Total</th>
-                            <th>Método Pago</th>
-                            <th>Comensales</th>
-                            <th>Estado</th>
-                        </tr>
-                    </thead>
-                    <tbody id="latest-tickets-table">
-                        <tr>
-                            <td colspan="7" class="loading">
-                                <div class="spinner"></div>
-                                Cargando últimos tickets...
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
+        <!-- SECCIÓN ANÁLISIS SEMANAL -->
+        <section id="semanal-section" class="content-section">
+            <!-- Indicador de carga -->
+            <div id="semanal-loading" class="loading-indicator" style="display: none;">
+                <div class="loading-spinner"></div>
+                <span>Cargando análisis semanal...</span>
             </div>
-        </div>
+            
+            <!-- Botón toggle para modo dark -->
+            <button class="dark-mode-toggle" id="dark-mode-toggle" onclick="toggleDarkMode()" title="Cambiar modo oscuro">
+                🌙
+            </button>
+            
+            <!-- HEADER PRINCIPAL MEJORADO -->
+            <div class="weekly-analysis-header-modern">
+                <div class="header-title-section">
+                    <div class="header-icon-gradient"></div>
+                    <div class="header-text">
+                        <h1 class="main-title">Análisis semanal</h1>
+                        <p class="main-subtitle">Insights detallados y comparativas de rendimiento</p>
+                    </div>
+                </div>
+                <div class="week-selector-modern">
+                    <button class="week-nav-btn-modern" onclick="navigateWeek(-1)">
+                        <span class="nav-icon">←</span>
+                        <span class="nav-text">Anterior</span>
+                    </button>
+                    <div class="current-week-modern" id="current-week-display">
+                        Semana del 17-23 Junio 2024
+                    </div>
+                    <button class="week-nav-btn-modern" onclick="navigateWeek(1)">
+                        <span class="nav-text">Siguiente</span>
+                        <span class="nav-icon">→</span>
+                    </button>
+                    
+                    <!-- Botón para adquirir datos meteorológicos -->
+                    <button class="weather-import-btn" onclick="importWeatherData()" id="weather-import-btn" title="Importar datos meteorológicos históricos">
+                        <span class="weather-icon">🌤️</span>
+                        <span class="weather-text">Adquirir Datos Meteorológicos</span>
+                        <span class="weather-status" id="weather-status"></span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- MÉTRICAS SEMANALES COMPACTAS Y ELEGANTES -->
+            <div class="weekly-metrics-compact">
+                <div class="compact-metric-card">
+                    <div class="compact-metric-header">
+                        <div class="metric-icon">💰</div>
+                        <div class="metric-title">Ventas Total</div>
+                    </div>
+                    <div class="metric-main-value" id="hero-ventas-total">€0</div>
+                    <div class="metric-comparisons-compact">
+                        <div class="comparison-compact">
+                            <span class="comparison-label">vs Sem. anterior</span>
+                            <span class="comparison-change" id="hero-vs-anterior">--</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="compact-metric-card">
+                    <div class="compact-metric-header">
+                        <div class="metric-icon">🎯</div>
+                        <div class="metric-title">Total Tickets</div>
+                    </div>
+                    <div class="metric-main-value" id="hero-tickets-total">0</div>
+                    <div class="metric-comparisons-compact">
+                        <div class="comparison-compact">
+                            <span class="comparison-label">vs Sem. anterior</span>
+                            <span class="comparison-change" id="hero-tickets-vs">--</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="compact-metric-card">
+                    <div class="compact-metric-header">
+                        <div class="metric-icon">📊</div>
+                        <div class="metric-title">Ticket Medio</div>
+                    </div>
+                    <div class="metric-main-value" id="hero-ticket-medio">€0</div>
+                    <div class="metric-comparisons-compact">
+                        <div class="comparison-compact">
+                            <span class="comparison-label">vs Sem. anterior</span>
+                            <span class="comparison-change" id="hero-medio-vs">--</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="compact-metric-card">
+                    <div class="compact-metric-header">
+                        <div class="metric-icon">👥</div>
+                        <div class="metric-title">Comensales</div>
+                    </div>
+                    <div class="metric-main-value" id="hero-comensales-total">0</div>
+                    <div class="metric-comparisons-compact">
+                        <div class="comparison-compact">
+                            <span class="comparison-label">vs Sem. anterior</span>
+                            <span class="comparison-change" id="hero-comensales-vs">--</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- COMPARATIVA DETALLADA EXPANDIBLE -->
+            <div class="detailed-comparison-section">
+                <div class="comparison-header-modern">
+                    <div class="comparison-title-section">
+                        <div class="comparison-icon-gradient">📊</div>
+                        <div class="comparison-text">
+                            <h3 class="comparison-main-title">Análisis Comparativo Avanzado</h3>
+                            <p class="comparison-subtitle">Métricas detalladas y tendencias de rendimiento</p>
+                        </div>
+                    </div>
+                    <div class="comparison-header-actions">
+                        <button class="btn btn-sm btn-diagnostic" onclick="diagnosticarDatosDisponibles()" title="Ver qué datos hay en la base de datos">
+                            🔍 Diagnóstico
+                        </button>
+                        <!-- BOTÓN TEMPORAL PARA TEST -->
+                        <button id="test-aemet-btn" onclick="testAemetFunction()" style="
+                            background: #ffffff; 
+                            color: #374151; 
+                            padding: 12px 20px; 
+                            border: 1px solid #d1d5db; 
+                            border-radius: 8px; 
+                            font-weight: 500;
+                            cursor: pointer;
+                            margin: 10px;
+                            font-size: 12px;
+                            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+                            transition: all 0.2s ease;
+                        " title="Probar conexión con AEMET">
+                            🧪 TEST AEMET FUNCTION
+                        </button>
+                        <button class="toggle-details-btn" onclick="toggleDetailedComparison()">
+                            <span id="details-toggle-icon">▼</span> Ver detalles
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="detailed-comparison-content" id="detailed-comparison-content" style="display: none;">
+                    <div class="comparison-grid">
+                        <!-- Ventas Detalladas -->
+                        <div class="comparison-detail-card">
+                            <div class="card-title-modern">
+                                <div class="title-icon">💰</div>
+                                <h4>Ventas Brutas</h4>
+                            </div>
+                            <div class="current-value" id="ventas-brutas-actual">€0</div>
+                            <div class="comparison-rows">
+                                <div class="comparison-row">
+                                    <span class="period-label">vs día anterior</span>
+                                    <div class="comparison-data-vertical">
+                                        <span class="value-main" id="ventas-brutas-anterior">€0</span>
+                                        <span class="change-badge" id="ventas-brutas-change">0%</span>
+                                    </div>
+                                </div>
+                                <div class="comparison-row">
+                                    <span class="period-label">vs hace 2 días</span>
+                                    <div class="comparison-data-vertical">
+                                        <span class="value-main" id="ventas-brutas-mes">€0</span>
+                                        <span class="change-badge" id="ventas-brutas-mes-change">0%</span>
+                                    </div>
+                                </div>
+                                <div class="comparison-row">
+                                    <span class="period-label">vs hace 3 días</span>
+                                    <div class="comparison-data-vertical">
+                                        <span class="value-main" id="ventas-brutas-año">€0</span>
+                                        <span class="change-badge" id="ventas-brutas-año-change">0%</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Tickets Detallados -->
+                        <div class="comparison-detail-card">
+                            <div class="card-title-modern">
+                                <div class="title-icon">🎫</div>
+                                <h4>Total Tickets</h4>
+                            </div>
+                            <div class="current-value" id="tickets-total-actual">0</div>
+                            <div class="comparison-rows">
+                                <div class="comparison-row">
+                                    <span class="period-label">vs día anterior</span>
+                                    <div class="comparison-data-vertical">
+                                        <span class="value-main" id="tickets-total-anterior">0</span>
+                                        <span class="change-badge" id="tickets-total-change">0%</span>
+                                    </div>
+                                </div>
+                                <div class="comparison-row">
+                                    <span class="period-label">vs hace 2 días</span>
+                                    <div class="comparison-data-vertical">
+                                        <span class="value-main" id="tickets-total-mes">0</span>
+                                        <span class="change-badge" id="tickets-total-mes-change">0%</span>
+                                    </div>
+                                </div>
+                                <div class="comparison-row">
+                                    <span class="period-label">vs hace 3 días</span>
+                                    <div class="comparison-data-vertical">
+                                        <span class="value-main" id="tickets-total-año">0</span>
+                                        <span class="change-badge" id="tickets-total-año-change">0%</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Ticket Medio Detallado -->
+                        <div class="comparison-detail-card">
+                            <div class="card-title-modern">
+                                <div class="title-icon">💵</div>
+                                <h4>Ticket Medio</h4>
+                            </div>
+                            <div class="current-value" id="ticket-medio-actual">€0</div>
+                            <div class="comparison-rows">
+                                <div class="comparison-row">
+                                    <span class="period-label">vs día anterior</span>
+                                    <div class="comparison-data-vertical">
+                                        <span class="value-main" id="ticket-medio-anterior">€0</span>
+                                        <span class="change-badge" id="ticket-medio-change">0%</span>
+                                    </div>
+                                </div>
+                                <div class="comparison-row">
+                                    <span class="period-label">vs hace 2 días</span>
+                                    <div class="comparison-data-vertical">
+                                        <span class="value-main" id="ticket-medio-mes">€0</span>
+                                        <span class="change-badge" id="ticket-medio-mes-change">0%</span>
+                                    </div>
+                                </div>
+                                <div class="comparison-row">
+                                    <span class="period-label">vs hace 3 días</span>
+                                    <div class="comparison-data-vertical">
+                                        <span class="value-main" id="ticket-medio-año">€0</span>
+                                        <span class="change-badge" id="ticket-medio-año-change">0%</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Comensales Detallados -->
+                        <div class="comparison-detail-card">
+                            <div class="card-title-modern">
+                                <div class="title-icon">👥</div>
+                                <h4>Comensales</h4>
+                            </div>
+                            <div class="current-value" id="comensales-total-actual">0</div>
+                            <div class="comparison-rows">
+                                <div class="comparison-row">
+                                    <span class="period-label">vs día anterior</span>
+                                    <div class="comparison-data-vertical">
+                                        <span class="value-main" id="comensales-anterior">0</span>
+                                        <span class="change-badge" id="comensales-change">0%</span>
+                                    </div>
+                                </div>
+                                <div class="comparison-row">
+                                    <span class="period-label">vs hace 2 días</span>
+                                    <div class="comparison-data-vertical">
+                                        <span class="value-main" id="comensales-mes">0</span>
+                                        <span class="change-badge" id="comensales-mes-change">0%</span>
+                                    </div>
+                                </div>
+                                <div class="comparison-row">
+                                    <span class="period-label">vs hace 3 días</span>
+                                    <div class="comparison-data-vertical">
+                                        <span class="value-main" id="comensales-año">0</span>
+                                        <span class="change-badge" id="comensales-año-change">0%</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- GRÁFICO PRINCIPAL CON CONTROLES -->
+            <div class="chart-container-advanced">
+                <div class="chart-header">
+                    <h3>Ventas Acumuladas - Comparativa Semanal</h3>
+                    <div class="chart-controls">
+                        <div class="legend-controls">
+                            <label class="legend-item">
+                                <input type="checkbox" id="toggle-actual" checked> 
+                                <span class="legend-color" style="background: #10b981;"></span>
+                                Esta Semana
+                            </label>
+                            <label class="legend-item">
+                                <input type="checkbox" id="toggle-anterior" checked>
+                                <span class="legend-color" style="background: #94a3b8;"></span>
+                                Semana Anterior
+                            </label>
+                            <label class="legend-item">
+                                <input type="checkbox" id="toggle-mes-anterior" checked>
+                                <span class="legend-color" style="background: #f59e0b;"></span>
+                                Misma Semana Mes Pasado
+                            </label>
+                            <label class="legend-item">
+                                <input type="checkbox" id="toggle-año-anterior" checked>
+                                <span class="legend-color" style="background: #8b5cf6;"></span>
+                                Misma Semana Año Pasado
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="chart-wrapper">
+                    <canvas id="weekly-comparison-chart"></canvas>
+                </div>
+            </div>
+
+            <!-- GRÁFICO COMBINADO VENTAS + TICKET MEDIO -->
+            <div class="chart-container-advanced">
+                <div class="chart-header">
+                    <h3>📊 Análisis Diario: Ventas vs Ticket Medio</h3>
+                    <div class="chart-subtitle">
+                        Evolución diaria de las ventas totales y el ticket medio por día de la semana
+                    </div>
+                </div>
+                <div class="chart-insights" id="combined-chart-insights">
+                    <!-- Insights automáticos se llenarán aquí -->
+                </div>
+                <div class="chart-wrapper">
+                    <canvas id="weekly-combined-chart" style="max-height: 400px;"></canvas>
+                </div>
+            </div>
+        </section>
 
         <!-- Products Section -->
         <div id="products-section" class="content-section">
@@ -385,6 +1071,71 @@ complete_sales_dashboard.js:2277 ✅ Estado de error aplicado correctamente     
                 </div>
             </div>
         </div>
+
+        <!-- SECCIÓN COMBINADA MENSUAL Y ANUAL -->
+        <section id="periodos-section" class="content-section">
+            
+            <!-- SELECTOR DE VISTA (MENSUAL vs ANUAL) -->
+            <div class="period-selector">
+                <div class="period-tabs">
+                    <button class="period-tab active" onclick="switchPeriodView('mensual', event)">
+                        📅 Vista Mensual
+                    </button>
+                    <button class="period-tab" onclick="switchPeriodView('anual', event)">
+                        📆 Vista Anual
+                    </button>
+                </div>
+            </div>
+
+            <!-- CONTENIDO MENSUAL -->
+            <div id="mensual-content" class="period-content active">
+                <div class="dashboard-grid">
+                    <div class="metrics-row">
+                        <!-- Métricas mensuales -->
+                        <div class="metric-card">
+                            <h3>Ventas del Mes</h3>
+                            <div id="ventas-mes" class="metric-value">€0</div>
+                            <div class="metric-change">vs mes anterior</div>
+                        </div>
+                        <!-- Más métricas... -->
+                    </div>
+                    
+                    <div class="charts-row">
+                        <div class="chart-container">
+                            <canvas id="monthly-sales-chart"></canvas>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="monthly-comparison-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CONTENIDO ANUAL -->
+            <div id="anual-content" class="period-content">
+                <div class="dashboard-grid">
+                    <div class="metrics-row">
+                        <!-- Métricas anuales -->
+                        <div class="metric-card">
+                            <h3>Ventas del Año</h3>
+                            <div id="ventas-año" class="metric-value">€0</div>
+                            <div class="metric-change">vs año anterior</div>
+                        </div>
+                        <!-- Más métricas... -->
+                    </div>
+                    
+                    <div class="charts-row">
+                        <div class="chart-container">
+                            <canvas id="yearly-sales-chart"></canvas>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="yearly-trends-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </section>
     </div>
 
     <!-- Modal de Diagnóstico de Sincronización -->
@@ -402,6 +1153,517 @@ complete_sales_dashboard.js:2277 ✅ Estado de error aplicado correctamente     
         </div>
     </div>
 
+    <!-- ✅ NUEVO: Modal de Carga Masiva -->
+    <div id="carga-masiva-modal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <h2>📁 Carga Masiva de Ventas</h2>
+                <span class="close" onclick="closeCargaMasivaModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="carga-masiva-content">
+                    <div class="upload-instructions" style="margin-bottom: 20px; text-align: center;">
+                        <div class="upload-icon" style="font-size: 48px; margin-bottom: 10px;">📊</div>
+                        <h3 style="margin-bottom: 10px; color: #1f2937;">Importar Datos de Ventas</h3>
+                        <p style="color: #6b7280; font-size: 14px;">
+                            Arrastra archivos CSV, Excel o JSON para importar ventas masivamente
+                        </p>
+                    </div>
+                    
+                    <!-- ZONA DE DRAG & DROP -->
+                    <div class="drag-drop-zone-modal" id="drag-drop-zone-modal" style="
+                        border: 2px dashed #d1d5db;
+                        border-radius: 8px;
+                        padding: 30px;
+                        text-align: center;
+                        background: #f9fafb;
+                        transition: all 0.3s ease;
+                        cursor: pointer;
+                    ">
+                        <div class="drag-drop-content">
+                            <div class="drag-drop-icon" style="font-size: 32px; margin-bottom: 10px;">📁</div>
+                            <div class="drag-drop-title" style="font-size: 16px; font-weight: 600; margin-bottom: 5px; color: #374151;">
+                                Arrastra tu archivo aquí
+                            </div>
+                            <div class="drag-drop-subtitle" style="font-size: 14px; color: #6b7280; margin-bottom: 15px;">
+                                O <span class="drag-drop-browse" onclick="triggerFileSelectModal()" style="color: #3b82f6; cursor: pointer; text-decoration: underline;">buscar archivo</span>
+                            </div>
+                            <div class="file-types" style="font-size: 12px; color: #9ca3af;">
+                                Formatos soportados: CSV, Excel (.xlsx), JSON
+                            </div>
+                        </div>
+                        
+                        <!-- ESTADO DE CARGA -->
+                        <div class="drag-drop-loading" id="drag-loading-modal" style="display: none;">
+                            <div class="spinner" style="width: 24px; height: 24px; margin: 0 auto 10px;"></div>
+                            <div class="loading-text" style="font-size: 14px; color: #374151;">Analizando archivo...</div>
+                        </div>
+                        
+                        <!-- RESULTADO DEL ANÁLISIS -->
+                        <div class="drag-drop-result" id="drag-result-modal" style="display: none;">
+                            <div class="result-header" style="margin-bottom: 15px; text-align: center;">
+                                <span class="result-icon" style="font-size: 24px;">✅</span>
+                                <div class="result-title" style="font-size: 16px; font-weight: 600; color: #059669; margin-top: 5px;">
+                                    Archivo analizado correctamente
+                                </div>
+                            </div>
+                            <div class="result-details" id="result-details-modal" style="
+                                background: #f0fdf4;
+                                border: 1px solid #bbf7d0;
+                                border-radius: 6px;
+                                padding: 15px;
+                                margin-bottom: 20px;
+                                font-size: 14px;
+                                color: #065f46;
+                            ">
+                                <!-- Se llena dinámicamente -->
+                            </div>
+                            <div class="result-actions" style="display: flex; gap: 10px; justify-content: center;">
+                                <button class="btn btn-primary" onclick="importAnalyzedDataModal()" style="padding: 8px 16px; font-size: 14px;">
+                                    📊 Importar Datos
+                                </button>
+                                <button class="btn btn-secondary" onclick="resetDragDropModal()" style="padding: 8px 16px; font-size: 14px;">
+                                    🔄 Nuevo Archivo
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="complete_sales_dashboard.js"></script>
+    
+    <!-- Script para modo noche -->
+    <script>
+        // Función para toggle de modo noche
+        function toggleTheme() {
+            const body = document.body;
+            const html = document.documentElement;
+            const toggleBtn = document.getElementById('themeToggle');
+            
+            if (body.classList.contains('dark')) {
+                // Cambiar a modo claro
+                body.classList.remove('dark');
+                html.classList.remove('dark');
+                toggleBtn.textContent = 'Modo Noche';
+                localStorage.setItem('theme', 'light');
+            } else {
+                // Cambiar a modo oscuro
+                body.classList.add('dark');
+                html.classList.add('dark');
+                toggleBtn.textContent = 'Modo Claro';
+                localStorage.setItem('theme', 'dark');
+            }
+        }
+        
+        // Cargar tema guardado al inicializar
+        function loadTheme() {
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            const body = document.body;
+            const html = document.documentElement;
+            const toggleBtn = document.getElementById('themeToggle');
+            
+            if (savedTheme === 'dark') {
+                body.classList.add('dark');
+                html.classList.add('dark');
+                toggleBtn.textContent = 'Modo Claro';
+            } else {
+                body.classList.remove('dark');
+                html.classList.remove('dark');
+                toggleBtn.textContent = 'Modo Noche';
+            }
+        }
+        
+        // Función ULTRA AGRESIVA para forzar modo día en tarjetas
+        function forceLightModeCards() {
+            if (!document.body.classList.contains('dark')) {
+                // Desactivar función conflictiva
+                if (typeof forceMetricCardsDark === 'function') {
+                    window.forceMetricCardsDark = function() { return; };
+                }
+                
+                const allCards = document.querySelectorAll('.metric-card, .compact-metric-card, .card, [class*="metric-card"], .weekly-metrics-compact .compact-metric-card, .metrics-grid .metric-card');
+                allCards.forEach(card => {
+                    // FORZAR ESTILOS MÁS AGRESIVAMENTE
+                    card.style.cssText = '';
+                    card.style.setProperty('background', '#ffffff', 'important');
+                    card.style.setProperty('background-color', '#ffffff', 'important');
+                    card.style.setProperty('background-image', 'none', 'important');
+                    card.style.setProperty('border', '1px solid #e5e7eb', 'important');
+                    card.style.setProperty('color', '#1e293b', 'important');
+                    card.style.setProperty('backdrop-filter', 'none', 'important');
+                    card.style.setProperty('box-shadow', '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)', 'important');
+                    
+                    // Forzar texto oscuro en elementos hijos
+                    const childElements = card.querySelectorAll('*');
+                    childElements.forEach(child => {
+                        if (!child.classList.contains('comparison-change')) {
+                            child.style.setProperty('color', '#1e293b', 'important');
+                        }
+                        
+                        // Quitar emoticonos de iconos
+                        if (child.classList.contains('metric-icon') || 
+                            child.classList.contains('weather-icon-title')) {
+                            child.style.setProperty('display', 'none', 'important');
+                        }
+                        
+                        // Aplicar font-weight normal a valores
+                        if (child.classList.contains('metric-value') || 
+                            child.classList.contains('value')) {
+                            child.style.setProperty('font-weight', '400', 'important');
+                        }
+                    });
+                });
+                
+                // Forzar estilos limpios en tablas
+                const allTables = document.querySelectorAll('.table-container, table, .products-table');
+                allTables.forEach(table => {
+                    table.style.setProperty('background', '#ffffff', 'important');
+                    table.style.setProperty('border', '1px solid #e5e7eb', 'important');
+                    table.style.setProperty('border-radius', '8px', 'important');
+                    table.style.setProperty('box-shadow', '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)', 'important');
+                    
+                    // Estilos para headers exactos
+                    const headers = table.querySelectorAll('th');
+                    headers.forEach(th => {
+                        th.style.setProperty('background', '#f7f8fa', 'important');
+                        th.style.setProperty('color', '#6b7280', 'important');
+                        th.style.setProperty('font-weight', '500', 'important');
+                        th.style.setProperty('font-size', '13px', 'important');
+                        th.style.setProperty('padding', '14px 20px', 'important');
+                        th.style.setProperty('text-transform', 'none', 'important');
+                        th.style.setProperty('letter-spacing', '-0.01em', 'important');
+                        th.style.setProperty('border', 'none', 'important');
+                        th.style.setProperty('border-bottom', '1px solid #e1e5e9', 'important');
+                        th.style.setProperty('font-family', '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', 'important');
+                    });
+                    
+                    // Estilos para celdas exactas
+                    const cells = table.querySelectorAll('td');
+                    cells.forEach((td, index) => {
+                        td.style.setProperty('padding', '18px 20px', 'important');
+                        td.style.setProperty('color', '#374151', 'important');
+                        td.style.setProperty('font-weight', '400', 'important');
+                        td.style.setProperty('font-size', '14px', 'important');
+                        td.style.setProperty('letter-spacing', '-0.005em', 'important');
+                        td.style.setProperty('border', 'none', 'important');
+                        td.style.setProperty('border-bottom', '1px solid #f1f3f4', 'important');
+                        td.style.setProperty('background', 'transparent', 'important');
+                        td.style.setProperty('font-family', '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', 'important');
+                        
+                        // Primera columna con ícono
+                        if (td.cellIndex === 0) {
+                            td.style.setProperty('font-weight', '500', 'important');
+                            td.style.setProperty('color', '#1f2937', 'important');
+                            td.style.setProperty('padding-left', '45px', 'important');
+                            td.style.setProperty('position', 'relative', 'important');
+                        }
+                        
+                        // Unificar tipografía de TODOS los elementos hijos
+                        const childElements = td.querySelectorAll('*');
+                        childElements.forEach(child => {
+                            child.style.setProperty('font-family', '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', 'important');
+                            child.style.setProperty('font-size', '14px', 'important');
+                            child.style.setProperty('font-weight', '400', 'important');
+                            child.style.setProperty('letter-spacing', '-0.005em', 'important');
+                            child.style.setProperty('color', '#374151', 'important');
+                        });
+                    });
+                });
+            }
+        }
+        
+        // Función para aplicar estilos de tabla profesional exacta
+        function forceCleanTableStyles() {
+            const tables = document.querySelectorAll('.table-container, table, .products-table');
+            tables.forEach(table => {
+                if (!document.body.classList.contains('dark')) {
+                    table.style.setProperty('background', '#ffffff', 'important');
+                    table.style.setProperty('border', '1px solid #e1e5e9', 'important');
+                    table.style.setProperty('border-radius', '6px', 'important');
+                    table.style.setProperty('box-shadow', 'none', 'important');
+                    
+                    // Aplicar filas alternadas
+                    const rows = table.querySelectorAll('tbody tr');
+                    rows.forEach((row, index) => {
+                        if (index % 2 === 0) {
+                            row.style.setProperty('background', '#ffffff', 'important');
+                        } else {
+                            row.style.setProperty('background', '#fafbfc', 'important');
+                        }
+                    });
+                    
+                    // Agregar iconos de puntos a primera columna
+                    const firstCells = table.querySelectorAll('tbody tr td:first-child');
+                    firstCells.forEach(cell => {
+                        if (!cell.querySelector('.dots-icon')) {
+                            const dotsIcon = document.createElement('span');
+                            dotsIcon.className = 'dots-icon';
+                            dotsIcon.innerHTML = '⋮⋮';
+                            dotsIcon.style.cssText = `
+                                position: absolute !important;
+                                left: 20px !important;
+                                top: 50% !important;
+                                transform: translateY(-50%) !important;
+                                color: #d1d5db !important;
+                                font-size: 14px !important;
+                                font-weight: 400 !important;
+                                letter-spacing: -2px !important;
+                                line-height: 0.8 !important;
+                                z-index: 1 !important;
+                            `;
+                            cell.style.setProperty('position', 'relative', 'important');
+                            cell.style.setProperty('padding-left', '45px', 'important');
+                            cell.appendChild(dotsIcon);
+                        }
+                    });
+                }
+            });
+        }
+        
+        // Función para mejorar gráficos y elementos visuales
+        // Función para corregir visibilidad de ejes y leyendas
+        function fixChartVisibility() {
+            console.log('🔧 Corrigiendo visibilidad de ejes y leyendas...');
+            
+            // Buscar todos los elementos de texto SVG y Chart.js
+            const textElements = document.querySelectorAll('text, tspan, .tick, .axis, .legend, .chartjs-legend-item');
+            textElements.forEach(el => {
+                // Contrarrestar estilos webkit que hacen transparente el texto
+                el.style.setProperty('-webkit-text-fill-color', '#1f2937', 'important');
+                el.style.setProperty('-webkit-background-clip', 'initial', 'important');
+                el.style.setProperty('background-clip', 'initial', 'important');
+                el.style.setProperty('background', 'transparent', 'important');
+                
+                // Estilos normales
+                el.style.setProperty('fill', '#1f2937', 'important');
+                el.style.setProperty('color', '#1f2937', 'important');
+                el.style.setProperty('opacity', '1', 'important');
+                el.style.setProperty('visibility', 'visible', 'important');
+                el.style.setProperty('display', 'block', 'important');
+                el.style.setProperty('font-size', '11px', 'important');
+                el.style.setProperty('font-family', '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', 'important');
+            });
+            
+            // Específico para elementos dentro de contenedores de gráficos
+            const chartContainers = document.querySelectorAll('[id*="chart"], [class*="chart"]');
+            chartContainers.forEach(container => {
+                const allTextInChart = container.querySelectorAll('*');
+                allTextInChart.forEach(el => {
+                    if (el.tagName === 'text' || el.tagName === 'tspan' || 
+                        el.classList.contains('tick') || el.classList.contains('axis') ||
+                        el.textContent && el.textContent.trim() && el.textContent.match(/\d/)) {
+                        
+                        // Contrarrestar webkit
+                        el.style.setProperty('-webkit-text-fill-color', '#1f2937', 'important');
+                        el.style.setProperty('-webkit-background-clip', 'initial', 'important');
+                        el.style.setProperty('background-clip', 'initial', 'important');
+                        el.style.setProperty('background', 'transparent', 'important');
+                        
+                        // Estilos normales
+                        el.style.setProperty('fill', '#1f2937', 'important');
+                        el.style.setProperty('color', '#1f2937', 'important');
+                        el.style.setProperty('opacity', '1', 'important');
+                        el.style.setProperty('visibility', 'visible', 'important');
+                        el.style.setProperty('font-size', '11px', 'important');
+                    }
+                });
+            });
+            
+            console.log('✅ Visibilidad de gráficos corregida');
+        }
+
+        // Función específica para mejorar gráficos individuales
+        function improveSpecificCharts() {
+            // Mejorar TODOS los containers de gráficos
+            const allChartContainers = document.querySelectorAll('div[id*="chart"], div[class*="chart"], canvas');
+            allChartContainers.forEach(container => {
+                if (container.tagName === 'CANVAS') {
+                    const parent = container.parentElement;
+                    if (parent) {
+                        parent.style.setProperty('background', '#ffffff', 'important');
+                        parent.style.setProperty('padding', '20px', 'important');
+                        parent.style.setProperty('border', '1px solid #e5e7eb', 'important');
+                        parent.style.setProperty('border-radius', '8px', 'important');
+                        parent.style.setProperty('box-shadow', '0 1px 3px 0 rgba(0, 0, 0, 0.1)', 'important');
+                    }
+                    container.style.setProperty('background', '#ffffff', 'important');
+                } else if (container.querySelector('canvas')) {
+                    container.style.setProperty('background', '#ffffff', 'important');
+                    container.style.setProperty('padding', '20px', 'important');
+                    container.style.setProperty('border', '1px solid #e5e7eb', 'important');
+                    container.style.setProperty('border-radius', '8px', 'important');
+                    container.style.setProperty('box-shadow', '0 1px 3px 0 rgba(0, 0, 0, 0.1)', 'important');
+                    
+                    // Aplicar estilos a textos dentro del gráfico
+                    const textElements = container.querySelectorAll('*:not(canvas)');
+                    textElements.forEach(text => {
+                        text.style.setProperty('color', '#1f2937', 'important');
+                        text.style.setProperty('font-family', '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', 'important');
+                    });
+                }
+            });
+        }
+
+        function forceChartImprovements() {
+            if (!document.body.classList.contains('dark')) {
+                // Títulos de gráficos
+                const chartTitles = document.querySelectorAll('.chart-title, .card-title, .chart-container h3, .chart-header h3');
+                chartTitles.forEach(title => {
+                    title.style.setProperty('color', '#1f2937', 'important');
+                    title.style.setProperty('font-size', '16px', 'important');
+                    title.style.setProperty('font-weight', '600', 'important');
+                    title.style.setProperty('font-family', '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', 'important');
+                });
+                
+                // Leyendas de gráficos
+                const legends = document.querySelectorAll('.chart-legend, .legend-item, .chart-legend-item');
+                legends.forEach(legend => {
+                    legend.style.setProperty('color', '#374151', 'important');
+                    legend.style.setProperty('font-size', '13px', 'important');
+                    legend.style.setProperty('font-weight', '400', 'important');
+                });
+                
+                // Gráficos específicos con fondo blanco - TODOS LOS SELECTORES POSIBLES
+                const chartSelectors = [
+                    '#ranking-chart-container', '#category-weight-chart', '#matriz-productos-chart',
+                    '#hourly-sales-chart', '#payment-methods-chart', '#sales-vs-ticket-chart', '#hourly-tickets-chart',
+                    '#ventas-hora-chart', '#metodos-pago-chart', '#ventas-ticket-chart', '#tickets-hora-chart',
+                    '#sales-chart-container', '#pie-chart-container', '#combo-chart-container', '#bar-chart-container',
+                    '[data-chart]', '.chart-container', '.chart-wrapper'
+                ];
+                
+                const specificCharts = document.querySelectorAll(chartSelectors.join(', '));
+                specificCharts.forEach(chart => {
+                    chart.style.setProperty('background', '#ffffff', 'important');
+                    chart.style.setProperty('background-color', '#ffffff', 'important');
+                    chart.style.setProperty('border', '1px solid #e5e7eb', 'important');
+                    chart.style.setProperty('border-radius', '8px', 'important');
+                    chart.style.setProperty('padding', '20px', 'important');
+                    chart.style.setProperty('box-shadow', '0 1px 3px 0 rgba(0, 0, 0, 0.1)', 'important');
+                    
+                    // Canvas dentro del gráfico
+                    const canvas = chart.querySelector('canvas');
+                    if (canvas) {
+                        canvas.style.setProperty('background', '#ffffff', 'important');
+                        canvas.style.setProperty('background-color', '#ffffff', 'important');
+                    }
+                    
+                    // Títulos de gráficos
+                    const titles = chart.querySelectorAll('h3, h4, .chart-title, .title');
+                    titles.forEach(title => {
+                        title.style.setProperty('color', '#1f2937', 'important');
+                        title.style.setProperty('font-weight', '500', 'important');
+                        title.style.setProperty('font-size', '16px', 'important');
+                    });
+                    
+                    // Textos y leyendas oscuros
+                    const textElements = chart.querySelectorAll('*');
+                    textElements.forEach(el => {
+                        if (el.tagName !== 'CANVAS') {
+                            el.style.setProperty('color', '#1f2937', 'important');
+                            el.style.setProperty('font-family', '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', 'important');
+                        }
+                    });
+                });
+                
+                // Containers de gráficos
+                const chartContainers = document.querySelectorAll('.chart-container, .chart-wrapper');
+                chartContainers.forEach(container => {
+                    container.style.setProperty('background', '#ffffff', 'important');
+                });
+            }
+        }
+        
+        // Función mejorada para toggle de tema
+        function toggleTheme() {
+            const body = document.body;
+            const html = document.documentElement;
+            const toggleBtn = document.getElementById('themeToggle');
+            
+            if (body.classList.contains('dark')) {
+                // Cambiar a modo claro
+                body.classList.remove('dark');
+                html.classList.remove('dark');
+                toggleBtn.textContent = 'Modo Noche';
+                localStorage.setItem('theme', 'light');
+                // Forzar tarjetas blancas después del cambio
+                setTimeout(forceLightModeCards, 100);
+                setTimeout(forceCleanTableStyles, 150);
+                setTimeout(forceChartImprovements, 200);
+            } else {
+                // Cambiar a modo oscuro
+                body.classList.add('dark');
+                html.classList.add('dark');
+                toggleBtn.textContent = 'Modo Claro';
+                localStorage.setItem('theme', 'dark');
+            }
+        }
+        
+        // EJECUCIÓN INMEDIATA para contrarrestar estilos oscuros
+        (function() {
+            // Desactivar función problemática INMEDIATAMENTE
+            if (typeof window.forceMetricCardsDark === 'function') {
+                window.forceMetricCardsDark = function() { 
+                    console.log('🚫 forceMetricCardsDark bloqueada');
+                    return; 
+                };
+            }
+            
+            // Aplicar estilos inmediatamente
+            const style = document.createElement('style');
+            style.textContent = `
+                .metric-card, .compact-metric-card, .weekly-metrics-compact .compact-metric-card, .metrics-grid .metric-card {
+                    background: #ffffff !important;
+                    background-color: #ffffff !important;
+                    background-image: none !important;
+                    color: #1e293b !important;
+                    border: 1px solid #e5e7eb !important;
+                    backdrop-filter: none !important;
+                }
+                .metric-card *, .compact-metric-card *, .weekly-metrics-compact .compact-metric-card *, .metrics-grid .metric-card * {
+                    color: #1e293b !important;
+                }
+            `;
+            document.head.appendChild(style);
+        })();
+        
+        // Inicializar cuando el DOM esté listo
+        document.addEventListener('DOMContentLoaded', function() {
+            loadTheme();
+            document.getElementById('themeToggle').addEventListener('click', toggleTheme);
+            
+            // Forzar modo día al cargar - MÁS AGRESIVO
+            forceLightModeCards();
+            setTimeout(forceLightModeCards, 100);
+            setTimeout(forceLightModeCards, 500);
+            setTimeout(forceCleanTableStyles, 600);
+                            setTimeout(forceChartImprovements, 700);
+                setTimeout(improveSpecificCharts, 800);
+                setTimeout(fixChartVisibility, 1000);
+                setTimeout(fixChartVisibility, 2000);
+                setTimeout(fixChartVisibility, 3000);
+            
+            // Observer para detectar nuevas tarjetas añadidas dinámicamente
+            const observer = new MutationObserver(function(mutations) {
+                mutations.forEach(function(mutation) {
+                    if (mutation.type === 'childList') {
+                        setTimeout(forceLightModeCards, 100);
+                        setTimeout(forceCleanTableStyles, 150);
+                        setTimeout(forceChartImprovements, 200);
+                        setTimeout(improveSpecificCharts, 250);
+                        setTimeout(fixChartVisibility, 300);
+                    }
+                });
+            });
+            
+            observer.observe(document.body, {
+                childList: true,
+                subtree: true
+            });
+        });
+    </script>
 </body>
 </html>

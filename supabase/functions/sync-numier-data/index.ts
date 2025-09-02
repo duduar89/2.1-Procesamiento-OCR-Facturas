@@ -398,27 +398,67 @@ async function insertVentaUnificada(
   sistemaOrigen: string,
   ventaData: any
 ) {
+  // ✅ CALCULAR TICKET MEDIO para cada venta del TPV
+  const totalBruto = parseFloat(ventaData.Totals?.GrossAmount || 0);
+  const numComensales = ventaData.NumDiners || 0;
+  
+  // 🔧 CORRECCIÓN: Si no hay comensales, asumir 1 comensal (el ticket completo para 1 persona)
+  const comensalesParaCalculo = numComensales > 0 ? numComensales : 1;
+  const ticketMedio = totalBruto / comensalesParaCalculo;
+
+  // ✅ GENERAR ID ÚNICO MEJORADO para evitar sobrescribir tickets
+  let idExterno = `${ventaData.Serie}-${ventaData.Number}`.trim();
+  
+  // Si TaxDocumentNumber existe, usarlo para mayor unicidad
+  if (ventaData.TaxDocumentNumber) {
+    idExterno = `${idExterno}-${ventaData.TaxDocumentNumber}`;
+  } else {
+    // Fallback: usar timestamp para garantizar unicidad
+    idExterno = `${idExterno}-${new Date(ventaData.Date).getTime()}`;
+  }
+
+  // ✅ CALCULAR FECHA DE VENTA CORRECTA (CONSIDERAR JORNADA NOCTURNA)
+  let fechaVentaCorrecta = formatDate(ventaData.Date);
+  
+  // Si la venta es de madrugada (00:00-02:00), asignarla al día anterior (jornada que aún no cerró)
+  if (ventaData.Date) {
+    const fechaHora = new Date(ventaData.Date);
+    const hora = fechaHora.getHours();
+    
+    if (hora >= 0 && hora <= 2) {
+      // Es madrugada: asignar al día anterior
+      const fechaAnterior = new Date(fechaHora);
+      fechaAnterior.setDate(fechaAnterior.getDate() - 1);
+      fechaVentaCorrecta = formatDate(fechaAnterior.toISOString());
+      
+      console.log(`🌙 Venta de madrugada ${hora}:XX reasignada: ${formatDate(ventaData.Date)} → ${fechaVentaCorrecta}`);
+    }
+  }
+
   const ventaUnificada = {
     restaurante_id: restauranteId,
     sistema_origen: sistemaOrigen,
-    id_externo: `${ventaData.Serie}-${ventaData.Number}`.trim(),
+    id_externo: idExterno,
     referencia_externa: ventaData.TaxDocumentNumber,
-    fecha_venta: ventaData.BusinessDay,
+    fecha_venta: fechaVentaCorrecta,
     fecha_hora_completa: ventaData.Date,
     tpv_id: ventaData.Pos?.Id,
     tpv_nombre: ventaData.Pos?.Name,
     seccion: ventaData.Section?.sectionName,
-    num_comensales: ventaData.NumDiners || 0,
-    total_bruto: parseFloat(ventaData.Totals?.GrossAmount || 0),
+    num_comensales: numComensales,
+    total_bruto: totalBruto,
     total_neto: parseFloat(ventaData.Totals?.NetAmount || 0),
     total_impuestos: parseFloat(ventaData.Totals?.VatAmount || 0),
     descuentos: parseFloat(ventaData.Totals?.DiscountAmount || 0),
     propinas: parseFloat(ventaData.Totals?.SurchargeAmount || 0),
+    ticket_medio: ticketMedio,  // ✅ NUEVO: Guardar ticket medio calculado
     metodo_pago: ventaData.Payments,
     datos_originales: ventaData,
   };
 
-  console.log('Insertando venta:', ventaUnificada.id_externo);
+  console.log(`💰 Ticket medio calculado: €${ticketMedio.toFixed(2)} (Total: €${totalBruto}, Comensales registrados: ${numComensales}, Comensales para cálculo: ${comensalesParaCalculo})`);
+
+  console.log(`🎫 Insertando ticket: ${idExterno} | €${totalBruto} | ${numComensales} comensales | Date: ${ventaData.Date} | BusinessDay: ${ventaData.BusinessDay}`);
 
   // Insert main sale record con manejo de errores mejorado
   const { data: ventaInserted, error } = await supabase
@@ -438,11 +478,11 @@ async function insertVentaUnificada(
     throw new Error('No se pudo obtener el ID de la venta insertada');
   }
 
-  console.log('Venta insertada con ID:', ventaInserted.id);
+  console.log(`✅ Venta insertada exitosamente: ID=${ventaInserted.id}, Externo=${idExterno}`);
 
   // CORRECCIÓN CRÍTICA: Insertar líneas de venta con transacción
   if (ventaData.InvoiceItems?.length > 0) {
-    const fechaVentaFormateada = formatDate(ventaData.BusinessDay);
+    const fechaVentaFormateada = fechaVentaCorrecta; // ✅ Usar la fecha corregida
 
     const lineasToInsert = ventaData.InvoiceItems.map((item: any) => ({
       venta_id: ventaInserted.id,

@@ -1,0 +1,596 @@
+/* SUB-PESTAÑAS PARA MENSUAL/ANUAL */
+.period-selector {
+    margin-bottom: 24px;
+    background: white;
+    border-radius: 12px;
+    padding: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.period-tabs {
+    display: flex;
+    gap: 4px;
+}
+
+.period-tab {
+    flex: 1;
+    padding: 12px 24px;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    color: #64748b;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.period-tab.active {
+    background: var(--brand-turquoise);
+    color: white;
+    transform: translateY(-1px);
+}
+
+.period-content {
+    display: none;
+}
+
+.period-content.active {
+    display: block;
+}
+
+/* =============================================
+   ESTILOS PARA ANÁLISIS SEMANAL
+   ============================================= */
+
+/* Header del análisis semanal */
+.weekly-analysis-header {
+    background: white;
+    border-radius: 16px;
+    padding: 24px;
+    margin-bottom: 30px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    border: 1px solid rgba(0, 212, 170, 0.1);
+}
+
+.weekly-analysis-header h2 {
+    color: var(--brand-navy);
+    font-size: 1.75rem;
+    font-weight: 700;
+    margin-bottom: 20px;
+    background: var(--gradient-primary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* Selector de semana */
+.week-selector {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.week-nav-btn {
+    background: var(--gradient-primary);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 12px 20px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(0, 212, 170, 0.2);
+}
+
+.week-nav-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 212, 170, 0.3);
+}
+
+.week-nav-btn:active {
+    transform: translateY(0);
+}
+
+#current-week-display {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--brand-navy);
+    background: var(--bg-light);
+    padding: 12px 24px;
+    border-radius: 8px;
+    border: 2px solid var(--border-light);
+    flex: 1;
+    text-align: center;
+    min-width: 250px;
+}
+
+/* Contenedor de gráfico avanzado */
+.chart-container-advanced {
+    background: white;
+    border-radius: 16px;
+    padding: 24px;
+    margin-bottom: 30px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    border: 1px solid rgba(0, 212, 170, 0.1);
+}
+
+.chart-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+
+.chart-header h3 {
+    color: var(--brand-navy);
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin: 0;
+}
+
+/* Controles del gráfico */
+.chart-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.legend-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    align-items: center;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    padding: 8px 12px;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+    font-size: 0.875rem;
+    font-weight: 500;
+    background: var(--bg-light);
+    border: 1px solid var(--border-light);
+}
+
+.legend-item:hover {
+    background: rgba(0, 212, 170, 0.05);
+    border-color: var(--brand-turquoise);
+}
+
+.legend-item input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--brand-turquoise);
+    cursor: pointer;
+}
+
+.legend-color {
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+    display: inline-block;
+    border: 1px solid rgba(0,0,0,0.1);
+}
+
+/* Wrapper del gráfico */
+.chart-wrapper {
+    position: relative;
+    height: 400px;
+    margin-top: 20px;
+}
+
+.chart-wrapper canvas {
+    max-height: 400px;
+}
+
+/* =============================================
+   MÉTRICAS PRINCIPALES HERO SECTION
+   ============================================= */
+
+.weekly-metrics-hero {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+    margin-bottom: 40px;
+}
+
+.hero-metric-card {
+    background: white;
+    border-radius: 20px;
+    padding: 32px 24px;
+    box-shadow: 0 4px 20px rgba(0, 212, 170, 0.08);
+    border: 1px solid rgba(0, 212, 170, 0.1);
+    transition: all 0.4s ease;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.hero-metric-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 12px 40px rgba(0, 212, 170, 0.15);
+}
+
+.hero-metric-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 5px;
+    background: var(--gradient-primary);
+}
+
+.hero-icon {
+    font-size: 3rem;
+    opacity: 0.9;
+    flex-shrink: 0;
+}
+
+.hero-content {
+    flex: 1;
+}
+
+.hero-content h3 {
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+}
+
+.hero-value {
+    font-size: 3rem;
+    font-weight: 800;
+    color: var(--brand-navy);
+    margin-bottom: 12px;
+    background: var(--gradient-primary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    line-height: 1;
+}
+
+.hero-comparison {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.comparison-item {
+    font-size: 0.875rem;
+    font-weight: 600;
+    padding: 6px 12px;
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.comparison-item.positive {
+    background: rgba(16, 185, 129, 0.1);
+    color: #059669;
+}
+
+.comparison-item.negative {
+    background: rgba(239, 68, 68, 0.1);
+    color: #dc2626;
+}
+
+.comparison-item.neutral {
+    background: rgba(107, 114, 128, 0.1);
+    color: #6b7280;
+}
+
+/* =============================================
+   MÉTRICAS DETALLADAS COMPARATIVAS
+   ============================================= */
+
+.weekly-metrics-detailed {
+    margin-bottom: 40px;
+}
+
+.section-title {
+    color: var(--brand-navy);
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 24px;
+    background: var(--gradient-primary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.detailed-metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 24px;
+}
+
+.detailed-metric-card {
+    background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+    border-radius: 20px;
+    padding: 28px;
+    box-shadow: 
+        0 10px 25px rgba(0, 212, 170, 0.08),
+        0 4px 12px rgba(0, 0, 0, 0.03),
+        inset 0 1px 0 rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(0, 212, 170, 0.12);
+    transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+    position: relative;
+    overflow: hidden;
+}
+
+.detailed-metric-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: var(--gradient-primary);
+    border-radius: 20px 20px 0 0;
+}
+
+.detailed-metric-card::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -50%;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(circle, rgba(0, 212, 170, 0.03) 0%, transparent 70%);
+    transition: all 0.4s ease;
+    transform: scale(0);
+}
+
+.detailed-metric-card:hover {
+    transform: translateY(-8px) scale(1.02);
+    box-shadow: 
+        0 20px 40px rgba(0, 212, 170, 0.15),
+        0 8px 25px rgba(0, 0, 0, 0.08),
+        inset 0 1px 0 rgba(255, 255, 255, 1);
+}
+
+.detailed-metric-card:hover::after {
+    transform: scale(1);
+}
+
+.metric-header {
+    margin-bottom: 24px;
+    padding-bottom: 20px;
+    border-bottom: 2px solid rgba(0, 212, 170, 0.1);
+    position: relative;
+}
+
+.metric-header::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    width: 60px;
+    height: 2px;
+    background: var(--gradient-primary);
+    border-radius: 1px;
+}
+
+.metric-header h4 {
+    color: var(--brand-navy);
+    font-size: 1.125rem;
+    font-weight: 700;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.metric-main-value {
+    font-size: 2.75rem;
+    font-weight: 800;
+    color: var(--brand-navy);
+    background: var(--gradient-primary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    line-height: 1;
+    text-shadow: 0 2px 4px rgba(0, 212, 170, 0.1);
+}
+
+.metric-comparisons {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.comparison-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    border-radius: 12px;
+    border: 1px solid rgba(0, 212, 170, 0.06);
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    position: relative;
+    overflow: hidden;
+}
+
+.comparison-row::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: var(--gradient-primary);
+    transform: scaleY(0);
+    transition: transform 0.3s ease;
+}
+
+.comparison-row:hover {
+    background: linear-gradient(135deg, rgba(0, 212, 170, 0.02) 0%, rgba(0, 212, 170, 0.05) 100%);
+    border-color: rgba(0, 212, 170, 0.15);
+    transform: translateX(4px);
+}
+
+.comparison-row:hover::before {
+    transform: scaleY(1);
+}
+
+.comparison-row span:first-child {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.comparison-values {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.comparison-values span:first-child {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--brand-navy);
+    min-width: 80px;
+    text-align: right;
+}
+
+.change-badge {
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 6px 12px;
+    border-radius: 20px;
+    min-width: 70px;
+    text-align: center;
+    border: 1px solid transparent;
+    transition: all 0.2s ease;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.change-badge.positive {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(16, 185, 129, 0.2) 100%);
+    color: #047857;
+    border-color: rgba(16, 185, 129, 0.2);
+}
+
+.change-badge.positive:hover {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(16, 185, 129, 0.25) 100%);
+    transform: scale(1.05);
+}
+
+.change-badge.negative {
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(239, 68, 68, 0.2) 100%);
+    color: #b91c1c;
+    border-color: rgba(239, 68, 68, 0.2);
+}
+
+.change-badge.negative:hover {
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(239, 68, 68, 0.25) 100%);
+    transform: scale(1.05);
+}
+
+.change-badge.neutral {
+    background: linear-gradient(135deg, rgba(107, 114, 128, 0.1) 0%, rgba(107, 114, 128, 0.2) 100%);
+    color: #4b5563;
+    border-color: rgba(107, 114, 128, 0.2);
+}
+
+.change-badge.neutral:hover {
+    background: linear-gradient(135deg, rgba(107, 114, 128, 0.15) 0%, rgba(107, 114, 128, 0.25) 100%);
+    transform: scale(1.05);
+}
+
+/* Responsive para análisis semanal */
+@media (max-width: 768px) {
+    .weekly-analysis-header {
+        padding: 20px;
+    }
+    
+    .weekly-analysis-header h2 {
+        font-size: 1.5rem;
+        margin-bottom: 16px;
+    }
+    
+    .week-selector {
+        flex-direction: column;
+        gap: 16px;
+    }
+    
+    .week-nav-btn {
+        width: 100%;
+        max-width: 200px;
+    }
+    
+    #current-week-display {
+        min-width: auto;
+        width: 100%;
+    }
+    
+    .chart-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .legend-controls {
+        justify-content: center;
+    }
+    
+    .legend-item {
+        font-size: 0.75rem;
+        padding: 6px 10px;
+    }
+    
+    .chart-wrapper {
+        height: 300px;
+    }
+    
+    .weekly-metrics-hero {
+        grid-template-columns: 1fr;
+    }
+    
+    .hero-metric-card {
+        padding: 24px 20px;
+        flex-direction: column;
+        text-align: center;
+        gap: 16px;
+    }
+    
+    .hero-value {
+        font-size: 2.5rem;
+    }
+    
+    .detailed-metrics-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .metric-main-value {
+        font-size: 1.75rem;
+    }
+    
+    .comparison-row {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+        text-align: center;
+    }
+    
+    .comparison-values {
+        justify-content: center;
+    }
+}

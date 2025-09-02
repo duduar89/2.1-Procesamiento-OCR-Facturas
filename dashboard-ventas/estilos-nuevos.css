@@ -1,0 +1,2802 @@
+:root {
+    /* === Colores Base === */
+    --background: oklch(1 0 0);
+    --foreground: oklch(0.1450 0 0);
+    --card: oklch(1 0 0);
+    --card-foreground: oklch(0.2142 0.0478 259.1039);
+    --popover: oklch(1 0 0);
+    --popover-foreground: oklch(0.1450 0 0);
+    --primary: oklch(0.7427 0.1498 167.8078);
+    --primary-foreground: oklch(0.9850 0 0);
+    --secondary: oklch(0.9700 0 0);
+    --secondary-foreground: oklch(0.2050 0 0);
+    --muted: oklch(0.9700 0 0);
+    --muted-foreground: oklch(0.5560 0 0);
+    --accent: oklch(0.9700 0 0);
+    --accent-foreground: oklch(0.2050 0 0);
+    --destructive: oklch(0.5770 0.2450 27.3250);
+    --destructive-foreground: oklch(1 0 0);
+    --border: oklch(0.9220 0 0);
+    --input: oklch(0.9220 0 0);
+    --ring: oklch(0.7080 0 0);
+    
+    /* === Colores de Gráficos === */
+    --chart-1: oklch(0.8100 0.1000 252);
+    --chart-2: oklch(0.6200 0.1900 260);
+    --chart-3: oklch(0.5500 0.2200 263);
+    --chart-4: oklch(0.4900 0.2200 264);
+    --chart-5: oklch(0.4200 0.1800 266);
+    
+    /* === Sidebar === */
+    --sidebar: oklch(0.9850 0 0);
+    --sidebar-foreground: oklch(0.1450 0 0);
+    --sidebar-primary: oklch(0.2050 0 0);
+    --sidebar-primary-foreground: oklch(0.9850 0 0);
+    --sidebar-accent: oklch(0.9700 0 0);
+    --sidebar-accent-foreground: oklch(0.2050 0 0);
+    --sidebar-border: oklch(0.9220 0 0);
+    --sidebar-ring: oklch(0.7080 0 0);
+    
+    /* === Tipografía === */
+    --font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+    --font-serif: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+    --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    
+    /* === Bordes Redondeados === */
+    --radius: 0.625rem;
+    
+    /* === Sombras === */
+    --shadow-2xs: 0 1px 3px 0px hsl(0 0% 0% / 0.05);
+    --shadow-xs: 0 1px 3px 0px hsl(0 0% 0% / 0.05);
+    --shadow-sm: 0 1px 3px 0px hsl(0 0% 0% / 0.10), 0 1px 2px -1px hsl(0 0% 0% / 0.10);
+    --shadow: 0 1px 3px 0px hsl(0 0% 0% / 0.10), 0 1px 2px -1px hsl(0 0% 0% / 0.10);
+    --shadow-md: 0 1px 3px 0px hsl(0 0% 0% / 0.10), 0 2px 4px -1px hsl(0 0% 0% / 0.10);
+    --shadow-lg: 0 1px 3px 0px hsl(0 0% 0% / 0.10), 0 4px 6px -1px hsl(0 0% 0% / 0.10);
+    --shadow-xl: 0 1px 3px 0px hsl(0 0% 0% / 0.10), 0 8px 10px -1px hsl(0 0% 0% / 0.10);
+    --shadow-2xl: 0 1px 3px 0px hsl(0 0% 0% / 0.25);
+    
+    /* === Espaciado === */
+    --tracking-normal: 0em;
+    --spacing: 0.25rem;
+    
+    /* === Variables Adicionales para Dashboard === */
+    --success: oklch(0.6924 0.1523 142.4771);
+    --success-foreground: oklch(0.9850 0 0);
+    --warning: oklch(0.7944 0.1523 87.0899);
+    --warning-foreground: oklch(0.1450 0 0);
+    --info: oklch(0.6924 0.1523 232.1911);
+    --info-foreground: oklch(0.9850 0 0);
+  }
+  
+  .dark {
+    /* === Colores Base Dark === */
+    --background: oklch(0.1450 0.0206 264.9994);
+    --foreground: oklch(0.9824 0.0056 267.5623);
+    --card: oklch(0.2106 0.0475 260.3147);
+    --card-foreground: oklch(0.9557 0.0150 263.4854);
+    --popover: oklch(0.1450 0.0206 264.9994);
+    --popover-foreground: oklch(0.9824 0.0056 267.5623);
+    --primary: oklch(0.7427 0.1498 167.8078);
+    --primary-foreground: oklch(0.1450 0.0206 264.9994);
+    --secondary: oklch(0.2789 0.0458 257.8419);
+    --secondary-foreground: oklch(0.9824 0.0056 267.5623);
+    --muted: oklch(0.2789 0.0458 257.8419);
+    --muted-foreground: oklch(0.6956 0.0186 259.4522);
+    --accent: oklch(0.2789 0.0458 257.8419);
+    --accent-foreground: oklch(0.9824 0.0056 267.5623);
+    --destructive: oklch(0.6269 0.2484 24.2873);
+    --destructive-foreground: oklch(0.9824 0.0056 267.5623);
+    --border: oklch(0.2789 0.0458 257.8419);
+    --input: oklch(0.2789 0.0458 257.8419);
+    --ring: oklch(0.7427 0.1498 167.8078);
+    
+    /* === Colores de Gráficos Dark === */
+    --chart-1: oklch(0.7427 0.1498 167.8078);
+    --chart-2: oklch(0.6724 0.1498 197.8078);
+    --chart-3: oklch(0.6269 0.2484 24.2873);
+    --chart-4: oklch(0.5820 0.1498 287.8078);
+    --chart-5: oklch(0.5369 0.1498 317.8078);
+    
+    /* === Sidebar Dark === */
+    --sidebar: oklch(0.2106 0.0475 260.3147);
+    --sidebar-foreground: oklch(0.9824 0.0056 267.5623);
+    --sidebar-primary: oklch(0.7427 0.1498 167.8078);
+    --sidebar-primary-foreground: oklch(0.1450 0.0206 264.9994);
+    --sidebar-accent: oklch(0.2789 0.0458 257.8419);
+    --sidebar-accent-foreground: oklch(0.9824 0.0056 267.5623);
+    --sidebar-border: oklch(0.2789 0.0458 257.8419);
+    --sidebar-ring: oklch(0.7427 0.1498 167.8078);
+    
+    /* === Tipografía Dark === */
+    --font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+    --font-serif: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+    --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    
+    /* === Bordes Redondeados Dark === */
+    --radius: 0.625rem;
+    
+    /* === Sombras Dark === */
+    --shadow-2xs: 0 1px 3px 0px hsl(0 0% 0% / 0.3);
+    --shadow-xs: 0 1px 3px 0px hsl(0 0% 0% / 0.3);
+    --shadow-sm: 0 1px 3px 0px hsl(0 0% 0% / 0.4), 0 1px 2px -1px hsl(0 0% 0% / 0.4);
+    --shadow: 0 1px 3px 0px hsl(0 0% 0% / 0.4), 0 1px 2px -1px hsl(0 0% 0% / 0.4);
+    --shadow-md: 0 1px 3px 0px hsl(0 0% 0% / 0.4), 0 2px 4px -1px hsl(0 0% 0% / 0.4);
+    --shadow-lg: 0 1px 3px 0px hsl(0 0% 0% / 0.4), 0 4px 6px -1px hsl(0 0% 0% / 0.4);
+    --shadow-xl: 0 1px 3px 0px hsl(0 0% 0% / 0.4), 0 8px 10px -1px hsl(0 0% 0% / 0.4);
+    --shadow-2xl: 0 1px 3px 0px hsl(0 0% 0% / 0.6);
+    
+    /* === Variables Adicionales para Dashboard Dark === */
+    --success: oklch(0.6924 0.1523 142.4771);
+    --success-foreground: oklch(0.1450 0.0206 264.9994);
+    --warning: oklch(0.7944 0.1523 87.0899);
+    --warning-foreground: oklch(0.1450 0.0206 264.9994);
+    --info: oklch(0.6924 0.1523 232.1911);
+    --info-foreground: oklch(0.1450 0.0206 264.9994);
+  }
+  
+  /* === Variables de utilidad adicionales === */
+  :root {
+    --radius-sm: calc(var(--radius) - 4px);
+    --radius-md: calc(var(--radius) - 2px);
+    --radius-lg: var(--radius);
+    --radius-xl: calc(var(--radius) + 4px);
+  }
+
+/* ========================================
+   COMPONENTES MODERNOS
+   ======================================== */
+
+/* === Reset y Base === */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-sans);
+  background: var(--background);
+  color: var(--foreground);
+  line-height: 1.6;
+  margin: 0;
+  padding: 0;
+}
+
+/* === Tarjetas Modernas === */
+.card-modern {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  transition: all 0.2s ease-in-out;
+  overflow: hidden;
+}
+
+.card-modern:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+}
+
+.card-header {
+  padding: 1.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.card-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--card-foreground);
+  margin: 0;
+}
+
+.card-description {
+  font-size: 0.875rem;
+  color: var(--muted-foreground);
+  margin: 0.25rem 0 0 0;
+}
+
+.card-content {
+  padding: 1.5rem;
+}
+
+/* === Métricas Modernas === */
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.metric-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  box-shadow: var(--shadow-sm);
+  transition: all 0.2s ease-in-out;
+  position: relative;
+}
+
+.metric-card:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+  border-color: var(--primary);
+}
+
+.metric-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.metric-title {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--muted-foreground);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.metric-icon {
+  width: 2rem;
+  height: 2rem;
+  border-radius: calc(var(--radius) - 2px);
+  background: var(--primary);
+  color: var(--primary-foreground);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+}
+
+.metric-value {
+  font-size: 2.25rem;
+  font-weight: 700;
+  color: var(--foreground);
+  line-height: 1;
+  margin-bottom: 0.5rem;
+}
+
+.metric-change {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.metric-change.positive {
+  color: var(--success);
+}
+
+.metric-change.negative {
+  color: var(--destructive);
+}
+
+.metric-change.neutral {
+  color: var(--muted-foreground);
+}
+
+/* === Botones Modernos === */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border-radius: calc(var(--radius) - 2px);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  text-decoration: none;
+  outline: none;
+}
+
+.btn:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.btn-primary {
+  background: var(--primary);
+  color: var(--primary-foreground);
+  border-color: var(--primary);
+}
+
+.btn-primary:hover {
+  background: color-mix(in srgb, var(--primary) 90%, black);
+}
+
+.btn-secondary {
+  background: var(--secondary);
+  color: var(--secondary-foreground);
+  border-color: var(--border);
+}
+
+.btn-secondary:hover {
+  background: var(--accent);
+}
+
+.btn-outline {
+  background: transparent;
+  color: var(--foreground);
+  border-color: var(--border);
+}
+
+.btn-outline:hover {
+  background: var(--accent);
+  color: var(--accent-foreground);
+}
+
+/* === Navegación Moderna === */
+.nav-tabs {
+  display: flex;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.25rem;
+  margin-bottom: 2rem;
+}
+
+.nav-tab {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--muted-foreground);
+  background: transparent;
+  border: none;
+  border-radius: calc(var(--radius) - 2px);
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  text-align: center;
+}
+
+.nav-tab:hover {
+  color: var(--foreground);
+  background: var(--muted);
+}
+
+.nav-tab.active {
+  background: var(--primary);
+  color: var(--primary-foreground);
+  box-shadow: var(--shadow-sm);
+}
+
+/* === Header Moderno === */
+.header-modern {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.header-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.header-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--foreground);
+  margin: 0;
+}
+
+.header-subtitle {
+  font-size: 0.875rem;
+  color: var(--muted-foreground);
+  margin: 0.25rem 0 0 0;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+/* === Responsive === */
+@media (max-width: 768px) {
+  .metrics-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .nav-tabs {
+    flex-direction: column;
+  }
+  
+  .nav-tab {
+    text-align: left;
+  }
+  
+  .header-content {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .header-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+}
+
+/* ========================================
+   COMPONENTES ESPECÍFICOS DEL DASHBOARD
+   ======================================== */
+
+/* === Métricas Compactas === */
+.weekly-metrics-compact {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.compact-metric-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  box-shadow: var(--shadow-sm);
+  transition: all 0.2s ease-in-out;
+  position: relative;
+  overflow: hidden;
+}
+
+.compact-metric-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--primary), var(--accent));
+  border-radius: var(--radius) var(--radius) 0 0;
+}
+
+.compact-metric-card:hover {
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-2px);
+  border-color: var(--primary);
+}
+
+.compact-metric-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.compact-metric-card .metric-icon {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: calc(var(--radius) - 2px);
+  background: var(--primary);
+  color: var(--primary-foreground);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.compact-metric-card .metric-title {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--muted-foreground);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 0;
+}
+
+.metric-main-value {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--foreground);
+  line-height: 1;
+  margin-bottom: 1rem;
+}
+
+.metric-comparisons-compact {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.comparison-compact {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem;
+  background: var(--muted);
+  border-radius: calc(var(--radius) - 4px);
+  font-size: 0.875rem;
+}
+
+.comparison-label {
+  color: var(--muted-foreground);
+  font-weight: 500;
+}
+
+.comparison-value {
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.comparison-percentage {
+  font-weight: 600;
+  padding: 0.125rem 0.5rem;
+  border-radius: calc(var(--radius) - 6px);
+  font-size: 0.75rem;
+}
+
+.comparison-percentage.positive {
+  background: color-mix(in srgb, var(--success) 15%, transparent);
+  color: var(--success);
+}
+
+.comparison-percentage.negative {
+  background: color-mix(in srgb, var(--destructive) 15%, transparent);
+  color: var(--destructive);
+}
+
+.comparison-percentage.neutral {
+  background: color-mix(in srgb, var(--muted-foreground) 15%, transparent);
+  color: var(--muted-foreground);
+}
+
+/* === Estilos para comparison-change === */
+.comparison-change {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-weight: 600;
+  padding: 0.25rem 0.75rem;
+  border-radius: calc(var(--radius) - 4px);
+  font-size: 0.875rem;
+  transition: all 0.2s ease-in-out;
+  border: 1px solid transparent;
+}
+
+.comparison-change.positive {
+  background: color-mix(in srgb, var(--success) 15%, transparent);
+  color: var(--success);
+  border-color: color-mix(in srgb, var(--success) 30%, transparent);
+}
+
+.comparison-change.negative {
+  background: color-mix(in srgb, var(--destructive) 15%, transparent);
+  color: var(--destructive);
+  border-color: color-mix(in srgb, var(--destructive) 30%, transparent);
+}
+
+.comparison-change.neutral {
+  background: color-mix(in srgb, var(--muted-foreground) 15%, transparent);
+  color: var(--muted-foreground);
+  border-color: color-mix(in srgb, var(--muted-foreground) 30%, transparent);
+}
+
+/* === Gráficos Modernos === */
+.charts-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.charts-grid-half-page {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  box-shadow: var(--shadow-sm);
+  transition: all 0.2s ease-in-out;
+}
+
+.card:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+}
+
+.card-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--card-foreground);
+  margin: 0 0 1rem 0;
+  text-align: center;
+}
+
+.chart-container {
+  position: relative;
+  height: 300px;
+  margin-top: 1rem;
+}
+
+.chart-container canvas {
+  border-radius: calc(var(--radius) - 4px);
+}
+
+/* === Responsive para Dashboard === */
+@media (max-width: 1024px) {
+  .charts-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .charts-grid-half-page {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .weekly-metrics-compact {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .compact-metric-card {
+    padding: 1rem;
+  }
+  
+  .metric-main-value {
+    font-size: 1.75rem;
+  }
+  
+  .compact-metric-header {
+    gap: 0.75rem;
+  }
+  
+  .compact-metric-card .metric-icon {
+    width: 2rem;
+    height: 2rem;
+    font-size: 1rem;
+  }
+}
+
+/* ========================================
+   CONTENEDOR PRINCIPAL Y NAVEGACIÓN
+   ======================================== */
+
+/* === Contenedor Principal === */
+.container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 1.5rem;
+  min-height: 100vh;
+}
+
+/* === Header Principal === */
+.header {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.header h1 {
+  font-size: 1.875rem;
+  font-weight: 700;
+  color: var(--foreground);
+  margin: 0;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+/* === Sections === */
+.content-section {
+  display: none;
+}
+
+.content-section.active {
+  display: block;
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* === Tablas Modernas === */
+.table-container {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+
+.products-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.products-table th {
+  background: var(--muted);
+  color: var(--muted-foreground);
+  font-weight: 600;
+  text-align: left;
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.products-table td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border);
+  color: var(--foreground);
+}
+
+.products-table tr:hover {
+  background: var(--muted);
+}
+
+/* === Estados de Carga === */
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 2rem;
+  color: var(--muted-foreground);
+}
+
+.spinner {
+  width: 1.5rem;
+  height: 1.5rem;
+  border: 2px solid var(--border);
+  border-top: 2px solid var(--primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* === Utilidades === */
+.text-sm { font-size: 0.875rem; }
+.text-xs { font-size: 0.75rem; }
+.font-semibold { font-weight: 600; }
+.font-bold { font-weight: 700; }
+.text-center { text-align: center; }
+
+/* === Weather Widget === */
+.weather-sales-widget {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 1.5rem;
+}
+
+.weather-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.weather-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--card-foreground);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* ========================================
+   RESET COMPLETO Y FORZAR ESTILOS MODERNOS
+   ======================================== */
+
+/* === RESET TOTAL DE ESTILOS EXISTENTES === */
+html, body {
+  margin: 0 !important;
+  padding: 0 !important;
+  box-sizing: border-box !important;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box !important;
+}
+
+/* === FORZAR MODO DÍA POR DEFECTO === */
+body,
+html body,
+body.light,
+html body.light,
+.container,
+html body .container {
+  background: #f8fafc !important;
+  color: #1e293b !important;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif !important;
+  line-height: 1.5 !important;
+}
+
+/* === SOBRESCRIBIR ESTILOS EXISTENTES CON ALTA ESPECIFICIDAD === */
+
+/* === ELIMINAR FONDOS AZULES/OSCUROS EN MODO DÍA - MÁXIMA PRIORIDAD === */
+.metrics-grid .metric-card,
+body .metrics-grid .metric-card,
+html body .metrics-grid .metric-card,
+html body div.metrics-grid div.metric-card,
+#diario-section .metrics-grid .metric-card,
+body #diario-section .metrics-grid .metric-card,
+[class*="metric-card"],
+[class="metric-card"],
+div.metric-card {
+  background: #ffffff !important;
+  background-color: #ffffff !important;
+  border: 1px solid #e5e7eb !important;
+  color: #1e293b !important;
+  backdrop-filter: none !important;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06) !important;
+}
+
+.metrics-grid .metric-card:hover,
+body .metrics-grid .metric-card:hover,
+html body .metrics-grid .metric-card:hover,
+html body div.metrics-grid div.metric-card:hover,
+#diario-section .metrics-grid .metric-card:hover,
+body #diario-section .metrics-grid .metric-card:hover,
+[class*="metric-card"]:hover,
+[class="metric-card"]:hover,
+div.metric-card:hover {
+  background: #ffffff !important;
+  background-color: #ffffff !important;
+  border-color: #cbd5e1 !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+  transform: translateY(-1px) !important;
+}
+
+/* === ELIMINAR DEGRADADOS SUPERIORES === */
+body #diario-section .metrics-grid .metric-card::before,
+body .metrics-grid .metric-card::before,
+html body .metric-card::before,
+.metric-card::before {
+  display: none !important;
+  content: none !important;
+  background: none !important;
+}
+
+/* === FORZAR TEXTO OSCURO EN TARJETAS BLANCAS === */
+.metrics-grid .metric-card *,
+body .metrics-grid .metric-card *,
+html body .metrics-grid .metric-card *,
+.metrics-grid .metric-card .metric-value,
+.metrics-grid .metric-card .metric-label,
+.metrics-grid .metric-card .metric-change,
+[class*="metric-card"] *,
+.metric-card * {
+  color: #1e293b !important;
+}
+
+/* === OVERRIDE PARA CUALQUIER CONTENEDOR AZUL === */
+#diario-section,
+body #diario-section,
+#semanal-section,
+body #semanal-section,
+.sales-dashboard,
+body .sales-dashboard,
+.dashboard-container,
+body .dashboard-container {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+/* === OVERRIDE PARA ELEMENTOS CON CLASES ESPECÍFICAS === */
+.weekly-metrics-compact,
+body .weekly-metrics-compact,
+.metrics-grid,
+body .metrics-grid,
+.chart-grid,
+body .chart-grid {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+/* === FORZAR TODOS LOS TEXTOS EN MODO DÍA === */
+body:not(.dark) .metric-title,
+body:not(.dark) .metric-value,
+body:not(.dark) .metric-label,
+body:not(.dark) .metric-main-value,
+body:not(.dark) .card-title,
+body:not(.dark) h1,
+body:not(.dark) h2,
+body:not(.dark) h3,
+body:not(.dark) h4,
+body:not(.dark) p,
+body:not(.dark) span,
+body:not(.dark) div {
+  color: #1e293b !important;
+}
+
+/* ========================================
+   WIDGET DE CLIMA - FONDO BLANCO MODO DÍA
+   ======================================== */
+.weather-sales-widget,
+body .weather-sales-widget,
+html body .weather-sales-widget,
+#weather-widget,
+body #weather-widget {
+  background: #ffffff !important;
+  background-color: #ffffff !important;
+  border: 1px solid #e5e7eb !important;
+  border-radius: 12px !important;
+  padding: 16px !important;
+  margin: 16px 0 !important;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06) !important;
+  backdrop-filter: none !important;
+}
+
+.weather-sales-widget:hover,
+body .weather-sales-widget:hover {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+  transform: translateY(-1px) !important;
+}
+
+/* === TIPOGRAFÍA DEL CLIMA === */
+.weather-title,
+body .weather-title,
+.weather-city,
+body .weather-city,
+.weather-temp-main,
+body .weather-temp-main,
+.weather-temp-feels,
+body .weather-temp-feels,
+.weather-description,
+body .weather-description {
+  color: #1e293b !important;
+}
+
+/* === COLOR BRAND #08c999 === */
+.weather-city,
+body .weather-city,
+.weather-actions button,
+body .weather-actions button {
+  color: #08c999 !important;
+}
+
+.weather-header {
+  border-bottom: 1px solid #f1f5f9 !important;
+}
+
+/* ========================================
+   COLOR BRAND #08c999 EN ELEMENTOS ESPECÍFICOS
+   ======================================== */
+
+/* === Usar #08c999 para acentos y elementos activos === */
+.comparison-change.positive,
+body .comparison-change.positive,
+.metric-change.positive,
+body .metric-change.positive {
+  color: #08c999 !important;
+  background: color-mix(in srgb, #08c999 15%, transparent) !important;
+  border-color: color-mix(in srgb, #08c999 30%, transparent) !important;
+}
+
+/* === Botones y elementos interactivos === */
+.weather-refresh-btn,
+body .weather-refresh-btn,
+.theme-toggle,
+body .theme-toggle {
+  background: #08c999 !important;
+  color: #ffffff !important;
+  border: 1px solid #08c999 !important;
+}
+
+.weather-refresh-btn:hover,
+body .weather-refresh-btn:hover,
+.theme-toggle:hover,
+body .theme-toggle:hover {
+  background: #07b085 !important;
+  border-color: #07b085 !important;
+}
+
+/* === Elementos de clima con color brand === */
+.weather-city,
+body .weather-city {
+  color: #08c999 !important;
+  font-weight: 500 !important;
+}
+
+/* === Iconos y elementos decorativos === */
+.weather-icon-title {
+  display: none !important;
+}
+
+/* === ELIMINAR TODOS LOS EMOTICONOS DE TARJETAS === */
+.metric-icon,
+body .metric-icon,
+.compact-metric-card .metric-icon,
+body .compact-metric-card .metric-icon {
+  display: none !important;
+}
+
+/* === OVERRIDE PARA TARJETAS DE MÉTRICAS === */
+.metrics-grid .metric-card .metric-icon,
+body .metrics-grid .metric-card .metric-icon,
+.metric-card .metric-icon,
+body .metric-card .metric-icon {
+  display: none !important;
+}
+
+/* ========================================
+   TABLA PROFESIONAL EXACTA - COPIA DE REFERENCIA
+   ======================================== */
+
+/* === Contenedor de tabla exacto === */
+.table-container,
+body .table-container,
+html body .table-container {
+  background: #ffffff !important;
+  border: 1px solid #e1e5e9 !important;
+  border-radius: 6px !important;
+  overflow: hidden !important;
+  box-shadow: none !important;
+  margin-bottom: 24px !important;
+  max-height: 400px !important;
+  overflow-y: auto !important;
+}
+
+/* === Estilo del scroll para tabla === */
+.table-container::-webkit-scrollbar {
+  width: 6px !important;
+}
+
+.table-container::-webkit-scrollbar-track {
+  background: #f1f3f4 !important;
+}
+
+.table-container::-webkit-scrollbar-thumb {
+  background: #d1d5db !important;
+  border-radius: 3px !important;
+}
+
+.table-container::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af !important;
+}
+
+/* === Tabla principal === */
+.products-table,
+body .products-table,
+html body .products-table,
+table,
+body table,
+html body table {
+  width: 100% !important;
+  border-collapse: collapse !important;
+  background: #ffffff !important;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+  font-size: 14px !important;
+  table-layout: auto !important;
+}
+
+/* === Headers exactos de la referencia === */
+.products-table thead,
+body .products-table thead,
+.products-table th,
+body .products-table th,
+table th,
+body table th,
+html body table th {
+  background: #f7f8fa !important;
+  color: #6b7280 !important;
+  font-weight: 500 !important;
+  text-align: left !important;
+  padding: 14px 20px !important;
+  font-size: 13px !important;
+  text-transform: none !important;
+  letter-spacing: -0.01em !important;
+  border-bottom: 1px solid #e1e5e9 !important;
+  border-top: none !important;
+  border-left: none !important;
+  border-right: none !important;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+}
+
+/* === Celdas exactas de la referencia === */
+.products-table td,
+body .products-table td,
+table td,
+body table td,
+html body table td {
+  padding: 18px 20px !important;
+  border-bottom: 1px solid #f1f3f4 !important;
+  border-top: none !important;
+  border-left: none !important;
+  border-right: none !important;
+  color: #374151 !important;
+  font-weight: 400 !important;
+  background: transparent !important;
+  vertical-align: middle !important;
+  font-size: 14px !important;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+  letter-spacing: -0.005em !important;
+}
+
+/* === UNIFICAR TODA LA TIPOGRAFÍA DE TABLA === */
+.products-table *,
+body .products-table *,
+table *,
+body table *,
+.table-container *,
+body .table-container * {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+  font-size: 14px !important;
+  font-weight: 400 !important;
+  letter-spacing: -0.005em !important;
+  color: #374151 !important;
+}
+
+/* === Filas alternadas exactas === */
+.products-table tbody tr:nth-child(even),
+body .products-table tbody tr:nth-child(even),
+table tbody tr:nth-child(even),
+body table tbody tr:nth-child(even) {
+  background: #fafbfc !important;
+}
+
+.products-table tbody tr:nth-child(odd),
+body .products-table tbody tr:nth-child(odd),
+table tbody tr:nth-child(odd),
+body table tbody tr:nth-child(odd) {
+  background: #ffffff !important;
+}
+
+/* === Hover sutil === */
+.products-table tr:hover,
+body .products-table tr:hover,
+table tr:hover,
+body table tr:hover {
+  background: #f3f4f6 !important;
+}
+
+/* === Primera columna con ícono de puntos === */
+.products-table td:first-child,
+body .products-table td:first-child,
+table td:first-child,
+body table td:first-child {
+  font-weight: 500 !important;
+  color: #1f2937 !important;
+  position: relative !important;
+  padding-left: 45px !important;
+}
+
+/* === Agregar iconos de puntos === */
+.products-table td:first-child::before,
+body .products-table td:first-child::before,
+table td:first-child::before,
+body table td:first-child::before {
+  content: "⋮⋮" !important;
+  position: absolute !important;
+  left: 20px !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  color: #d1d5db !important;
+  font-size: 14px !important;
+  font-weight: 400 !important;
+  letter-spacing: -2px !important;
+  line-height: 0.8 !important;
+}
+
+/* === Números centrados === */
+.products-table td:nth-child(n+3),
+body .products-table td:nth-child(n+3),
+table td:nth-child(n+3),
+body table td:nth-child(n+3) {
+  text-align: center !important;
+  font-variant-numeric: tabular-nums !important;
+}
+
+/* === Headers centrados para números === */
+.products-table th:nth-child(n+3),
+body .products-table th:nth-child(n+3),
+table th:nth-child(n+3),
+body table th:nth-child(n+3) {
+  text-align: center !important;
+}
+
+/* === Sin bordes externos === */
+.products-table,
+body .products-table,
+table,
+body table {
+  border: none !important;
+}
+
+/* === Última fila sin borde inferior === */
+.products-table tr:last-child td,
+body .products-table tr:last-child td,
+table tr:last-child td,
+body table tr:last-child td {
+  border-bottom: none !important;
+}
+
+/* === Modo oscuro para tablas === */
+.dark .table-container,
+body.dark .table-container {
+  background: #1a1f2e !important;
+  border-color: #2d3748 !important;
+}
+
+.dark .products-table th,
+body.dark .products-table th,
+.dark table th,
+body.dark table th {
+  background: #242938 !important;
+  color: #94a3b8 !important;
+  border-bottom-color: #374151 !important;
+}
+
+.dark .products-table td,
+body.dark .products-table td,
+.dark table td,
+body.dark table td {
+  color: #e2e8f0 !important;
+  border-bottom-color: #2d3748 !important;
+}
+
+.dark .products-table tr:hover,
+body.dark .products-table tr:hover,
+.dark table tr:hover,
+body.dark table tr:hover {
+  background: #242938 !important;
+}
+
+.dark .products-table td:first-child,
+body.dark .products-table td:first-child,
+.dark table td:first-child,
+body.dark table td:first-child {
+  color: #f8fafc !important;
+}
+
+/* ========================================
+   ELEMENTOS ESPECIALES DE TABLA
+   ======================================== */
+
+/* === Badges/Tags en celdas === */
+.table-badge,
+.products-table .badge,
+body .products-table .badge {
+  display: inline-block !important;
+  padding: 4px 8px !important;
+  border-radius: 4px !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  background: #f3f4f6 !important;
+  color: #6b7280 !important;
+  border: 1px solid #e5e7eb !important;
+}
+
+/* === Dropdowns en tabla === */
+.table-dropdown,
+.products-table select,
+body .products-table select {
+  background: transparent !important;
+  border: 1px solid #e5e7eb !important;
+  border-radius: 4px !important;
+  padding: 6px 12px !important;
+  font-size: 13px !important;
+  color: #6b7280 !important;
+  font-family: inherit !important;
+  cursor: pointer !important;
+}
+
+.table-dropdown:hover,
+.products-table select:hover,
+body .products-table select:hover {
+  border-color: #d1d5db !important;
+  background: #f9fafb !important;
+}
+
+/* === Botones de acción en tabla === */
+.table-action-btn,
+.products-table .action-btn,
+body .products-table .action-btn {
+  background: transparent !important;
+  border: none !important;
+  color: #6b7280 !important;
+  font-size: 14px !important;
+  cursor: pointer !important;
+  padding: 4px 8px !important;
+  border-radius: 4px !important;
+  transition: all 0.1s ease !important;
+}
+
+.table-action-btn:hover,
+.products-table .action-btn:hover,
+body .products-table .action-btn:hover {
+  background: #f3f4f6 !important;
+  color: #374151 !important;
+}
+
+/* === Elementos de status === */
+.table-status,
+.products-table .status,
+body .products-table .status {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+}
+
+.table-status::before,
+.products-table .status::before,
+body .products-table .status::before {
+  content: "●" !important;
+  font-size: 8px !important;
+}
+
+.status-active::before { color: #10b981 !important; }
+.status-inactive::before { color: #ef4444 !important; }
+.status-pending::before { color: #f59e0b !important; }
+
+/* === Números y métricas con misma font === */
+.table-number,
+.products-table .number,
+body .products-table .number,
+.products-table td:nth-child(n+3),
+body .products-table td:nth-child(n+3),
+table td:nth-child(n+3),
+body table td:nth-child(n+3) {
+  font-variant-numeric: tabular-nums !important;
+  font-weight: 400 !important;
+  color: #374151 !important;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+  font-size: 14px !important;
+}
+
+/* === Enlaces en tabla === */
+.table-link,
+.products-table a,
+body .products-table a {
+  color: #3b82f6 !important;
+  text-decoration: none !important;
+  font-weight: 500 !important;
+}
+
+.table-link:hover,
+.products-table a:hover,
+body .products-table a:hover {
+  color: #2563eb !important;
+  text-decoration: underline !important;
+}
+
+/* ========================================
+   MEJORAS BARRA DE TÍTULO Y BOTONES
+   ======================================== */
+
+/* === Header sin emoticonos === */
+.header-icon-gradient,
+body .header-icon-gradient {
+  display: none !important;
+}
+
+/* === Títulos del header === */
+.main-title,
+body .main-title {
+  font-size: 24px !important;
+  font-weight: 600 !important;
+  color: #1f2937 !important;
+  margin: 0 !important;
+  text-shadow: none !important;
+}
+
+.main-subtitle,
+body .main-subtitle {
+  font-size: 14px !important;
+  font-weight: 400 !important;
+  color: #6b7280 !important;
+  margin: 0 !important;
+}
+
+/* === Header background === */
+.weekly-analysis-header-modern,
+body .weekly-analysis-header-modern {
+  background: #ffffff !important;
+  border: 1px solid #e5e7eb !important;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06) !important;
+}
+
+/* === Botones de período mejorados === */
+.range-btn,
+body .range-btn,
+.period-btn,
+body .period-btn {
+  background: transparent !important;
+  border: 1px solid #d1d5db !important;
+  color: #374151 !important;
+  padding: 8px 16px !important;
+  border-radius: 6px !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+}
+
+.range-btn:hover,
+body .range-btn:hover,
+.period-btn:hover,
+body .period-btn:hover {
+  background: #f3f4f6 !important;
+  border-color: #9ca3af !important;
+  color: #1f2937 !important;
+  transform: none !important;
+}
+
+.range-btn.active,
+body .range-btn.active,
+.period-btn.active,
+body .period-btn.active {
+  background: #08c999 !important;
+  border-color: #08c999 !important;
+  color: #ffffff !important;
+  box-shadow: none !important;
+}
+
+/* === Botón "Hoy" especial === */
+.today-btn,
+body .today-btn,
+button[onclick*="setToday"],
+body button[onclick*="setToday"] {
+  background: #3b82f6 !important;
+  border: 1px solid #3b82f6 !important;
+  color: #ffffff !important;
+  font-weight: 500 !important;
+}
+
+.today-btn:hover,
+body .today-btn:hover,
+button[onclick*="setToday"]:hover,
+body button[onclick*="setToday"]:hover {
+  background: #2563eb !important;
+  border-color: #2563eb !important;
+}
+
+/* ========================================
+   GRÁFICOS - TÍTULOS Y LEYENDAS OSCURAS
+   ======================================== */
+
+/* === Títulos de gráficos === */
+.chart-title,
+body .chart-title,
+.card-title,
+body .card-title,
+.chart-container h3,
+body .chart-container h3,
+.chart-header h3,
+body .chart-header h3 {
+  color: #1f2937 !important;
+  font-size: 16px !important;
+  font-weight: 600 !important;
+  margin: 0 0 16px 0 !important;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+}
+
+/* === Leyendas de gráficos === */
+.chart-legend,
+body .chart-legend,
+.legend-item,
+body .legend-item,
+.chart-legend-item,
+body .chart-legend-item {
+  color: #374151 !important;
+  font-size: 13px !important;
+  font-weight: 400 !important;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+}
+
+/* === Ejes de gráficos en negro === */
+.chart-axis-label,
+body .chart-axis-label,
+.axis-label,
+body .axis-label {
+  color: #1f2937 !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+}
+
+/* === Mejorar visibilidad de elementos específicos de Chart.js === */
+.chartjs-render-monitor,
+body .chartjs-render-monitor {
+  background: #ffffff !important;
+}
+
+/* === Forzar colores oscuros en elementos de gráficos === */
+canvas + div,
+.chart-legend-wrapper,
+.chart-tooltip-wrapper {
+  color: #1f2937 !important;
+}
+
+
+
+/* === Tooltips de gráficos === */
+.chart-tooltip,
+body .chart-tooltip {
+  background: #ffffff !important;
+  border: 1px solid #e5e7eb !important;
+  border-radius: 6px !important;
+  color: #1f2937 !important;
+  font-size: 13px !important;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+}
+
+/* === Fondo de gráficos === */
+.chart-container,
+body .chart-container,
+.chart-wrapper,
+body .chart-wrapper {
+  background: #ffffff !important;
+}
+
+/* === Gráficos específicos que necesitan fondo blanco === */
+#ranking-chart-container,
+body #ranking-chart-container,
+#peso-categoria-chart,
+body #peso-categoria-chart,
+#matriz-productos-chart,
+body #matriz-productos-chart,
+#hourly-sales-chart,
+body #hourly-sales-chart,
+#payment-methods-chart,
+body #payment-methods-chart,
+#sales-vs-ticket-chart,
+body #sales-vs-ticket-chart,
+#hourly-tickets-chart,
+body #hourly-tickets-chart {
+  background: #ffffff !important;
+  border: 1px solid #e5e7eb !important;
+  border-radius: 8px !important;
+  padding: 16px !important;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06) !important;
+}
+
+/* === Canvas específicos === */
+#ranking-chart-container canvas,
+#peso-categoria-chart canvas,
+#matriz-productos-chart canvas,
+#hourly-sales-chart canvas,
+#payment-methods-chart canvas,
+#sales-vs-ticket-chart canvas,
+#hourly-tickets-chart canvas {
+  background: #ffffff !important;
+}
+
+/* === CORREGIR GRÁFICOS CON DOS TARJETAS === */
+.charts-grid-half-page {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
+  gap: 20px !important;
+  margin: 20px 0 !important;
+}
+
+.half-page-card {
+  background: #ffffff !important;
+  border: 1px solid #e5e7eb !important;
+  border-radius: 8px !important;
+  padding: 20px !important;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06) !important;
+}
+
+.half-page-card .card-title {
+  font-size: 16px !important;
+  font-weight: 500 !important;
+  color: #1f2937 !important;
+  margin-bottom: 16px !important;
+  text-transform: none !important;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+}
+
+.half-page-card .chart-container {
+  background: #ffffff !important;
+  border-radius: 6px !important;
+  height: 300px !important;
+}
+
+/* === CORREGIR VISIBILIDAD DE CHART.JS === */
+/* Forzar visibilidad de todos los elementos de Chart.js */
+canvas {
+  color: #000000 !important;
+}
+
+/* Elementos de texto en SVG y Chart.js */
+text, tspan, .chartjs-legend, .chartjs-tooltip {
+  fill: #1f2937 !important;
+  color: #1f2937 !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  display: block !important;
+  font-size: 12px !important;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+}
+
+/* Ejes y ticks específicos */
+.tick, .tick text, .axis, .axis text {
+  fill: #1f2937 !important;
+  color: #1f2937 !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  font-size: 11px !important;
+  stroke: none !important;
+}
+
+/* Leyendas */
+.legend, .legend-item, .legend-text, .chartjs-legend-item {
+  color: #1f2937 !important;
+  fill: #1f2937 !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  font-size: 12px !important;
+}
+
+/* Forzar elementos dentro de contenedores de gráficos */
+[id*="chart"] text,
+[id*="chart"] tspan,
+[class*="chart"] text,
+[class*="chart"] tspan {
+  fill: #1f2937 !important;
+  color: #1f2937 !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  font-size: 11px !important;
+}
+
+/* === Leyendas y textos de gráficos oscuros === */
+#ranking-chart-container *,
+#peso-categoria-chart *,
+#matriz-productos-chart *,
+#hourly-sales-chart *,
+#payment-methods-chart *,
+#sales-vs-ticket-chart *,
+#hourly-tickets-chart * {
+  color: #1f2937 !important;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+}
+
+
+
+/* === OVERRIDE CRÍTICO PARA VISIBILIDAD DE GRÁFICOS === */
+/* CONTRARRESTAR ESTILOS QUE OCULTAN TEXTOS */
+text,
+tspan,
+.tick,
+.axis,
+.legend,
+.chartjs-legend-item,
+svg text,
+svg tspan,
+g text,
+g tspan {
+  -webkit-text-fill-color: #1f2937 !important;
+  -webkit-background-clip: initial !important;
+  background-clip: initial !important;
+  background: transparent !important;
+}
+
+/* Forzar TODOS los elementos de texto a ser visibles */
+* {
+  --chart-text-color: #1f2937 !important;
+}
+
+/* Override ultra específico para Chart.js */
+body text,
+html body text,
+body tspan,
+html body tspan,
+body .tick,
+html body .tick,
+body .axis,
+html body .axis,
+body .legend,
+html body .legend {
+  fill: #1f2937 !important;
+  color: #1f2937 !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  display: block !important;
+  font-size: 11px !important;
+  stroke: none !important;
+}
+
+/* Canvas y SVG elementos críticos */
+canvas + * text,
+svg text,
+svg tspan,
+g text,
+g tspan {
+  -webkit-text-fill-color: #1f2937 !important;
+  -webkit-background-clip: initial !important;
+  background-clip: initial !important;
+  background: transparent !important;
+  fill: #1f2937 !important;
+  color: #1f2937 !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+/* OVERRIDE ULTRA-ESPECÍFICO PARA CHART.JS */
+[id*="chart"] text,
+[id*="chart"] tspan,
+[class*="chart"] text,
+[class*="chart"] tspan,
+.chartjs-render-monitor text,
+.chartjs-render-monitor tspan {
+  -webkit-text-fill-color: #1f2937 !important;
+  -webkit-background-clip: initial !important;
+  background-clip: initial !important;
+  background: transparent !important;
+  fill: #1f2937 !important;
+  color: #1f2937 !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  font-size: 11px !important;
+}
+
+/* ========================================
+   BOTÓN DE DATOS METEOROLÓGICOS MODO CLARO
+   ======================================== */
+
+/* === Botón meteorológico con estilo claro === */
+.weather-import-btn,
+body .weather-import-btn,
+html body .weather-import-btn {
+  background: #ffffff !important;
+  border: 1px solid #d1d5db !important;
+  color: #374151 !important;
+  padding: 12px 20px !important;
+  border-radius: 8px !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06) !important;
+}
+
+.weather-import-btn:hover,
+body .weather-import-btn:hover,
+html body .weather-import-btn:hover {
+  background: #f3f4f6 !important;
+  border-color: #9ca3af !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+  transform: translateY(-1px) !important;
+}
+
+.weather-import-btn:disabled,
+body .weather-import-btn:disabled,
+html body .weather-import-btn:disabled {
+  background: #f9fafb !important;
+  color: #9ca3af !important;
+  border-color: #e5e7eb !important;
+  cursor: not-allowed !important;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+.weather-import-btn.loading,
+body .weather-import-btn.loading,
+html body .weather-import-btn.loading {
+  background: #fef3c7 !important;
+  color: #92400e !important;
+  border-color: #f59e0b !important;
+}
+
+.weather-import-btn.success,
+body .weather-import-btn.success,
+html body .weather-import-btn.success {
+  background: #dcfce7 !important;
+  color: #166534 !important;
+  border-color: #22c55e !important;
+}
+
+.weather-import-btn.error,
+body .weather-import-btn.error,
+html body .weather-import-btn.error {
+  background: #fee2e2 !important;
+  color: #dc2626 !important;
+  border-color: #ef4444 !important;
+}
+
+/* === Ocultar emoji del botón === */
+.weather-import-btn .weather-icon,
+body .weather-import-btn .weather-icon,
+html body .weather-import-btn .weather-icon {
+  display: none !important;
+}
+
+/* ========================================
+   FONDO GENERAL ANÁLISIS SEMANAL - MODO CLARO
+   ======================================== */
+
+/* === Fondo general de la sección semanal === */
+#semanal-section,
+body #semanal-section,
+html body #semanal-section {
+  background: #f8fafc !important;
+  min-height: 100vh !important;
+  padding: 24px !important;
+}
+
+/* === Asegurar que el contenedor no tenga fondo oscuro === */
+#semanal-section .content-section,
+body #semanal-section .content-section,
+html body #semanal-section .content-section {
+  background: transparent !important;
+}
+
+/* === OVERRIDE CRÍTICO para weekly-analysis-styles.css === */
+/* Neutralizar todos los fondos oscuros del archivo weekly-analysis-styles.css */
+#semanal-section *,
+body #semanal-section *,
+html body #semanal-section * {
+  background-image: none !important;
+}
+
+/* === Neutralizar fondos de gradientes específicos === */
+#semanal-section .table-container,
+body #semanal-section .table-container,
+html body #semanal-section .table-container {
+  background: #ffffff !important;
+  border: 1px solid #e5e7eb !important;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06) !important;
+}
+
+/* === Override para elementos con fondos azules/oscuros === */
+#semanal-section [style*="background"],
+body #semanal-section [style*="background"],
+html body #semanal-section [style*="background"] {
+  background: #ffffff !important;
+  background-color: #ffffff !important;
+  background-image: none !important;
+}
+
+/* ========================================
+   ANÁLISIS COMPARATIVO AVANZADO - MODO CLARO
+   ======================================== */
+
+/* === Neutralizar estilos oscuros === */
+.comparison-detail-card::before {
+  display: none !important;
+}
+
+/* === Estilos básicos para las tarjetas === */
+.comparison-detail-card {
+  background: #ffffff !important;
+  border: 1px solid #e5e7eb !important;
+  border-radius: 12px !important;
+  padding: 20px !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05) !important;
+}
+
+.comparison-detail-card h4 {
+  color: #1f2937 !important;
+  font-size: 16px !important;
+  margin-bottom: 15px !important;
+}
+
+.current-value {
+  font-size: 28px !important;
+  font-weight: 700 !important;
+  color: #1f2937 !important;
+  text-align: left !important;
+  margin-bottom: 20px !important;
+}
+
+.comparison-rows {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 12px !important;
+}
+
+.comparison-row {
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  flex-direction: column !important;
+  padding: 12px !important;
+  background: #f8fafc !important;
+  border-radius: 8px !important;
+  text-align: center !important;
+}
+
+.period-label {
+  font-size: 11px !important;
+  color: #6b7280 !important;
+  text-transform: uppercase !important;
+  margin-bottom: 6px !important;
+}
+
+.value-main {
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  color: #1f2937 !important;
+}
+
+.change-badge {
+  font-size: 11px !important;
+  padding: 4px 8px !important;
+  border-radius: 6px !important;
+  background: #f3f4f6 !important;
+  color: #6b7280 !important;
+  margin-top: 4px !important;
+}
+
+/* ========================================
+   ANÁLISIS COMPARATIVO AVANZADO - MODO CLARO
+   ======================================== */
+
+/* === Sección de comparación detallada === */
+.detailed-comparison-section,
+body .detailed-comparison-section,
+html body .detailed-comparison-section {
+  background: #ffffff !important;
+  border: 1px solid #e5e7eb !important;
+  border-radius: 12px !important;
+  padding: 24px !important;
+  margin: 24px 0 !important;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06) !important;
+}
+
+/* === Header de comparación === */
+.comparison-header-modern,
+body .comparison-header-modern,
+html body .comparison-header-modern {
+  background: transparent !important;
+  border-bottom: 1px solid #f1f5f9 !important;
+  padding-bottom: 16px !important;
+  margin-bottom: 24px !important;
+}
+
+/* === Títulos de comparación === */
+.comparison-main-title,
+body .comparison-main-title,
+html body .comparison-main-title {
+  color: #1f2937 !important;
+  font-size: 18px !important;
+  font-weight: 600 !important;
+  margin: 0 !important;
+}
+
+.comparison-subtitle,
+body .comparison-subtitle,
+html body .comparison-subtitle {
+  color: #6b7280 !important;
+  font-size: 14px !important;
+  margin: 4px 0 0 0 !important;
+}
+
+/* === Ocultar icono de comparación === */
+.comparison-icon-gradient,
+body .comparison-icon-gradient,
+html body .comparison-icon-gradient {
+  display: none !important;
+}
+
+/* === Botones de diagnóstico === */
+.btn-diagnostic,
+body .btn-diagnostic,
+html body .btn-diagnostic {
+  background: #ffffff !important;
+  color: #374151 !important;
+  border: 1px solid #d1d5db !important;
+  padding: 8px 16px !important;
+  border-radius: 6px !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+}
+
+.btn-diagnostic:hover,
+body .btn-diagnostic:hover,
+html body .btn-diagnostic:hover {
+  background: #f3f4f6 !important;
+  border-color: #9ca3af !important;
+}
+
+/* === Botón de toggle detalles === */
+.toggle-details-btn,
+body .toggle-details-btn,
+html body .toggle-details-btn {
+  background: #08c999 !important;
+  color: #ffffff !important;
+  border: 1px solid #08c999 !important;
+  padding: 8px 16px !important;
+  border-radius: 6px !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+}
+
+.toggle-details-btn:hover,
+body .toggle-details-btn:hover,
+html body .toggle-details-btn:hover {
+  background: #07b085 !important;
+  border-color: #07b085 !important;
+}
+
+/* === Grid de comparación === */
+.comparison-grid {
+  display: grid !important;
+  grid-template-columns: repeat(4, 1fr) !important;
+  gap: 20px !important;
+  margin-top: 25px !important;
+}
+
+@media (max-width: 1200px) {
+  .comparison-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .comparison-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+
+
+/* === Tarjetas de detalle de comparación === */
+.comparison-detail-card,
+body .comparison-detail-card,
+html body .comparison-detail-card {
+  background: #ffffff !important;
+  border: 1px solid #e5e7eb !important;
+  border-radius: 8px !important;
+  padding: 16px !important;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06) !important;
+  transition: all 0.2s ease !important;
+  min-height: 220px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: space-between !important;
+}
+
+.comparison-detail-card:hover,
+body .comparison-detail-card:hover,
+html body .comparison-detail-card:hover {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+  transform: translateY(-1px) !important;
+}
+
+/* === Títulos de tarjetas de detalle === */
+.card-title-modern,
+body .card-title-modern,
+html body .card-title-modern {
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  margin-bottom: 16px !important;
+  padding-bottom: 12px !important;
+  border-bottom: 1px solid #f1f5f9 !important;
+}
+
+.card-title-modern h4,
+body .card-title-modern h4,
+html body .card-title-modern h4 {
+  color: #1f2937 !important;
+  font-size: 16px !important;
+  font-weight: 600 !important;
+  margin: 0 !important;
+}
+
+/* === Ocultar iconos de título === */
+.title-icon,
+body .title-icon,
+html body .title-icon {
+  display: none !important;
+}
+
+/* === Valores actuales === */
+.current-value,
+body .current-value,
+html body .current-value {
+  font-size: 24px !important;
+  font-weight: 600 !important;
+  color: #1f2937 !important;
+  margin: 8px 0 16px 0 !important;
+  text-align: left !important;
+  padding: 8px 0 !important;
+  border-bottom: 1px solid #f1f5f9 !important;
+}
+
+/* === Filas de comparación === */
+.comparison-rows,
+body .comparison-rows,
+html body .comparison-rows {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 8px !important;
+  flex: 1 !important;
+  text-align: center !important;
+  margin-top: 8px !important;
+}
+
+.comparison-row,
+body .comparison-row,
+html body .comparison-row {
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: center !important;
+  align-items: center !important;
+  padding: 10px 8px !important;
+  background: #f8fafc !important;
+  border-radius: 6px !important;
+  border: 1px solid #e2e8f0 !important;
+  min-height: 45px !important;
+  text-align: center !important;
+  transition: all 0.2s ease !important;
+}
+
+.comparison-row:hover,
+body .comparison-row:hover,
+html body .comparison-row:hover {
+  background: #f1f5f9 !important;
+  border-color: #cbd5e1 !important;
+}
+
+/* === Etiquetas de período === */
+.period-label,
+body .period-label,
+html body .period-label {
+  font-size: 10px !important;
+  color: #6b7280 !important;
+  font-weight: 500 !important;
+  text-align: center !important;
+  margin-bottom: 4px !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.3px !important;
+}
+
+/* === Datos de comparación vertical === */
+.comparison-data-vertical,
+body .comparison-data-vertical,
+html body .comparison-data-vertical {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  gap: 2px !important;
+  width: 100% !important;
+  text-align: center !important;
+}
+
+.value-main,
+body .value-main,
+html body .value-main {
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  color: #1f2937 !important;
+  text-align: center !important;
+  line-height: 1.1 !important;
+}
+
+/* === Badges de cambio === */
+.change-badge,
+body .change-badge,
+html body .change-badge {
+  font-size: 10px !important;
+  font-weight: 600 !important;
+  padding: 2px 6px !important;
+  border-radius: 4px !important;
+  color: #6b7280 !important;
+  background: #f3f4f6 !important;
+  border: 1px solid #e5e7eb !important;
+  text-align: center !important;
+  min-width: 40px !important;
+  margin-top: 1px !important;
+  display: inline-block !important;
+}
+
+.change-badge.positive,
+body .change-badge.positive,
+html body .change-badge.positive {
+  color: #16a34a !important;
+  background: #f0fdf4 !important;
+  border-color: #bbf7d0 !important;
+}
+
+.change-badge.negative,
+body .change-badge.negative,
+html body .change-badge.negative {
+  color: #dc2626 !important;
+  background: #fef2f2 !important;
+  border-color: #fecaca !important;
+}
+
+/* ========================================
+   OVERRIDE FINAL - MÁXIMA PRIORIDAD ABSOLUTA
+   ======================================== */
+
+/* === OVERRIDE FINAL CON SELECTORES MUY ESPECÍFICOS === */
+html body div#diario-section div.weekly-metrics-compact div.compact-metric-card,
+html body div#semanal-section div.weekly-metrics-compact div.compact-metric-card,
+html body .weekly-metrics-compact .compact-metric-card,
+html body div.metrics-grid div.metric-card,
+html[lang] body .weekly-metrics-compact .compact-metric-card,
+html[lang] body .metrics-grid .metric-card {
+  background: #ffffff !important;
+  background-color: #ffffff !important;
+  background-image: none !important;
+  border: 1px solid #e5e7eb !important;
+  color: #1e293b !important;
+  backdrop-filter: none !important;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06) !important;
+}
+
+/* === TÍTULOS Y VALORES CON OVERRIDE ESPECÍFICO === */
+html body .weekly-metrics-compact .compact-metric-card .metric-title,
+html body .metrics-grid .metric-card .metric-title,
+html body .weekly-metrics-compact .compact-metric-card .metric-value,
+html body .metrics-grid .metric-card .metric-value,
+html body .weekly-metrics-compact .compact-metric-card .metric-main-value,
+html body .metrics-grid .metric-card .metric-main-value,
+html body .weekly-metrics-compact .compact-metric-card .comparison-label,
+html body .metrics-grid .metric-card .comparison-label {
+  color: #1e293b !important;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+}
+
+/* ========================================
+   OVERRIDE ULTRA ESPECÍFICO CONTRA WEEKLY-ANALYSIS-STYLES
+   ======================================== */
+
+/* === FORZAR TARJETAS BLANCAS CON MÁXIMA ESPECIFICIDAD === */
+html body div.weekly-metrics-compact div.compact-metric-card,
+html body .weekly-metrics-compact .compact-metric-card,
+body .weekly-metrics-compact .compact-metric-card,
+.weekly-metrics-compact .compact-metric-card,
+div.compact-metric-card,
+html body div.metrics-grid div.metric-card,
+html body .metrics-grid .metric-card,
+body .metrics-grid .metric-card,
+.metrics-grid .metric-card,
+div.metric-card,
+[class*="metric-card"],
+[class="metric-card"] {
+  background: #ffffff !important;
+  background-color: #ffffff !important;
+  border: 1px solid #e5e7eb !important;
+  color: #1e293b !important;
+  backdrop-filter: none !important;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06) !important;
+}
+
+/* === FORZAR TEXTO OSCURO EN TARJETAS === */
+html body .weekly-metrics-compact .compact-metric-card *,
+.compact-metric-card .metric-title,
+.compact-metric-card .metric-main-value,
+.compact-metric-card .comparison-label,
+html body .metrics-grid .metric-card *,
+.metrics-grid .metric-card *,
+.metrics-grid .metric-card .metric-value,
+.metrics-grid .metric-card .metric-label,
+.metrics-grid .metric-card .metric-change,
+[class*="metric-card"] * {
+  color: #1e293b !important;
+}
+
+/* === TARJETAS MODERNAS ESTILO REFERENCIAS === */
+.weekly-metrics-compact .compact-metric-card,
+body .weekly-metrics-compact .compact-metric-card,
+html body .weekly-metrics-compact .compact-metric-card,
+.compact-metric-card,
+body .compact-metric-card,
+html body .compact-metric-card {
+  background: #ffffff !important;
+  border: 1px solid #e5e7eb !important;
+  border-radius: 12px !important;
+  padding: 24px !important;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06) !important;
+  backdrop-filter: none !important;
+  transition: all 0.2s ease-in-out !important;
+  position: relative !important;
+  overflow: visible !important;
+}
+
+.compact-metric-card:hover,
+body .compact-metric-card:hover,
+html body .compact-metric-card:hover {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+  transform: translateY(-1px) !important;
+  border-color: #cbd5e1 !important;
+  background: #ffffff !important;
+}
+
+/* === TÍTULOS PROFESIONALES CON TIPOGRAFÍA FINA === */
+.compact-metric-card .metric-title,
+body .compact-metric-card .metric-title,
+html body .compact-metric-card .metric-title,
+.compact-metric-card h3,
+body .compact-metric-card h3,
+html body .compact-metric-card h3,
+.metrics-grid .metric-card .metric-title,
+body .metrics-grid .metric-card .metric-title {
+  font-size: 11px !important;
+  font-weight: 400 !important;
+  color: #6b7280 !important;
+  margin: 0 0 6px 0 !important;
+  text-transform: none !important;
+  letter-spacing: 0.02em !important;
+  line-height: 1.4 !important;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+}
+
+/* === DÍGITOS SIN BOLD - PESO NORMAL === */
+.compact-metric-card .metric-value,
+body .compact-metric-card .metric-value,
+html body .compact-metric-card .metric-value,
+.compact-metric-card .value,
+body .compact-metric-card .value,
+html body .compact-metric-card .value,
+.metrics-grid .metric-card .metric-value,
+body .metrics-grid .metric-card .metric-value,
+.metrics-grid .metric-card .value,
+body .metrics-grid .metric-card .value {
+  font-size: 28px !important;
+  font-weight: 300 !important;
+  color: #0f172a !important;
+  margin: 0 0 8px 0 !important;
+  line-height: 1.1 !important;
+  letter-spacing: -0.02em !important;
+}
+
+/* === COMPARATIVAS PROFESIONALES === */
+.compact-metric-card .metric-change,
+body .compact-metric-card .metric-change,
+html body .compact-metric-card .metric-change,
+.compact-metric-card .comparison,
+body .compact-metric-card .comparison,
+html body .compact-metric-card .comparison {
+  font-size: 12px !important;
+  font-weight: 400 !important;
+  margin: 4px 0 0 0 !important;
+  line-height: 1.3 !important;
+  color: #6b7280 !important;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+}
+
+/* === Texto de comparativa vs día anterior === */
+.comparison-label,
+body .comparison-label,
+.vs-previous,
+body .vs-previous {
+  font-size: 11px !important;
+  color: #9ca3af !important;
+  font-weight: 400 !important;
+  margin-top: 2px !important;
+  text-transform: lowercase !important;
+}
+
+/* ========================================
+   MODO NOCHE FUNCIONAL
+   ======================================== */
+
+/* === MODO NOCHE ESPECÍFICO COMO REFERENCIAS === */
+.dark body,
+body.dark,
+html.dark body {
+  background: #0a0e1a !important;
+  color: #e2e8f0 !important;
+}
+
+.dark .compact-metric-card,
+body.dark .compact-metric-card,
+html.dark body .compact-metric-card {
+  background: #1a1f2e !important;
+  border: 1px solid #2d3748 !important;
+  color: #e2e8f0 !important;
+}
+
+.dark .compact-metric-card:hover,
+body.dark .compact-metric-card:hover,
+html.dark body .compact-metric-card:hover {
+  background: #242938 !important;
+  border-color: #374151 !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2) !important;
+}
+
+.dark .compact-metric-card .metric-title,
+body.dark .compact-metric-card .metric-title,
+html.dark body .compact-metric-card .metric-title,
+.dark .compact-metric-card h3,
+body.dark .compact-metric-card h3,
+html.dark body .compact-metric-card h3 {
+  color: #9ca3af !important;
+}
+
+.dark .compact-metric-card .metric-value,
+body.dark .compact-metric-card .metric-value,
+html.dark body .compact-metric-card .metric-value,
+.dark .compact-metric-card .value,
+body.dark .compact-metric-card .value,
+html.dark body .compact-metric-card .value {
+  color: #f8fafc !important;
+}
+
+/* === Botón de toggle sin emojis === */
+.theme-toggle {
+  position: fixed !important;
+  top: 20px !important;
+  right: 20px !important;
+  z-index: 1000 !important;
+  background: #475569 !important;
+  color: white !important;
+  border: none !important;
+  border-radius: 6px !important;
+  padding: 8px 16px !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+  font-family: inherit !important;
+}
+
+.theme-toggle:hover {
+  background: #334155 !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* === TARJETAS DE GRÁFICOS GRANDES - FONDO BLANCO FORZADO === */
+.card,
+body .card,
+html body .card,
+.chart-container,
+body .chart-container,
+html body .chart-container,
+#weather-chart-container,
+body #weather-chart-container,
+.weather-chart,
+body .weather-chart,
+.sales-chart,
+body .sales-chart {
+  background: #ffffff !important;
+  background-color: #ffffff !important;
+  border: 1px solid #e5e7eb !important;
+  border-radius: 12px !important;
+  padding: 24px !important;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06) !important;
+  margin-bottom: 24px !important;
+  transition: all 0.2s ease-in-out !important;
+  backdrop-filter: none !important;
+}
+
+.card:hover,
+body .card:hover,
+html body .card:hover {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
+  transform: translateY(-1px) !important;
+}
+
+/* === Títulos de las tarjetas === */
+.card h3,
+body .card h3,
+html body .card h3,
+.card .card-title,
+body .card .card-title,
+html body .card .card-title {
+  font-size: 18px !important;
+  font-weight: 600 !important;
+  color: #111827 !important;
+  margin: 0 0 16px 0 !important;
+  line-height: 1.3 !important;
+}
+
+/* === Modo oscuro para tarjetas grandes === */
+.dark .card,
+body.dark .card,
+html.dark body .card,
+.dark .chart-container,
+body.dark .chart-container,
+html.dark body .chart-container {
+  background: #1a1f2e !important;
+  border: 1px solid #2d3748 !important;
+}
+
+.dark .card:hover,
+body.dark .card:hover,
+html.dark body .card:hover {
+  background: #242938 !important;
+  border-color: #374151 !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2) !important;
+}
+
+.dark .card h3,
+body.dark .card h3,
+html.dark body .card h3,
+.dark .card .card-title,
+body.dark .card .card-title,
+html.dark body .card .card-title {
+  color: #f8fafc !important;
+}
+
+/* === Sobrescribir iconos de métricas === */
+.compact-metric-card .metric-icon,
+body .compact-metric-card .metric-icon,
+html body .compact-metric-card .metric-icon {
+  width: 2.5rem !important;
+  height: 2.5rem !important;
+  border-radius: calc(var(--radius) - 2px) !important;
+  background: var(--primary) !important;
+  color: var(--primary-foreground) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 1.25rem !important;
+  box-shadow: var(--shadow-sm) !important;
+  margin: 0 !important;
+}
+
+/* === Sobrescribir valores principales === */
+.metric-main-value,
+body .metric-main-value,
+html body .metric-main-value {
+  font-size: 2rem !important;
+  font-weight: 700 !important;
+  color: var(--foreground) !important;
+  line-height: 1 !important;
+  margin-bottom: 1rem !important;
+  background: none !important;
+  -webkit-background-clip: initial !important;
+  -webkit-text-fill-color: var(--foreground) !important;
+  background-clip: initial !important;
+  text-shadow: none !important;
+}
+
+/* === Sobrescribir títulos de métricas === */
+.compact-metric-card .metric-title,
+body .compact-metric-card .metric-title,
+html body .compact-metric-card .metric-title {
+  font-size: 0.875rem !important;
+  font-weight: 500 !important;
+  color: var(--muted-foreground) !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+  margin: 0 !important;
+}
+
+/* === Sobrescribir header principal === */
+.header,
+body .header,
+html body .header {
+  background: var(--card) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius) !important;
+  padding: 1.5rem !important;
+  margin-bottom: 2rem !important;
+  box-shadow: var(--shadow-sm) !important;
+  backdrop-filter: none !important;
+}
+
+.header h1,
+body .header h1,
+html body .header h1 {
+  font-size: 1.875rem !important;
+  font-weight: 700 !important;
+  color: var(--foreground) !important;
+  margin: 0 !important;
+  background: none !important;
+  -webkit-background-clip: initial !important;
+  -webkit-text-fill-color: var(--foreground) !important;
+  background-clip: initial !important;
+  text-shadow: none !important;
+}
+
+/* === Sobrescribir navegación === */
+.nav-tabs,
+body .nav-tabs,
+html body .nav-tabs {
+  display: flex !important;
+  background: var(--card) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius) !important;
+  padding: 0.25rem !important;
+  margin-bottom: 2rem !important;
+  backdrop-filter: none !important;
+  box-shadow: var(--shadow-sm) !important;
+}
+
+.nav-tab,
+body .nav-tab,
+html body .nav-tab {
+  flex: 1 !important;
+  padding: 0.75rem 1rem !important;
+  font-size: 0.875rem !important;
+  font-weight: 500 !important;
+  color: var(--muted-foreground) !important;
+  background: transparent !important;
+  border: none !important;
+  border-radius: calc(var(--radius) - 2px) !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease-in-out !important;
+  text-align: center !important;
+}
+
+.nav-tab:hover,
+body .nav-tab:hover,
+html body .nav-tab:hover {
+  color: var(--foreground) !important;
+  background: var(--muted) !important;
+}
+
+.nav-tab.active,
+body .nav-tab.active,
+html body .nav-tab.active {
+  background: var(--primary) !important;
+  color: var(--primary-foreground) !important;
+  box-shadow: var(--shadow-sm) !important;
+  transform: none !important;
+}
+
+/* === Sobrescribir contenedor principal === */
+.container,
+body .container,
+html body .container {
+  max-width: 1400px !important;
+  margin: 0 auto !important;
+  padding: 1.5rem !important;
+  min-height: 100vh !important;
+}
+
+/* === Sobrescribir body === */
+body,
+html body {
+  font-family: var(--font-sans) !important;
+  background: var(--background) !important;
+  color: var(--foreground) !important;
+  line-height: 1.6 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* === Sobrescribir bordes superiores con degradado === */
+.compact-metric-card::before,
+body .compact-metric-card::before,
+html body .compact-metric-card::before {
+  content: '' !important;
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  height: 3px !important;
+  background: linear-gradient(90deg, var(--primary), var(--accent)) !important;
+  border-radius: var(--radius) var(--radius) 0 0 !important;
+  z-index: 1 !important;
+}
+
+/* === Sobrescribir tarjetas de gráficos === */
+.card,
+body .card,
+html body .card {
+  background: var(--card) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius) !important;
+  padding: 1.5rem !important;
+  box-shadow: var(--shadow-sm) !important;
+  transition: all 0.2s ease-in-out !important;
+  backdrop-filter: none !important;
+}
+
+.card:hover,
+body .card:hover,
+html body .card:hover {
+  box-shadow: var(--shadow-md) !important;
+  transform: translateY(-1px) !important;
+}
+
+.card-title,
+body .card-title,
+html body .card-title {
+  font-size: 1.125rem !important;
+  font-weight: 600 !important;
+  color: var(--card-foreground) !important;
+  margin: 0 0 1rem 0 !important;
+  text-align: center !important;
+  background: none !important;
+  -webkit-background-clip: initial !important;
+  -webkit-text-fill-color: var(--card-foreground) !important;
+  background-clip: initial !important;
+}
+
+/* === Sobrescribir contenedores de gráficos === */
+.chart-container,
+body .chart-container,
+html body .chart-container {
+  position: relative !important;
+  height: 300px !important;
+  margin-top: 1rem !important;
+  background: transparent !important;
+  border-radius: calc(var(--radius) - 4px) !important;
+}
+
+/* === Sobrescribir grids de gráficos === */
+.charts-grid,
+body .charts-grid,
+html body .charts-grid {
+  display: grid !important;
+  grid-template-columns: 2fr 1fr !important;
+  gap: 1.5rem !important;
+  margin-bottom: 2rem !important;
+}
+
+.charts-grid-half-page,
+body .charts-grid-half-page,
+html body .charts-grid-half-page {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
+  gap: 1.5rem !important;
+  margin-bottom: 2rem !important;
+}
+
+/* === Sobrescribir header de análisis semanal === */
+.weekly-analysis-header-modern,
+body .weekly-analysis-header-modern,
+html body .weekly-analysis-header-modern {
+  background: var(--card) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius) !important;
+  padding: 1.5rem !important;
+  margin-bottom: 2rem !important;
+  box-shadow: var(--shadow-sm) !important;
+  backdrop-filter: none !important;
+}
+
+.main-title,
+body .main-title,
+html body .main-title {
+  font-size: 1.875rem !important;
+  font-weight: 700 !important;
+  color: var(--foreground) !important;
+  margin: 0 !important;
+  background: none !important;
+  -webkit-background-clip: initial !important;
+  -webkit-text-fill-color: var(--foreground) !important;
+  background-clip: initial !important;
+  text-shadow: none !important;
+}
+
+.main-subtitle,
+body .main-subtitle,
+html body .main-subtitle {
+  font-size: 0.875rem !important;
+  color: var(--muted-foreground) !important;
+  margin: 0.25rem 0 0 0 !important;
+}
+
+/* === Eliminar efectos de glassmorphism === */
+*[style*="backdrop-filter"],
+body *[style*="backdrop-filter"],
+html body *[style*="backdrop-filter"] {
+  backdrop-filter: none !important;
+  }

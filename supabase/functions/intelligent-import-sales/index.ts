@@ -29,7 +29,7 @@ interface FileAnalysis {
   sampleRows: any[][]
   totalRows: number
   encoding: string
-  detectedStructure: 'ventas' | 'productos' | 'unknown'
+  detectedStructure: 'ventas' | 'productos' | 'tickets_medios' | 'unknown'
   mappedColumns?: {
     fecha?: number
     hora?: number
@@ -39,6 +39,7 @@ interface FileAnalysis {
     cantidad?: number
     precio?: number
     total?: number
+    ticket_medio?: number
     metodo_pago?: number
     categoria?: number
   }
@@ -184,6 +185,92 @@ async function generateStringHash(input: string): Promise<string> {
 }
 
 // =============================================
+// FUNCIÓN: Validar compatibilidad de datos
+// =============================================
+async function validateDataCompatibility(
+  supabase: any,
+  analysisData: FileAnalysis,
+  restauranteId: string
+): Promise<{ valid: boolean; conflictos: string[]; sugerencia: string; accion: 'crear' | 'enriquecer' }> {
+  console.log('🔍 Analizando datos para importación inteligente...');
+  
+  const conflictos: string[] = [];
+  let sugerencia = '';
+  let accion: 'crear' | 'enriquecer' = 'crear';
+  
+  // Extraer fechas del archivo a importar
+  const fechasArchivo = new Set<string>();
+  const dataRows = analysisData.allRows || analysisData.sampleRows;
+  
+  if (analysisData.mappedColumns?.fecha !== undefined) {
+    dataRows.forEach(row => {
+      const fechaRaw = row[analysisData.mappedColumns!.fecha!];
+      if (fechaRaw) {
+        const fecha = parseSpanishDate(fechaRaw.toString());
+        if (fecha) {
+          fechasArchivo.add(fecha.toISOString().split('T')[0]);
+        }
+      }
+    });
+  }
+  
+  if (fechasArchivo.size === 0) {
+    return { valid: true, conflictos: [], sugerencia: 'No se detectaron fechas para validar', accion: 'crear' };
+  }
+  
+  // Verificar qué datos existen para estas fechas
+  const fechasArray = Array.from(fechasArchivo);
+  const { data: datosExistentes, error } = await supabase
+    .from('ventas_datos')
+    .select('fecha_venta, ticket_medio, sistema_origen, total_bruto, num_comensales')
+    .eq('restaurante_id', restauranteId)
+    .in('fecha_venta', fechasArray);
+    
+  if (error) {
+    console.warn('Error validando datos existentes:', error);
+    return { valid: true, conflictos: [], sugerencia: 'Error de validación, procediendo...', accion: 'crear' };
+  }
+  
+  if (datosExistentes.length === 0) {
+    // No hay datos existentes - crear nuevos
+    sugerencia = 'No hay datos existentes para estas fechas. Se crearán registros nuevos.';
+    accion = 'crear';
+  } else {
+    // Hay datos existentes - analizar si se pueden enriquecer
+    accion = 'enriquecer';
+    const fechasConDatos = datosExistentes.length;
+    const fechasConTicketMedio = datosExistentes.filter(d => d.ticket_medio && parseFloat(d.ticket_medio) > 0).length;
+    
+    console.log(`📊 Datos existentes encontrados:`);
+    console.log(`   - ${fechasConDatos} fechas con datos`);
+    console.log(`   - ${fechasConTicketMedio} con ticket_medio`);
+    
+    // ✅ NUEVA LÓGICA: ENRIQUECIMIENTO INTELIGENTE
+    const tipoArchivoActual = analysisData.detectedStructure;
+    const nuevosValores = analysisData.mappedColumns;
+    
+    if (tipoArchivoActual === 'tickets_medios' && nuevosValores?.ticket_medio !== undefined) {
+      sugerencia = `Se enriquecerán ${fechasConDatos} registros existentes con datos de ticket_medio del Excel.`;
+    } else if (nuevosValores?.producto !== undefined) {
+      sugerencia = `Se enriquecerán ${fechasConDatos} registros existentes con datos de productos del Excel.`;
+    } else {
+      sugerencia = `Se enriquecerán ${fechasConDatos} registros existentes con la nueva información disponible.`;
+    }
+    
+    console.log(`✅ MODO ENRIQUECIMIENTO: Los datos existentes se complementarán con la nueva información`);
+  }
+  
+  console.log(`🎯 Validación completada: ${conflictos.length} conflictos, acción: ${accion}`);
+  
+  return {
+    valid: true,  // ✅ SIEMPRE PERMITIR (modo inteligente)
+    conflictos,
+    sugerencia,
+    accion
+  };
+}
+
+// =============================================
 // FUNCIÓN: Importar a ventas_datos (cabecera) y ventas_lineas (productos)
 // =============================================
 async function importToVentasDatosYLineas(
@@ -193,6 +280,12 @@ async function importToVentasDatosYLineas(
   userId: string
 ) {
   console.log('🔄 Iniciando importación a ventas_datos y ventas_lineas...')
+  
+  // ✅ VALIDAR COMPATIBILIDAD ANTES DE IMPORTAR
+  const validacion = await validateDataCompatibility(supabase, analysisData, restauranteId);
+  if (!validacion.valid) {
+    throw new Error(`Conflicto de datos: ${validacion.conflictos.join(', ')}. ${validacion.sugerencia}`);
+  }
   
   const { headers, sampleRows, mappedColumns } = analysisData
   
@@ -280,23 +373,80 @@ async function importToVentasDatosYLineas(
   console.log(`📦 Procesando ${dataRows.length} filas de datos...`);
   
   for (const row of dataRows) {
-    // Extraer datos comunes
-    const fecha = mappedColumns?.fecha !== undefined ? parseDate(row[mappedColumns.fecha]) : new Date();
+    // Extraer datos comunes - 🔧 CORREGIDO: Usar parseSpanishDate
+    const fechaRaw = mappedColumns?.fecha !== undefined ? row[mappedColumns.fecha] : null;
+    console.log(`🔍 DEBUG fecha - valor raw = "${fechaRaw}"`);
+    const fecha = fechaRaw ? parseSpanishDate(fechaRaw.toString()) : new Date();
+    if (fecha && fechaRaw) {
+      console.log(`✅ FECHA procesada: "${fechaRaw}" → ${fecha.toISOString().split('T')[0]}`);
+    } else if (fechaRaw) {
+      console.warn(`❌ FECHA no procesada: "${fechaRaw}"`);
+    }
     const hora = mappedColumns?.hora !== undefined ? row[mappedColumns.hora] : '';
     const producto = mappedColumns?.producto !== undefined ? row[mappedColumns.producto] : '';
     const cantidad = mappedColumns?.cantidad !== undefined ? parseFloat(row[mappedColumns.cantidad]) || 1 : 1;
     const precio = mappedColumns?.precio !== undefined ? parseFloat(row[mappedColumns.precio]) || 0 : 0;
     const total = mappedColumns?.total !== undefined ? parseFloat(row[mappedColumns.total]) || (precio * cantidad) : (precio * cantidad);
+    // ✅ DEBUGGING: Extraer ticket_medio con logging detallado
+    let ticketMedio = null;
+    if (mappedColumns?.ticket_medio !== undefined) {
+      const rawValue = row[mappedColumns.ticket_medio];
+      console.log(`🔍 DEBUG ticket_medio - valor raw = "${rawValue}", tipo = ${typeof rawValue}`);
+      
+      if (rawValue !== null && rawValue !== undefined && rawValue !== '') {
+        const parsedValue = parseFloat(rawValue);
+        
+        // 🛡️ FILTRO MONETARIO: Validar rango razonable para ticket medio
+        if (!isNaN(parsedValue) && parsedValue > 0) {
+          if (parsedValue >= 1 && parsedValue <= 500) {
+            ticketMedio = parsedValue;
+            console.log(`✅ FILTRO: Ticket medio válido: €${ticketMedio}`);
+          } else {
+            console.warn(`❌ FILTRO: Ticket medio fuera de rango: €${parsedValue} (permitido: €1-€500)`);
+          }
+        } else {
+          console.warn(`❌ FILTRO: Ticket medio no numérico: parseFloat("${rawValue}") = ${parsedValue}`);
+        }
+      } else {
+        console.log(`❌ FILTRO: Ticket medio vacío: "${rawValue}"`);
+      }
+    }
     const categoria = mappedColumns?.categoria !== undefined ? row[mappedColumns.categoria] || 'Sin categoría' : 'Sin categoría';
     const numeroTicket = mappedColumns?.numero_ticket !== undefined ? row[mappedColumns.numero_ticket] : null;
     const cliente = mappedColumns?.cliente !== undefined ? row[mappedColumns.cliente] : null;
     const metodoPago = mappedColumns?.metodo_pago !== undefined ? row[mappedColumns.metodo_pago] || 'Efectivo' : 'Efectivo';
     
-    // Validaciones básicas
+    // 🛡️ FILTROS DE VALIDACIÓN ROBUSTOS
     const filaVacia = !producto && !total && !numeroTicket;
     if (filaVacia) {
       continue;
     }
+    
+    // 🛡️ FILTRO: Fecha obligatoria y válida
+    if (!fecha) {
+      console.warn(`❌ FILTRO: Fila sin fecha válida, saltando`);
+      continue;
+    }
+    
+    // 🛡️ FILTRO: Total debe estar en rango razonable
+    if (total < 0 || total > 50000) {
+      console.warn(`❌ FILTRO: Total fuera de rango: €${total} (permitido: €0-€50,000)`);
+      continue;
+    }
+    
+    // 🛡️ FILTRO: Cantidad debe ser razonable
+    if (cantidad <= 0 || cantidad > 1000) {
+      console.warn(`❌ FILTRO: Cantidad fuera de rango: ${cantidad} (permitido: 1-1000)`);
+      continue;
+    }
+    
+    // 🛡️ FILTRO: Precio unitario debe ser razonable
+    if (precio < 0 || precio > 1000) {
+      console.warn(`❌ FILTRO: Precio unitario fuera de rango: €${precio} (permitido: €0-€1,000)`);
+      continue;
+    }
+    
+    console.log(`✅ FILTRO: Fila válida - Fecha: ${fecha.toISOString().split('T')[0]}, Total: €${total}, Producto: ${producto}`);
     
     // ================================================================
     // CASO 1: DATOS DE PRODUCTOS/INVENTARIO
@@ -347,6 +497,7 @@ async function importToVentasDatosYLineas(
           metodo_pago: metodoPago,
           numero_ticket: numeroTicket,
           cliente: cliente,
+          ticket_medio: ticketMedio,  // ✅ AGREGAR TICKET_MEDIO
           lineas: [{
             producto_nombre: `Cierre TPV ${numeroTicket || fecha.toISOString().split('T')[0]}`,
             categoria_nombre: 'Resumen Diario',
@@ -389,6 +540,7 @@ async function importToVentasDatosYLineas(
             metodo_pago: metodoPago,
             numero_ticket: numeroTicket,
             cliente: cliente,
+            ticket_medio: ticketMedio,  // ✅ AGREGAR TICKET_MEDIO
             lineas: [],
             total_bruto: 0,
             total_neto: 0,
@@ -490,37 +642,49 @@ async function importToVentasDatosYLineas(
       const ventaHash = await generateStringHash(lineasIdentifier);
       const id_externo = `IMP_${ventaData.fecha_venta}_${ventaHash.substring(0, 8)}`;
 
+      // ✅ CONSTRUIR OBJETO DE VENTA CON TICKET_MEDIO SI APLICA
+      const ventaObject: any = {
+        restaurante_id: restauranteId,
+        sistema_origen: 'import_manual',
+        id_externo: id_externo,
+        referencia_externa: ventaData.numero_ticket ? 
+          `Ticket ${ventaData.numero_ticket}` : 
+          `Importación ${ventaData.fecha_venta} ${ventaData.fecha_hora_completa.split('T')[1]?.substring(0, 5) || ''}`,
+        fecha_venta: ventaData.fecha_venta,
+        fecha_hora_completa: ventaData.fecha_hora_completa,
+        total_bruto: ventaData.total_bruto.toFixed(2),
+        total_neto: ventaData.total_neto.toFixed(2),
+        total_impuestos: ventaData.total_impuestos.toFixed(2),
+        descuentos: 0,
+        propinas: 0,
+        metodo_pago: ventaData.metodo_pago,
+      };
+
+      // ✅ ENRIQUECIMIENTO INTELIGENTE: Solo agregar campos que tengan valor
+      console.log(`🔍 DEBUG ventaData.ticket_medio: "${ventaData.ticket_medio}", tipo: ${typeof ventaData.ticket_medio}`);
+      
+      // Solo agregar ticket_medio si tiene un valor válido
+      if (ventaData.ticket_medio && parseFloat(ventaData.ticket_medio) > 0) {
+        ventaObject.ticket_medio = parseFloat(ventaData.ticket_medio);
+        console.log(`💰 ✅ ENRIQUECIENDO con ticket_medio: €${ventaObject.ticket_medio} para ${ventaData.fecha_venta}`);
+      }
+      
+      // Solo agregar num_comensales si tiene un valor válido  
+      if (ventaData.num_comensales && parseInt(ventaData.num_comensales) > 0) {
+        ventaObject.num_comensales = parseInt(ventaData.num_comensales);
+        console.log(`👥 ✅ ENRIQUECIENDO con num_comensales: ${ventaObject.num_comensales} para ${ventaData.fecha_venta}`);
+      }
+      
+      console.log(`🔧 Objeto a guardar/actualizar:`, Object.keys(ventaObject));
+      console.log(`🔧 TICKET_MEDIO en objeto:`, ventaObject.ticket_medio);
+      console.log(`🔧 Fecha a upsert:`, ventaObject.fecha_venta);
+
       // 1. Usar UPSERT para insertar la venta y evitar duplicados a nivel de transacción
       const { data: venta, error: ventaError } = await supabase
         .from('ventas_datos')
-        .upsert({
-          restaurante_id: restauranteId,
-          sistema_origen: 'import_manual',
-          id_externo: id_externo,
-          referencia_externa: ventaData.numero_ticket ? 
-            `Ticket ${ventaData.numero_ticket}` : 
-            `Importación ${ventaData.fecha_venta} ${ventaData.fecha_hora_completa.split('T')[1]?.substring(0, 5) || ''}`,
-          fecha_venta: ventaData.fecha_venta,
-          fecha_hora_completa: ventaData.fecha_hora_completa,
-          total_bruto: ventaData.total_bruto.toFixed(2),
-          total_neto: ventaData.total_neto.toFixed(2),
-          total_impuestos: ventaData.total_impuestos.toFixed(2),
-          descuentos: 0,
-          propinas: 0,
-          metodo_pago: ventaData.metodo_pago,
-          num_comensales: 0,
-          seccion: 'Importado',
-          estado: 'procesado',
-          procesado_por: userId,
-          datos_originales: { 
-            import_date: new Date().toISOString(),
-            source: 'manual_import',
-            productos_count: ventaData.lineas.length,
-            cliente: ventaData.cliente,
-            numero_ticket: ventaData.numero_ticket
-          }
-        }, {
-          onConflict: 'restaurante_id, sistema_origen, id_externo'
+        .upsert(ventaObject, {
+          onConflict: 'restaurante_id, fecha_venta',
+          ignoreDuplicates: false  // 🔧 CRÍTICO: Permite actualizar registros existentes
         })
         .select()
         .single()
@@ -606,6 +770,21 @@ async function importToVentasDatosYLineas(
   }
   
   console.log(`🎯 TABLAS AFECTADAS: ${[...(requiereProductos ? ['productos'] : []), ...(requiereVentas ? ['ventas_datos', 'ventas_lineas'] : [])].join(', ')}`);
+  
+  // 🛡️ FILTRO FINAL: Validar calidad de la importación
+  const totalFilas = ventasMap.size;
+  const porcentajeExito = totalFilas > 0 ? (ventasInsertadas / totalFilas * 100) : 0;
+  const porcentajeErrores = totalFilas > 0 ? (errores.length / totalFilas * 100) : 0;
+  
+  console.log(`📊 === ESTADÍSTICAS DE FILTROS ===`);
+  console.log(`✅ Registros válidos: ${ventasInsertadas}/${totalFilas} (${porcentajeExito.toFixed(1)}%)`);
+  console.log(`❌ Registros filtrados: ${errores.length}/${totalFilas} (${porcentajeErrores.toFixed(1)}%)`);
+  
+  // 🛡️ FILTRO: Advertir si hay muchos errores
+  if (porcentajeErrores > 50) {
+    console.warn(`🚨 ADVERTENCIA: ${porcentajeErrores.toFixed(1)}% de datos fueron filtrados. Revisa el formato del archivo.`);
+  }
+  
   console.log(`================================================================\n`);
   
   return {
@@ -614,6 +793,11 @@ async function importToVentasDatosYLineas(
     lineas_count: lineasInsertadas,
     tipo_datos: tipoDetectado,
     errores: errores.length > 0 ? errores : null,
+    quality_check: {
+      success_rate: porcentajeExito,
+      error_rate: porcentajeErrores,
+      status: porcentajeExito >= 80 ? 'excellent' : porcentajeExito >= 60 ? 'good' : 'warning'
+    },
     resumen: {
       tipo_archivo: tipoDetectado,
       productos_insertados: productosInsertados,
@@ -848,7 +1032,19 @@ async function analyzeFile(file: File): Promise<FileAnalysis> {
     
     // Detectar estructura y mapear columnas
     const mappedColumns = detectColumnMapping(headers, sampleRows)
-    const detectedStructure = mappedColumns.producto !== undefined ? 'ventas' : 'unknown'
+    
+    // ✅ NUEVA LÓGICA: Detección inteligente de estructura
+    let detectedStructure: 'ventas' | 'productos' | 'tickets_medios' | 'unknown' = 'unknown'
+    
+    if (mappedColumns.ticket_medio !== undefined) {
+        detectedStructure = 'tickets_medios'
+        console.log('🎯 Detectado: Archivo de TICKETS MEDIOS')
+    } else if (mappedColumns.producto !== undefined) {
+        detectedStructure = 'ventas'
+        console.log('🎯 Detectado: Archivo de VENTAS INDIVIDUALES')
+    } else {
+        console.log('❓ Estructura no reconocida automáticamente')
+    }
 
     console.log(`✅ Análisis completado: ${data.length} filas, estructura: ${detectedStructure}`)
     
@@ -880,8 +1076,9 @@ function analyzeColumnContent(columnData: any[]): string {
   // Analizar patrones en los datos reales
   const hasNumbers = samples.some(val => !isNaN(parseFloat(val.toString())));
   const hasDates = samples.some(val => {
-    const date = new Date(val.toString());
-    return isValidDate(date);
+    // 🔧 CORREGIDO: Usar parseSpanishDate en lugar de new Date()
+    const parsedDate = parseSpanishDate(val.toString());
+    return parsedDate !== null;
   });
   const hasProducts = samples.some(val => {
     const str = val.toString().toLowerCase();
@@ -939,6 +1136,7 @@ function detectColumnMapping(headers: string[], sampleRows: any[][]) {
   if (fechaByContent) {
     mapping.fecha = fechaByContent.index;
     console.log(`✅ Fecha detectada por CONTENIDO en columna ${fechaByContent.index}: "${fechaByContent.header}"`);
+    console.log(`🔍 MUESTRA de fechas detectadas: ${fechaByContent.sampleData.join(', ')}`);
   } else {
     // Fallback a detección por header
     for (let i = 0; i < normalizedHeaders.length; i++) {
@@ -1020,6 +1218,32 @@ function detectColumnMapping(headers: string[], sampleRows: any[][]) {
     }
   }
   
+  // ✅ NUEVO: Detectar columna ticket_medio
+  const ticketMedioPatterns = [
+    'ticket_medio', 'ticket medio', 'ticketmedio', 'ticket promedio', 'ticket average', 'avg_ticket', 'promedio_ticket', 'promedio', 'medio',
+    'precio medio por ticket', 'precio_medio_por_ticket', 'preciomedioporticket', 'ticket_price_avg', 'avg_ticket_price'
+  ]
+  console.log(`🔍 DEBUG: Buscando ticket_medio en headers: ${normalizedHeaders.join(', ')}`);
+  
+  for (let i = 0; i < normalizedHeaders.length; i++) {
+    // ❌ EXCLUIR explícitamente "precio medio por comensal"
+    if (normalizedHeaders[i].includes('comensal') || normalizedHeaders[i].includes('comensales')) {
+      console.log(`❌ EXCLUIDO: "${headers[i]}" contiene 'comensal' - NO es ticket medio`);
+      continue;
+    }
+    
+    const foundPattern = ticketMedioPatterns.find(p => normalizedHeaders[i].includes(p));
+    if (foundPattern) {
+      mapping.ticket_medio = i
+      console.log(`✅ Ticket medio detectado en columna ${i}: "${headers[i]}" (normalizado: "${normalizedHeaders[i]}") usando patrón: "${foundPattern}"`);
+      break
+    }
+  }
+  
+  if (mapping.ticket_medio === undefined) {
+    console.log(`❌ NO se detectó columna ticket_medio en: ${headers.join(', ')}`);
+  }
+
   // Detectar columna de total/ventas
   const totalPatterns = ['total', 'importe', 'amount', 'subtotal', 'suma', 'ventas', 'venta', 'facturacion', 'ingresos']
   
@@ -1141,6 +1365,93 @@ function parseDate(dateStr: any): Date {
   // Si todo falla, retornar fecha actual
   console.warn(`⚠️ No se pudo parsear la fecha: ${str}`)
   return new Date()
+}
+
+// ✅ FUNCIÓN HELPER: Parseador de fechas con filtros robustos
+function parseSpanishDate(dateStr: any): Date | null {
+  if (!dateStr) return null;
+  try {
+    let cleanDate = dateStr.toString().trim();
+    
+    // 🛡️ FILTRO 1: Rechazar fechas obviamente incorrectas
+    if (cleanDate.length < 6 || cleanDate.length > 10) {
+      console.warn(`❌ FILTRO: Longitud de fecha inválida: "${cleanDate}"`);
+      return null;
+    }
+    
+    // Patrones de fecha española
+    const patterns = [
+      // DD/MM/YYYY
+      /^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/,
+      // DD-MM-YYYY
+      /^(\d{1,2})-(\d{1,2})-(\d{2,4})$/,
+      // DD.MM.YYYY
+      /^(\d{1,2})\.(\d{1,2})\.(\d{2,4})$/,
+      // DD/MM/YY
+      /^(\d{1,2})\/(\d{1,2})\/(\d{2})$/,
+      // DD-MM-YY
+      /^(\d{1,2})-(\d{1,2})-(\d{2})$/,
+      // DD.MM.YY
+      /^(\d{1,2})\.(\d{1,2})\.(\d{2})$/
+    ];
+    
+    for (const pattern of patterns){
+      const match = cleanDate.match(pattern);
+      if (match) {
+        let day = parseInt(match[1]);
+        let month = parseInt(match[2]);
+        let year = parseInt(match[3]);
+        
+        // 🛡️ FILTRO 2: Validar día y mes antes de procesar
+        if (day < 1 || day > 31 || month < 1 || month > 12) {
+          console.warn(`❌ FILTRO: Día/mes inválido: ${day}/${month}/${year}`);
+          continue;
+        }
+        
+        // Ajustar año si es de 2 dígitos
+        if (year < 100) {
+          // Si el año es menor a 50, asumimos 2000s (00-49 = 2000-2049)
+          // Si el año es mayor a 50, asumimos 1900s (50-99 = 1950-1999)
+          if (year < 50) {
+            year += 2000;
+          } else {
+            year += 1900;
+          }
+        }
+        
+        // 🛡️ FILTRO 3: Rango de años MENOS RESTRICTIVO para restaurantes
+        const currentYear = new Date().getFullYear();
+        if (year < 1990 || year > currentYear + 2) {
+          console.warn(`❌ FILTRO: Año fuera de rango: ${year} (permitido: 1990-${currentYear + 2})`);
+          continue;
+        }
+        
+        // 🛡️ FILTRO 4: Crear fecha y validar que sea real
+        const date = new Date(year, month - 1, day);
+        if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) {
+          console.warn(`❌ FILTRO: Fecha no existe: ${day}/${month}/${year}`);
+          continue;
+        }
+        
+        // 🛡️ FILTRO 5: Permitir fechas futuras razonables (hasta 30 días)
+        const maxFutureDate = new Date();
+        maxFutureDate.setDate(maxFutureDate.getDate() + 30);
+        if (date > maxFutureDate) {
+          console.warn(`❌ FILTRO: Fecha demasiado futura: ${date.toISOString()}`);
+          continue;
+        }
+        
+        console.log(`✅ FILTRO: Fecha válida: ${day}/${month}/${year} → ${date.toISOString().split('T')[0]}`);
+        return date;
+      }
+    }
+    
+    console.warn(`❌ FILTRO: Formato de fecha no reconocido: "${cleanDate}"`);
+    return null;
+  } catch (error) {
+    console.warn('❌ FILTRO: Error parseando fecha:', dateStr, error);
+    return null;
+  }
 }
 
 // =============================================

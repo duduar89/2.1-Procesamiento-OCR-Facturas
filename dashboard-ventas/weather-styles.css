@@ -1,0 +1,250 @@
+/* ========================================
+   WIDGET DE CLIMA - ESTILOS ULTRA COMPACTOS
+   ======================================== */
+
+.weather-sales-widget {
+    background: linear-gradient(135deg, #1e293b 0%, #334155 100%) !important;
+    border: 1px solid #00D4AA !important;
+    border-radius: 6px !important;
+    padding: 6px !important;
+    margin: 4px 0 !important;
+    box-shadow: 0 1px 4px rgba(0, 212, 170, 0.15) !important;
+    transition: all 0.2s ease !important;
+    max-width: 100% !important;
+    min-height: auto !important;
+}
+
+.weather-sales-widget:hover {
+    box-shadow: 0 2px 8px rgba(0, 212, 170, 0.25) !important;
+    transform: translateY(-1px) !important;
+}
+
+.weather-header {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    margin-bottom: 4px !important;
+    padding-bottom: 2px !important;
+    border-bottom: 1px solid rgba(0, 212, 170, 0.2) !important;
+}
+
+.weather-title {
+    display: flex !important;
+    align-items: center !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    color: #f1f5f9 !important;
+}
+
+.weather-icon-title {
+    font-size: 12px !important;
+    margin-right: 4px !important;
+}
+
+.weather-city {
+    font-size: 9px !important;
+    opacity: 0.8 !important;
+    color: #00D4AA !important;
+    font-weight: 500 !important;
+    margin-left: 3px !important;
+}
+
+.weather-status {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 4px !important;
+    margin-bottom: 4px !important;
+    padding: 4px !important;
+    background: rgba(255, 255, 255, 0.03) !important;
+    border-radius: 4px !important;
+}
+
+.weather-main-horizontal {
+    display: flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    margin-bottom: 3px !important;
+    justify-content: space-between !important;
+}
+
+.weather-temp-container {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    min-width: 35px !important;
+}
+
+.weather-temp-main {
+    font-size: 14px !important;
+    font-weight: 700 !important;
+    color: #ffffff !important;
+    line-height: 1 !important;
+    margin: 0 !important;
+}
+
+.weather-temp-feels {
+    font-size: 7px !important;
+    color: #94a3b8 !important;
+    margin: 0 !important;
+    opacity: 0.8 !important;
+}
+
+.weather-icon-main {
+    font-size: 16px !important;
+    margin: 0 4px !important;
+}
+
+.weather-description {
+    font-size: 8px !important;
+    font-weight: 500 !important;
+    color: #00D4AA !important;
+    text-transform: capitalize !important;
+    flex: 1 !important;
+    text-align: center !important;
+}
+
+.weather-details-horizontal {
+    display: flex !important;
+    gap: 8px !important;
+    font-size: 8px !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+.weather-detail-item {
+    display: flex !important;
+    align-items: center !important;
+    gap: 2px !important;
+    padding: 2px 4px !important;
+    background: rgba(255, 255, 255, 0.05) !important;
+    border-radius: 3px !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+.weather-detail-icon {
+    font-size: 10px !important;
+    margin: 0 !important;
+}
+
+.weather-detail-value {
+    font-size: 8px !important;
+    font-weight: 600 !important;
+    color: #f1f5f9 !important;
+}
+
+.weather-weekly-forecast {
+    margin-top: 3px !important;
+}
+
+.forecast-title {
+    font-size: 7px !important;
+    font-weight: 600 !important;
+    margin-bottom: 2px !important;
+    color: #94a3b8 !important;
+    text-align: center !important;
+}
+
+.forecast-days {
+    display: flex !important;
+    gap: 3px !important;
+    overflow-x: auto !important;
+    padding: 1px !important;
+    justify-content: center !important;
+}
+
+.forecast-day-compact {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    padding: 2px 3px !important;
+    background: rgba(255, 255, 255, 0.05) !important;
+    border-radius: 3px !important;
+    min-width: 35px !important;
+    text-align: center !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    transition: all 0.2s ease !important;
+}
+
+.forecast-day-compact:hover {
+    background: rgba(255, 255, 255, 0.1) !important;
+    transform: translateY(-1px) !important;
+}
+
+.forecast-day-name {
+    font-size: 6px !important;
+    font-weight: 600 !important;
+    color: #94a3b8 !important;
+    margin-bottom: 1px !important;
+    line-height: 1 !important;
+}
+
+.forecast-icon {
+    font-size: 10px !important;
+    margin-bottom: 1px !important;
+}
+
+.forecast-temp-range {
+    font-size: 6px !important;
+    color: #94a3b8 !important;
+    margin-bottom: 1px !important;
+    line-height: 1 !important;
+}
+
+.forecast-rain {
+    font-size: 5px !important;
+    color: #10b981 !important;
+    font-weight: 500 !important;
+    line-height: 1 !important;
+}
+
+.weather-footer {
+    margin-top: 2px !important;
+    font-size: 6px !important;
+    opacity: 0.6 !important;
+    color: #94a3b8 !important;
+    text-align: center !important;
+}
+
+.weather-actions {
+    display: flex !important;
+    align-items: center !important;
+    gap: 2px !important;
+}
+
+.weather-refresh-btn {
+    background: linear-gradient(135deg, #00D4AA, #14B8A6) !important;
+    color: white !important;
+    border: none !important;
+    padding: 2px 4px !important;
+    border-radius: 3px !important;
+    font-weight: 600 !important;
+    transition: all 0.2s ease !important;
+    font-size: 8px !important;
+}
+
+.weather-refresh-btn:hover {
+    transform: translateY(-1px) !important;
+    box-shadow: 0 2px 6px rgba(0, 212, 170, 0.3) !important;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .weather-main-horizontal {
+        flex-direction: column !important;
+        gap: 3px !important;
+        align-items: center !important;
+    }
+    
+    .weather-details-horizontal {
+        gap: 4px !important;
+    }
+    
+    .forecast-days {
+        gap: 2px !important;
+    }
+    
+    .forecast-day-compact {
+        min-width: 30px !important;
+        padding: 1px 2px !important;
+    }
+}

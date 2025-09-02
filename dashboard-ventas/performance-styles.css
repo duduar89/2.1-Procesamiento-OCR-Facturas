@@ -1,0 +1,269 @@
+/**
+ * ⚡ ESTILOS OPTIMIZADOS PARA RENDIMIENTO
+ * 
+ * Este archivo sobrescribe las transiciones y animaciones problemáticas
+ * identificadas en el análisis de rendimiento.
+ */
+
+/* =============================================
+   🎯 CONFIGURACIÓN GLOBAL DE RENDIMIENTO
+   ============================================= */
+
+/* Forzar aceleración por hardware para elementos críticos */
+.card,
+.metric-card,
+.nav-tab,
+.btn {
+    will-change: transform;
+    transform: translateZ(0);
+    backface-visibility: hidden;
+}
+
+/* Optimizar todas las transiciones */
+* {
+    transition-duration: 0.1s !important;
+    transition-timing-function: ease !important;
+    animation-duration: 0.2s !important;
+    animation-timing-function: ease !important;
+}
+
+/* =============================================
+   🚫 DESACTIVAR ANIMACIONES PROBLEMÁTICAS
+   ============================================= */
+
+/* Eliminar animaciones infinitas que consumen recursos */
+@keyframes pulse {
+    /* Vacío para desactivar */
+}
+
+@keyframes shine {
+    /* Vacío para desactivar */
+}
+
+@keyframes pulse-neon-diario {
+    /* Vacío para desactivar */
+}
+
+@keyframes shimmer {
+    /* Vacío para desactivar */
+}
+
+/* Desactivar animaciones específicas */
+.metric-card::after,
+.metric-card:first-child::after,
+.metric-card:nth-child(4)::after,
+.metric-card:nth-child(5)::after {
+    animation: none !important;
+}
+
+.metric-icon {
+    animation: none !important;
+}
+
+.popularity-bar::after {
+    animation: none !important;
+}
+
+/* =============================================
+   ⚡ TRANSICIONES OPTIMIZADAS
+   ============================================= */
+
+/* Cards con transiciones ultra-rápidas */
+.card {
+    transition: box-shadow 0.1s ease, transform 0.1s ease !important;
+}
+
+.card:hover {
+    transform: translateY(-2px) !important; /* Reducido de -8px */
+    transition: transform 0.1s ease !important;
+}
+
+/* Metric cards optimizadas */
+.metric-card {
+    transition: all 0.1s ease !important;
+}
+
+.metric-card:hover {
+    transform: scale(1.02) !important; /* Reducido de 1.08 */
+}
+
+/* Navegación optimizada */
+.nav-tab {
+    transition: background 0.1s ease, color 0.1s ease !important;
+}
+
+.nav-tab::before {
+    transition: left 0.1s ease !important; /* Reducido de 0.3s */
+}
+
+/* Botones optimizados */
+.btn {
+    transition: background 0.1s ease, transform 0.1s ease !important;
+}
+
+.btn:hover {
+    transform: translateY(-1px) !important; /* Reducido de -2px */
+}
+
+.btn::before {
+    transition: left 0.1s ease !important; /* Reducido de 0.5s */
+}
+
+/* =============================================
+   📊 OPTIMIZACIONES ESPECÍFICAS PARA GRÁFICOS
+   ============================================= */
+
+/* Contenedores de gráficos */
+.chart-container,
+.chart-wrapper {
+    will-change: contents;
+    contain: layout style;
+}
+
+/* Canvas de Chart.js */
+canvas {
+    will-change: contents;
+    image-rendering: optimizeSpeed;
+}
+
+/* =============================================
+   🎨 ELEMENTOS DE INTERFAZ OPTIMIZADOS
+   ============================================= */
+
+/* Selector de fechas */
+.date-selector {
+    transition: all 0.1s ease !important;
+}
+
+.custom-date-picker {
+    animation: none !important; /* Desactivar slideDown */
+}
+
+/* Range buttons */
+.range-btn {
+    transition: all 0.05s ease !important; /* Ultra rápido */
+}
+
+.range-btn.active {
+    transition: all 0.05s ease !important;
+}
+
+/* Weather widget */
+.weather-sales-widget {
+    transition: all 0.1s ease !important;
+}
+
+/* Notificaciones */
+.notification {
+    animation: none !important; /* Desactivar slideIn */
+    opacity: 1 !important;
+    transform: none !important;
+}
+
+/* =============================================
+   📱 OPTIMIZACIONES RESPONSIVE
+   ============================================= */
+
+/* Reducir complejidad en pantallas pequeñas */
+@media (max-width: 768px) {
+    * {
+        transition: none !important;
+        animation: none !important;
+    }
+    
+    .card:hover,
+    .metric-card:hover,
+    .btn:hover {
+        transform: none !important;
+    }
+}
+
+/* =============================================
+   🔧 MEJORAS DE RENDIMIENTO ESPECÍFICAS
+   ============================================= */
+
+/* Optimizar scrolling */
+.content-section {
+    contain: layout style;
+    animation: none !important; /* Desactivar fadeInUp */
+}
+
+.content-section.active {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+}
+
+/* Optimizar tablas */
+.products-table,
+.table-container {
+    contain: layout style;
+}
+
+/* Spinner optimizado */
+.spinner {
+    animation: spin 0.5s linear infinite !important; /* Más rápido */
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* =============================================
+   🎯 MODO ALTO RENDIMIENTO
+   ============================================= */
+
+/* Clase para desactivar completamente las animaciones cuando sea necesario */
+.high-performance-mode * {
+    animation: none !important;
+    transition: none !important;
+    transform: none !important;
+}
+
+.high-performance-mode .card:hover,
+.high-performance-mode .metric-card:hover,
+.high-performance-mode .btn:hover {
+    transform: none !important;
+    box-shadow: none !important;
+}
+
+/* =============================================
+   📊 MEJORAS ESPECÍFICAS PARA CHART.JS
+   ============================================= */
+
+/* Optimizar tooltips de Chart.js */
+.chartjs-tooltip {
+    transition: opacity 0.05s ease !important;
+    animation: none !important;
+}
+
+/* Optimizar leyendas */
+.chartjs-legend {
+    transition: none !important;
+}
+
+/* =============================================
+   🔍 DEBUG Y MONITOREO DE RENDIMIENTO
+   ============================================= */
+
+/* Indicador visual para elementos optimizados */
+.performance-optimized {
+    position: relative;
+}
+
+.performance-optimized::before {
+    content: "⚡";
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    font-size: 12px;
+    opacity: 0.5;
+    z-index: 1000;
+    pointer-events: none;
+}
+
+/* Ocultar indicadores en producción */
+.production .performance-optimized::before {
+    display: none;
+}

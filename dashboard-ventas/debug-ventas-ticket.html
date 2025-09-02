@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug - Ventas vs Ticket Medio</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .debug-info {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            border-left: 4px solid #007bff;
+        }
+        .chart-container {
+            height: 400px;
+            margin: 20px 0;
+        }
+        .btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .btn:hover {
+            background: #0056b3;
+        }
+        .data-display {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            overflow-x: auto;
+        }
+        pre {
+            margin: 0;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Debug: Gráfico Ventas vs Ticket Medio</h1>
+        
+        <div class="debug-info">
+            <h3>Estado del Debug</h3>
+            <p>Este archivo te permitirá verificar qué datos están llegando al gráfico de ventas vs ticket medio.</p>
+            <button class="btn" onclick="testRealData()">🔄 Cargar Datos Reales</button>
+            <button class="btn" onclick="testMockData()">🎯 Cargar Datos de Prueba</button>
+            <button class="btn" onclick="clearLogs()">🧹 Limpiar Logs</button>
+        </div>
+
+        <div id="logs" class="data-display">
+            <h4>📋 Logs de Debug:</h4>
+            <pre id="log-content">Esperando datos...</pre>
+        </div>
+
+        <div class="chart-container">
+            <canvas id="debug-chart"></canvas>
+        </div>
+
+        <div id="data-analysis" class="data-display">
+            <h4>📊 Análisis de Datos:</h4>
+            <pre id="analysis-content">No hay datos que analizar...</pre>
+        </div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://yurqgcpgwsgdnxnpyxes.supabase.co';
+        const SUPABASE_SERVICE_ROLE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl1cnFnY3Bnd3NnZG54bnB5eGVzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDkyODM4MiwiZXhwIjoyMDcwNTA0MzgyfQ.cVwMjZ72uZwOrX-tGJFsOhVVDATiMBnWeyYRu0P6bvQ';
+        const RESTAURANT_ID = '2852b1af-38d8-43ec-8872-2b2921d5a231';
+
+        let debugChart = null;
+
+        function log(message) {
+            const now = new Date().toLocaleTimeString();
+            const logContent = document.getElementById('log-content');
+            logContent.textContent += `[${now}] ${message}\n`;
+            logContent.scrollTop = logContent.scrollHeight;
+            console.log(message);
+        }
+
+        function clearLogs() {
+            document.getElementById('log-content').textContent = 'Logs limpiados...\n';
+            document.getElementById('analysis-content').textContent = 'No hay datos que analizar...\n';
+        }
+
+        function analyzeData(ventasPorHora) {
+            const analysis = document.getElementById('analysis-content');
+            let analysisText = '📊 ANÁLISIS COMPLETO DE DATOS:\n\n';
+            
+            analysisText += `Total de horas con datos: ${ventasPorHora.length}\n`;
+            analysisText += `Datos originales:\n${JSON.stringify(ventasPorHora, null, 2)}\n\n`;
+            
+            // Calcular ticket medio por hora
+            analysisText += '🎯 CÁLCULO DE TICKET MEDIO POR HORA:\n';
+            const ticketMedios = ventasPorHora.map(h => {
+                const ticketMedio = h.cantidad_tickets > 0 ? h.ventas / h.cantidad_tickets : 0;
+                analysisText += `  ${h.hora_formato}: €${h.ventas} ÷ ${h.cantidad_tickets} tickets = €${ticketMedio.toFixed(2)}\n`;
+                return ticketMedio;
+            });
+
+            // Verificar si hay datos válidos
+            const horasConDatos = ventasPorHora.filter(h => h.ventas > 0 || h.cantidad_tickets > 0);
+            const horasConTicketMedio = ventasPorHora.filter(h => h.cantidad_tickets > 0);
+            
+            analysisText += `\n📈 RESUMEN:\n`;
+            analysisText += `  Horas con ventas > 0: ${horasConDatos.length}\n`;
+            analysisText += `  Horas con tickets > 0: ${horasConTicketMedio.length}\n`;
+            analysisText += `  Ticket medio promedio: €${ticketMedios.filter(t => t > 0).reduce((a, b) => a + b, 0) / ticketMedios.filter(t => t > 0).length || 0}\n`;
+            
+            analysis.textContent = analysisText;
+        }
+
+        function createDebugChart(ventasPorHora) {
+            const ctx = document.getElementById('debug-chart');
+            if (!ctx) {
+                log('❌ No se encontró el canvas');
+                return;
+            }
+
+            if (debugChart) {
+                debugChart.destroy();
+            }
+
+            // Calcular ticket medio
+            const ticketMedioPorHora = ventasPorHora.map(h => {
+                return h.cantidad_tickets > 0 ? h.ventas / h.cantidad_tickets : 0;
+            });
+
+            log(`📊 Creando gráfico con ${ventasPorHora.length} datos`);
+            log(`📊 Ticket medios calculados: ${ticketMedioPorHora.map(t => '€' + t.toFixed(2)).join(', ')}`);
+
+            debugChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ventasPorHora.map(h => h.hora_formato),
+                    datasets: [
+                        {
+                            label: 'Ventas por Hora (€)',
+                            data: ventasPorHora.map(h => h.ventas),
+                            backgroundColor: 'rgba(16, 185, 129, 0.8)',
+                            borderColor: '#10b981',
+                            borderWidth: 2,
+                            borderRadius: 8,
+                            yAxisID: 'y'
+                        },
+                        {
+                            label: 'Ticket Medio (€)',
+                            data: ticketMedioPorHora,
+                            type: 'line',
+                            borderColor: '#00D4AA',
+                            backgroundColor: 'rgba(0, 212, 170, 0.1)',
+                            borderWidth: 3,
+                            pointRadius: 6,
+                            pointBackgroundColor: '#00D4AA',
+                            pointBorderColor: '#ffffff',
+                            pointBorderWidth: 2,
+                            fill: false,
+                            tension: 0.4,
+                            yAxisID: 'y1'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false,
+                    },
+                    scales: {
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Ventas (€)',
+                                color: '#64748b'
+                            },
+                            ticks: {
+                                callback: function(value) {
+                                    return '€' + value.toLocaleString();
+                                },
+                                color: '#64748b'
+                            }
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Ticket Medio (€)',
+                                color: '#64748b'
+                            },
+                            ticks: {
+                                callback: function(value) {
+                                    return '€' + value.toFixed(2);
+                                },
+                                color: '#64748b'
+                            },
+                            grid: {
+                                drawOnChartArea: false,
+                            },
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Hora del Día',
+                                color: '#64748b'
+                            },
+                            ticks: {
+                                color: '#64748b'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const datasetLabel = context.dataset.label || '';
+                                    const value = context.parsed.y;
+                                    return `${datasetLabel}: €${value.toFixed(2)}`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            log('✅ Gráfico creado exitosamente');
+        }
+
+        async function testRealData() {
+            log('🔄 Cargando datos reales del backend...');
+            
+            // Calcular fechas para hoy
+            const hoy = new Date();
+            const fechaHoy = hoy.toISOString().split('T')[0]; // YYYY-MM-DD
+            
+            log(`📅 Solicitando datos para: ${fechaHoy}`);
+            
+            try {
+                const requestBody = {
+                    restaurante_id: RESTAURANT_ID,
+                    fecha_inicio: fechaHoy,
+                    fecha_fin: fechaHoy,
+                    tipo_rango: 'today'
+                };
+                
+                log(`📤 Enviando request: ${JSON.stringify(requestBody, null, 2)}`);
+                
+                const response = await fetch(`${SUPABASE_URL}/functions/v1/get-dashboard-data`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(requestBody)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                log('✅ Datos recibidos del backend');
+                log(`📊 Total de horas: ${data.ventas_por_hora?.length || 0}`);
+                
+                if (data.ventas_por_hora && data.ventas_por_hora.length > 0) {
+                    log('📋 Datos de ventas por hora encontrados');
+                    analyzeData(data.ventas_por_hora);
+                    createDebugChart(data.ventas_por_hora);
+                } else {
+                    log('❌ No hay datos de ventas por hora');
+                    log(`Estructura completa: ${JSON.stringify(data, null, 2)}`);
+                }
+                
+            } catch (error) {
+                log(`❌ Error cargando datos: ${error.message}`);
+            }
+        }
+
+        function testMockData() {
+            log('🎯 Cargando datos de prueba...');
+            
+            const mockData = [
+                { hora: 12, hora_formato: '12:00', ventas: 150.50, cantidad_tickets: 8 },
+                { hora: 13, hora_formato: '13:00', ventas: 320.75, cantidad_tickets: 15 },
+                { hora: 14, hora_formato: '14:00', ventas: 280.30, cantidad_tickets: 12 },
+                { hora: 15, hora_formato: '15:00', ventas: 95.20, cantidad_tickets: 4 },
+                { hora: 19, hora_formato: '19:00', ventas: 180.60, cantidad_tickets: 9 },
+                { hora: 20, hora_formato: '20:00', ventas: 425.80, cantidad_tickets: 18 },
+                { hora: 21, hora_formato: '21:00', ventas: 380.90, cantidad_tickets: 16 },
+                { hora: 22, hora_formato: '22:00', ventas: 210.40, cantidad_tickets: 11 }
+            ];
+
+            log(`📊 Datos de prueba creados: ${mockData.length} horas`);
+            analyzeData(mockData);
+            createDebugChart(mockData);
+        }
+
+        // Cargar datos de prueba al inicio
+        window.addEventListener('load', () => {
+            log('🚀 Debug iniciado - Listo para cargar datos');
+        });
+    </script>
+</body>
+</html>

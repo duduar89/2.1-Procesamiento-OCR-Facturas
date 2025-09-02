@@ -1,0 +1,35 @@
+{
+    "compilerOptions": {
+      "allowJs": true,
+      "lib": ["deno.window"],
+      "strict": true
+    },
+    "imports": {
+      "std/": "https://deno.land/std@0.168.0/",
+      "supabase": "https://esm.sh/@supabase/supabase-js@2"
+    },
+    "tasks": {
+      "dev": "deno run --allow-net --allow-read --allow-env index.ts",
+      "serve": "deno run --allow-all --watch index.ts"
+    },
+    "fmt": {
+      "files": {
+        "include": ["index.ts"]
+      },
+      "options": {
+        "useTabs": false,
+        "lineWidth": 100,
+        "indentWidth": 2,
+        "semiColons": false,
+        "singleQuote": true
+      }
+    },
+    "lint": {
+      "files": {
+        "include": ["index.ts"]
+      },
+      "rules": {
+        "tags": ["recommended"]
+      }
+    }
+  }
